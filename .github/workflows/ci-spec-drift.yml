@@ -679,22 +679,34 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/bnd && cp -R "$PWD" /tmp/bnd
           python3 - <<'PY'
+          import os
           p = "/tmp/bnd/cloud/issuer/internal/grpcserver/server.go"
-          s = open(p, encoding="utf-8").read()
-          old = "SPDX-License-Identifier: BUSL-1.1"
-          if s[:400].count(old) != 1:
-              raise SystemExit("Cannot construct/validate CI control - Positive control - issuer file under the Apache header")
-          open(p, "w", encoding="utf-8").write(s.replace(old, "SPDX-License-Identifier: Apache-2.0", 1))
-          print("CI detail - Positive control - issuer file under the Apache header")
+          if os.path.exists(p):
+              s = open(p, encoding="utf-8").read()
+              old = "SPDX-License-Identifier: BUSL-1.1"
+              if s[:400].count(old) != 1:
+                  raise SystemExit("Cannot construct/validate CI control - Positive control - issuer file under the Apache header")
+              open(p, "w", encoding="utf-8").write(s.replace(old, "SPDX-License-Identifier: Apache-2.0", 1))
+              print("CI detail - Positive control - issuer file under the Apache header")
+          else:
+              # A PAIL-Core-only tree carries no issuer bundle (0.2.0 ships no Issuer source). The direction under
+              # test — a file under cloud/issuer/ that claims the Apache header — is then planted synthetically, so
+              # the control still measures the checker instead of dying on a missing file (first run of this step
+              # on the public tree, 2026-11-04).
+              os.makedirs(os.path.dirname(p))
+              open(p, "w", encoding="utf-8").write("// SPDX-License-Identifier: Apache-2.0\npackage grpcserver\n")
+              print("CI detail - Positive control - issuer file under the Apache header (Core-only tree: synthetic issuer file planted)")
           PY
-          rc=0; ( cd /tmp/bnd && python3 spec/tools/spec_bundle_check.py ) || rc=$?
-          # rc 1 = a finding. rc 2 = the checker could not measure; that is not a confirmation.
-          if [ "$rc" -ne 1 ]; then
-            echo "Unexpected result (rc=$rc, want 1) - Positive control - issuer file under the Apache header. Inspect the preceding command output."
+          rc=0; ( cd /tmp/bnd && python3 spec/tools/spec_bundle_check.py > /tmp/bnd-out.log 2>&1 ) || rc=$?
+          cat /tmp/bnd-out.log
+          # rc 1 = a finding. rc 2 = the checker could not measure; that is not a confirmation. And the finding has
+          # to be the one this control provokes (B2 on that file), not some other row that happened to be red.
+          if [ "$rc" -ne 1 ] || ! grep -q 'B2: cloud/issuer/internal/grpcserver/server.go' /tmp/bnd-out.log; then
+            echo "Unexpected result (rc=$rc, want 1 with a B2 finding on the planted file) - Positive control - issuer file under the Apache header. Inspect the preceding command output."
             exit 1
           fi
           echo "Positive control confirmed - Positive control - issuer file under the Apache header"
-          rm -rf /tmp/bnd
+          rm -rf /tmp/bnd /tmp/bnd-out.log
 
       # B7/B8 run from this bare checkout: the declaration of bundle-B files outside
       # cloud/issuer/ lives in the checker (B_OUTSIDE_ISSUER), so no delivery manifest is
@@ -705,21 +717,34 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/bnd && cp -R "$PWD" /tmp/bnd
           python3 - <<'PY'
+          import os
           p = "/tmp/bnd/examples/perf/WORKLOADS.yaml"
-          s = open(p, encoding="utf-8").read()
-          first, rest = s.split("\n", 1)
-          if "SPDX-License-Identifier: BUSL-1.1" not in first:
-              raise SystemExit("Cannot construct/validate CI control - Positive control - declared issuer file loses its bundle-B SPDX header")
-          open(p, "w", encoding="utf-8").write(rest)
-          print("CI detail - Positive control - declared issuer file loses its bundle-B SPDX header")
+          if os.path.exists(p):
+              s = open(p, encoding="utf-8").read()
+              first, rest = s.split("\n", 1)
+              if "SPDX-License-Identifier: BUSL-1.1" not in first:
+                  raise SystemExit("Cannot construct/validate CI control - Positive control - declared issuer file loses its bundle-B SPDX header")
+              open(p, "w", encoding="utf-8").write(rest)
+              print("CI detail - Positive control - declared issuer file loses its bundle-B SPDX header")
+          else:
+              # A PAIL-Core-only tree carries neither the issuer bundle nor its declared outside files. B7 is only
+              # measured in a tree that carries cloud/issuer/, so the control plants a minimal issuer bundle and
+              # the declared file without its bundle-B header; the checker must then name that file.
+              g = "/tmp/bnd/cloud/issuer/internal/grpcserver/server.go"
+              os.makedirs(os.path.dirname(g))
+              open(g, "w", encoding="utf-8").write("// SPDX-License-Identifier: BUSL-1.1\npackage grpcserver\n")
+              os.makedirs(os.path.dirname(p), exist_ok=True)
+              open(p, "w", encoding="utf-8").write("workloads: []\n")
+              print("CI detail - Positive control - declared issuer file loses its bundle-B SPDX header (Core-only tree: synthetic bundle B planted)")
           PY
-          rc=0; ( cd /tmp/bnd && python3 spec/tools/spec_bundle_check.py ) || rc=$?
-          if [ "$rc" -ne 1 ]; then
-            echo "Unexpected result (rc=$rc, want 1) - Positive control - declared issuer file loses its bundle-B SPDX header. Inspect the preceding command output."
+          rc=0; ( cd /tmp/bnd && python3 spec/tools/spec_bundle_check.py > /tmp/bnd-out.log 2>&1 ) || rc=$?
+          cat /tmp/bnd-out.log
+          if [ "$rc" -ne 1 ] || ! grep -q 'B7: examples/perf/WORKLOADS.yaml is bundle B outside' /tmp/bnd-out.log; then
+            echo "Unexpected result (rc=$rc, want 1 with a B7 finding on the declared file) - Positive control - declared issuer file loses its bundle-B SPDX header. Inspect the preceding command output."
             exit 1
           fi
           echo "Positive control confirmed - Positive control - declared issuer file loses its bundle-B SPDX header"
-          rm -rf /tmp/bnd
+          rm -rf /tmp/bnd /tmp/bnd-out.log
 
       - name: Positive control - undeclared file claims the bundle-B SPDX header
         run: |
