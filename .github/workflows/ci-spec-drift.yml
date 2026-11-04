@@ -573,12 +573,22 @@ jobs:
             echo "Unexpected result - Positive control - ineffective guard evidence. Inspect the preceding command output."
             exit 1
           fi
-          if ( cd /tmp/gdprobe && python3 spec/tools/spec_guards_check.py --mutate --only=G15 ); then
+          if ( cd /tmp/gdprobe && python3 spec/tools/spec_guards_check.py --mutate --only=G15 > /tmp/gdprobe-mutate.log 2>&1 ); then
             echo "Unexpected result - Positive control - ineffective guard evidence. Inspect the preceding command output."
+            cat /tmp/gdprobe-mutate.log
             exit 1
           fi
+          # A non-zero exit is not enough: when the unmodified baseline itself is red the checker stops with a
+          # prerequisite failure (exit 2) and no mutation was measured. That must fail this control, not confirm it
+          # (first public run, 2026-11-04: the control "confirmed" itself through exactly that failure).
+          if grep -q 'prerequisite failure' /tmp/gdprobe-mutate.log; then
+            echo "Unexpected result - Positive control - ineffective guard evidence: the measurement could not run; a prerequisite failure is not a detected mutation."
+            cat /tmp/gdprobe-mutate.log
+            exit 1
+          fi
+          grep -E '^SPEC-GUARDS: ' /tmp/gdprobe-mutate.log || true
           echo "Positive control confirmed - Positive control - ineffective guard evidence"
-          rm -rf /tmp/gdprobe
+          rm -rf /tmp/gdprobe /tmp/gdprobe-mutate.log
 
       - name: Guard registry (static)
         run: python3 spec/tools/spec_guards_check.py

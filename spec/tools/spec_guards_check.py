@@ -198,6 +198,50 @@ def gotest(mount, rel):
     return proc.returncode, proc.stdout + proc.stderr
 
 
+SPEC_REF_RE = re.compile(r'"\.\./\.\./(spec/[^"]+)"')
+SANDBOX_SPEC_DEFAULT = ('spec/vectors', 'spec/proof-vectors')
+
+
+def sandbox_spec_dirs(cmddir):
+    """The `../../spec/<p>` directories the distributed tests read, as paths relative to the tree root.
+
+    Derived from the test sources rather than listed by hand. The internal tree keeps the vectors under
+    spec/vectors/{proof,merkle} while the public snapshot renames them to spec/{proof,merkle}-vectors; a
+    fixed list covered the first layout only, and in the public layout the unmodified baseline went red on
+    the Merkle corpus tests (first public CI run, 2026-11-04) — a prerequisite failure that looks like a
+    detected mutation unless the control reads it. Only directories that exist are returned, in the same
+    relative place the tests look for them; an empty result falls back to the historical pair.
+    """
+    root = os.path.dirname(os.path.dirname(cmddir))
+    refs = set()
+    for name in sorted(os.listdir(cmddir)):
+        if name.endswith('_test.go'):
+            refs |= set(SPEC_REF_RE.findall(read(os.path.join(cmddir, name))))
+    found = sorted(r for r in refs if os.path.isdir(os.path.join(root, *r.split('/'))))
+    if not found:
+        found = [r for r in SANDBOX_SPEC_DEFAULT if os.path.isdir(os.path.join(root, *r.split('/')))]
+    return found
+
+
+def public_layout_copy(root):
+    """Rebuild the public snapshot layout from the internal tree in a temporary directory and return its
+    cmd/pail-verify path, following gen_public_tree.py: spec/vectors <- tests/golden/, and
+    oss/spec/vectors/{merkle,proof,subgraph} -> spec/{merkle,proof,subgraph}-vectors. Returns None when the
+    tree is not the internal layout (the public tree already is that layout). The caller removes the copy."""
+    golden = os.path.join(root, 'tests', 'golden')
+    vectors = os.path.join(root, 'oss', 'spec', 'vectors')
+    cmd = os.path.join(root, 'oss', 'cmd', 'pail-verify')
+    if not (os.path.isdir(golden) and os.path.isdir(vectors) and os.path.isdir(cmd)):
+        return None
+    work = tempfile.mkdtemp(prefix='pailguards-public.')
+    shutil.copytree(cmd, os.path.join(work, 'cmd', 'pail-verify'))
+    shutil.copytree(golden, os.path.join(work, 'spec', 'vectors'))
+    for src, dst in (('merkle', 'merkle-vectors'), ('proof', 'proof-vectors'), ('subgraph', 'subgraph-vectors')):
+        if os.path.isdir(os.path.join(vectors, src)):
+            shutil.copytree(os.path.join(vectors, src), os.path.join(work, 'spec', dst))
+    return os.path.join(work, 'cmd', 'pail-verify')
+
+
 def mutate_run(cmddir, edits, fails):
     """`edits` 를 모두 심은 사본에서 테스트를 돌리고 (rc, 붉은 테스트 이름들) 을 낸다.
 
@@ -212,13 +256,12 @@ def mutate_run(cmddir, edits, fails):
         os.makedirs(os.path.dirname(dst))
         shutil.copytree(cmddir, dst)
         # 벡터는 `../../spec/...` 로 찾는다. 사본에서도 같은 상대 자리에 둔다.
-        for rel in ('spec/vectors', 'spec/proof-vectors'):
-            src = os.path.join(os.path.dirname(os.path.dirname(cmddir)),
-                               *rel.split('/'))
-            if os.path.isdir(src):
-                out = os.path.join(work, 'spec', os.path.basename(rel))
-                os.makedirs(os.path.dirname(out), exist_ok=True)
-                shutil.copytree(src, out)
+        tree_root = os.path.dirname(os.path.dirname(cmddir))
+        for rel in sandbox_spec_dirs(cmddir):
+            src = os.path.join(tree_root, *rel.split('/'))
+            out = os.path.join(work, *rel.split('/'))
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            shutil.copytree(src, out)
         main = os.path.join(dst, 'main.go')
         text = read(main)
         for gid, old, new in edits:
@@ -243,9 +286,19 @@ def main():
                     help='Measure registry claims using Docker and Go tests (several minutes)')
     ap.add_argument('--only', default='',
                     help='Limit mutations to these comma-separated guard IDs')
+    ap.add_argument('--baseline-only', action='store_true',
+                    help='With --mutate: run the unmodified sandbox baseline only (one Go test run) and stop')
+    ap.add_argument('--public-layout', action='store_true',
+                    help='In the internal tree: measure a temporary copy laid out like the public snapshot; ignored in the public tree')
     args = ap.parse_args()
 
     layout, root, cmddir = locate()
+    public_copy = None
+    if args.public_layout:
+        public_copy = public_layout_copy(root)
+        if public_copy is not None:
+            cmddir = public_copy
+            layout = layout + '/public-copy'
     ledger = os.path.join(cmddir, 'GUARDS.tsv')
     main_go = os.path.join(cmddir, 'main.go')
     for p in (ledger, main_go):
@@ -344,8 +397,15 @@ def main():
             die("--only contains guards absent from the registry: %s" % sorted(only - set(by_id)))
         base_rc, base = mutate_run(cmddir, [], fails)
         if base_rc != 0:
+            if public_copy:
+                shutil.rmtree(os.path.dirname(os.path.dirname(public_copy)), ignore_errors=True)
             die("Unmodified baseline failed (rc=%r %r); mutations cannot be evaluated" % (base_rc, base))
+        if args.baseline_only:
+            mode = 'baseline-only'
+            sys.stdout.write("SPEC-GUARDS: BASELINE PASS (sandbox copies %s)\n" % ', '.join(sandbox_spec_dirs(cmddir)))
         for gid, status, ev, what, old, new in rows:
+            if args.baseline_only:
+                break
             if only and gid not in only:
                 continue
             measured += 1
@@ -385,6 +445,8 @@ def main():
     for code, msg in fails:
         sys.stdout.write('[FAIL] %s %s\n' % (code, msg))
     sys.stdout.write('SPEC-GUARDS: %s failures=%d skipped_groups=%d unmeasurable_groups=%d scope=%s\n' % ('FAIL' if fails else 'PASS', len(fails), 0, 0, layout))
+    if public_copy:
+        shutil.rmtree(os.path.dirname(os.path.dirname(public_copy)), ignore_errors=True)
     return 1 if fails else 0
 
 
