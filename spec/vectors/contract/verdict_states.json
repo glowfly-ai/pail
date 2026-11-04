@@ -1,0 +1,44 @@
+{
+  "schema": "pail-verdict-states/v1",
+  "canon_version": "pail-verdict:v3",
+  "canon": "services/anchor_saas/internal/verdict/verdict.go — verdict 값 집합의 유일 정본(G-ANC-I06 소유, 서명되어 유통되는 판정). 이 파일은 그 집합의 계약 고정이다(LLD-OSS-A §4.5 / F6, 스키마 정본은 LLD-E §1.5). 갱신은 커밋 diff 로 보인다(IR-4).",
+  "frozen_by": "LLD-OSS-A-2026-V1 §4.5 (2026-08-06) — 값 집합 4 → 8",
+  "note": "검증기는 이 집합 밖의 값을 통과로 해석하지 않는다(F6). 표시층 대응은 미지 값도 unknown 으로 접는 것이다.",
+  "states": [
+    {"name": "INDETERMINATE", "precedence": 1, "display_class": "unknown",  "ko": "판정 불가", "description": "평가 자체가 수행되지 못함", "track": "게이트 B / SC1"},
+    {"name": "TAMPERED",      "precedence": 2, "display_class": "tampered", "ko": "조작 확정", "description": "체인 자체가 자기 해시와 불일치", "track": "현행"},
+    {"name": "SEAL_BROKEN",   "precedence": 3, "display_class": "unknown",  "ko": "봉인 침해", "description": "leaf 봉인이 제출 바이트를 덮지 못함", "track": "게이트 B / SC1"},
+    {"name": "LOG_FORKED",    "precedence": 4, "display_class": "unknown",  "ko": "로그 분기", "description": "로그 일관성 증명 실패(현재 X5 가 판정에 반영 안 함)", "track": "게이트 B / SC1"},
+    {"name": "NO_RECORDS",    "precedence": 5, "display_class": "empty",    "ko": "기록 없음", "description": "체인에 레코드가 없다", "track": "현행"},
+    {"name": "NO_EVIDENCE",   "precedence": 6, "display_class": "unknown",  "ko": "증거 없음", "description": "대조할 앵커가 로그에 없다(현재 X6 이 MATCH 로 오표기)", "track": "게이트 B / SC1"},
+    {"name": "DIVERGED",      "precedence": 7, "display_class": "diverged", "ko": "불일치",   "description": "특정 지점에서 갈라짐", "track": "현행"},
+    {"name": "MATCH",         "precedence": 8, "display_class": "match",    "ko": "일치",     "description": "제출된 체인이 로그의 앵커와 일치", "track": "현행"}
+  ],
+  "display_folding": {
+    "rule": "8개 값을 4개 표시 클래스로 접는다. match/diverged/tampered/empty 에 못 접히는 값은 전부 unknown('단정 금지'). 데모의 넷째 상태가 원래 '모르면 모른다'였으므로 의미가 보존된다(P0 청구항 26/42 와 정합).",
+    "unknown_value_policy": "집합 밖의 값을 만난 소비자도 unknown 으로 접는다 — F6 의 표시층 대응. 통과로 해석하지 않는다."
+  },
+  "consumers": {
+    "E-12-1": {
+      "what": "앵커 SaaS HTTP POST /v1/verify/{tenant}/{robot} 응답의 verdict 필드",
+      "status": "정본 — Go verdict.go 실측과 대조",
+      "gap": "값 8개 중 NO_EVIDENCE·LOG_FORKED·SEAL_BROKEN·INDETERMINATE 는 아직 산출되지 않는다(게이트 B / SC1). 이 파일은 집합을 고정할 뿐 구현을 주장하지 않는다."
+    },
+    "E-12-2": {
+      "what": "pvs/runner/verifiers/segment_chain.py verify()",
+      "status": "결함 기록만 — A 는 고치지 않는다",
+      "gap": "표현 가능 집합 {TAMPERED, NO_RECORDS, CHAIN_VALID}. NoFiles 부재로 빈/부재 디렉터리를 NO_RECORDS 로 표현하지 못한다(LLD-E §1.8 결함, P6). 값이 4→8 로 늘면서 표현 못 하는 값이 5개로 늘었다."
+    },
+    "E-12-3": {
+      "what": "demo/web/static/easy.html anchor(m) 분기",
+      "status": "결함 기록만 — A 는 고치지 않는다",
+      "gap": "chain_ok===false 를 첫 분기로 검사해 빈 체인을 조작 확정으로 표시한다(LLD-E §1.8 결함, P6). 신설 4값에 대한 분기가 없어 현재는 미지 값으로 떨어진다."
+    },
+    "TB-12": {
+      "what": "services/anchor_saas/integration/xs/xs01_four_state.sh — 케이스 루프가 기대표를 그대로 읽는다",
+      "status": "아직 tests/golden/contract/four_state.json 을 읽는다",
+      "gap": "이 파일로의 전환은 소비자 수정이므로 LLD-E 위임분이다. four_state.json 은 지우지 않는다 — 지우면 TB-12 가 죽는다."
+    }
+  },
+  "delegation": "소비자 3곳의 수정은 LLD-E 소관(P6 와 동일 방침). A 는 값 집합을 동결하고, 각 소비자가 무엇을 표현하지 못하는지를 기록한다. 기록되지 않은 결함은 없는 결함처럼 보인다."
+}

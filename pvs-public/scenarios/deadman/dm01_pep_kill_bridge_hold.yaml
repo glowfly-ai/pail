@@ -1,0 +1,17 @@
+version: 2.0
+name: pep_kill_triggers_bridge_hold
+robot_id: robot-1
+profile: insecure          # deadman needs no security profile
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 5.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 5.0}}
+  - {t: 1.0, expect_bridge: {state: FORWARDING}}
+  - {t: 1.0, expect_permit: {present: true, rate_hz: 20}}
+  - {t: 2.0, fault: {kill: pep_gate, signal: 9}}
+  # PR-axis assertion: only whether HOLD is entered (boolean) — avoids CI flakiness
+  - {t: 3.0, expect_bridge: {state: HOLD}}
+  - {t: 3.0, expect_permit: {present: false, observe_window_ms: 300}}
+  # precise timing assertion split out to nightly (kill propagation + rclpy jitter)
+  - {t: 3.0, expect_bridge: {state: HOLD, within_ms_of_fault: 200}, only: nightly}

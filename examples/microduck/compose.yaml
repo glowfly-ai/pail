@@ -1,0 +1,129 @@
+# SPDX-License-Identifier: Apache-2.0
+# Software-only. No devices, host networking, published ports or Docker socket.
+x-common: &common
+  image: ${PAIL_DUCK_IMAGE:?Run the public runner first}
+  user: "10001:10001"
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  networks: [preview]
+services:
+  prepare:
+    cpus: 2
+    mem_limit: 3072m
+    memswap_limit: 3072m
+    pids_limit: 256
+    <<: *common
+    user: "0:0"
+    cap_drop: []
+    command: [python, /opt/pail/example/support.py, prepare]
+    volumes:
+      - ${PAIL_DUCK_STATE}:/state
+      - private:/state/private
+      - run:/run/duck
+  issuer:
+    cpus: 0.4
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    <<: *common
+    image: ${PAIL_DUCK_ISSUER_IMAGE:?Load the pinned Issuer evaluation image}
+    # pail_cloud, not pail_services: the cloud half serves the AgentRelay beacon stream the
+    # robot agent subscribes to, so a CancelPlan (CHAIN_REVOKED) reaches the adapter through
+    # the agent instead of surviving until the step window expires (M1-d, 2026-09-15).
+    command: [pail_cloud]
+    volumes:
+      - type: volume
+        source: private
+        target: /etc/pail
+        volume: {subpath: config}
+      - type: volume
+        source: private
+        target: /var/log/pail_blackbox
+        volume: {subpath: blackbox}
+    environment:
+      PAIL_PROFILE: dev
+      PAIL_GRPC_TLS: "off"
+      PAIL_CLOUD_PORT: "50051"
+      PAIL_ISSUER_KEY_ID: dev-key-1
+      PAIL_KEYRING_MODE: unsigned-dev
+      PAIL_ROBOT_ID: robot-1
+      PAIL_SITE_MODEL: /etc/pail/site_model.yaml
+      PAIL_REQUESTERS: /etc/pail/requesters.not-provided.yaml
+      PAIL_CHECKPOINT_EVERY_RECORDS: "1"
+  agent:
+    cpus: 0.3
+    mem_limit: 384m
+    memswap_limit: 384m
+    pids_limit: 256
+    <<: *common
+    command: [pail_robot_agent]
+    volumes:
+      - ${PAIL_DUCK_STATE}/public/config:/etc/pail:ro
+      - type: volume
+        source: private
+        target: /run/pail-secrets
+        read_only: true
+        volume: {subpath: agent-key}
+      - run:/run/duck
+    environment:
+      PAIL_PROFILE: dev
+      PAIL_GRPC_TLS: "off"
+      PAIL_KEYRING_MODE: unsigned-dev
+      PAIL_ROBOT_ID: robot-1
+      PAIL_CLOUD_ADDR: issuer:50051
+      PAIL_AGENT_KEY: /run/pail-secrets/agent_ed25519.json
+      PAIL_REPORT_QUEUE_DIR: /run/duck/report_queue
+  fake:
+    cpus: 0.25
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    <<: *common
+    command: [robotd, --fake, --no-policy, --params, /opt/pail/example/fixtures/robotd.toml, --socket, /run/duck/raw/robotd.sock]
+    volumes: [run:/run/duck]
+  adapter:
+    cpus: 0.3
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    <<: *common
+    group_add: ["10002"]
+    command: [pail-duckd, --public, /run/duck/pail.sock, --public-gid, "10002", --raw, /run/duck/raw/robotd.sock, --agent, "http://agent:50051", --robot-id, robot-1, --policy, /etc/pail/policy.yaml, --keyring, /etc/pail/keys/keyring.json, --skills, /etc/pail/duck_skills.yaml, --evidence, /run/duck/evidence.sock, --gate-log, /run/duck/gate.ndjson]
+    volumes:
+      - run:/run/duck
+      - ${PAIL_DUCK_STATE}/public/config:/etc/pail:ro
+    environment:
+      PAIL_PROFILE: production
+      PAIL_KEYRING_MODE: unsigned-dev
+      PAIL_BUILD_INFO: "pail-build:v1:pep_gate:0.1.0-microduck-preview:-:-:-"
+      PAIL_ROBOT_CLASS: microduck
+  harness:
+    cpus: 0.2
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    <<: *common
+    user: "0:0"
+    cap_drop: []
+    command: [python, /opt/pail/example/support.py, demo]
+    volumes:
+      - run:/run/duck
+      - ${PAIL_DUCK_STATE}:/state
+      - private:/state/private
+    environment:
+      PAIL_DUCK_PUBLIC: /run/duck/pail.sock
+      PAIL_DUCK_RAW: /run/duck/raw/robotd.sock
+      PAIL_DUCK_ISSUER: issuer:50051
+      PAIL_DUCK_BLACKBOX: /state/private/blackbox
+      PVS_KEYRING: /state/private/config/keys/keyring.json
+      PVS_ISSUER_KEY: /state/private/config/keys/issuer_ed25519.json
+      PVS_OPERATOR_KEY: /state/private/config/keys/operator_ed25519.json
+      PAIL_DUCK_CONTROL_DIR: /state/control
+      PAIL_DUCKD_BIN: /usr/local/bin/pail-duckd
+      PAIL_CB1_GID: "10002"
+networks:
+  preview:
+    internal: true
+volumes:
+  run:
+  private:

@@ -1,0 +1,18 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+axis: recovery
+scenarios:
+  - id: an01_anchor_down_queue_resume
+    owns: []
+    also_touched_by: [G-ANC-C07]   # 소유자는 bo2/run_bo2.sh (TB-10) — 여기는 라이브 교차 확인
+    future_refs: []
+    delegated_to: null
+  - id: rc01_operator_unlock_recovers
+    owns: []
+    also_touched_by: [G-ENF-16]   # 위조 서명 → ERR_TAMPERED → SAFE_STOP 진입 경로
+    future_refs: [G-KEY-04]       # 운영자 잠금해제 서명·nonce 단일 사용
+    delegated_to: null
+  - id: rc02_unlock_nonce_replay_denied
+    owns: []
+    also_touched_by: [G-ENF-16]
+    future_refs: [G-KEY-04]       # nonce 재생 거부가 핵심 명제
+    delegated_to: null

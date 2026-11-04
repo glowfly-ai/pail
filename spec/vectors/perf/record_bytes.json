@@ -1,0 +1,58 @@
+{
+  "_note": "G-PRF-02 골든. 손으로 적지 않았다 — cmd/perf_spec 이 실제 blackbox.Writer 로 Append 하고 세그먼트 파일 증가분을 바이트로 잰 값이다. 다시 구우려면 tests/golden/perf/MKGOLDEN-PERF.md 를 본다. 값이 바뀌면 저널 형식이 바뀐 것이고, 그때는 공표문도 함께 바뀌어야 한다.",
+  "record_overhead_bytes": 84,
+  "segment_header_bytes": 56,
+  "checkpoint_record_bytes": 196,
+  "checkpoint_every_records": 1000,
+  "checkpoint_every_seconds": 60,
+  "max_segment_bytes": 67108864,
+  "max_segment_age_seconds": 86400,
+  "idle_flush_after_seconds": 1,
+  "gate_decision": {
+    "minimal": {
+      "payload_bytes": 392,
+      "record_bytes": 476,
+      "keys": [
+        "caller_id",
+        "caller_kind",
+        "chain_attributed",
+        "chain_id",
+        "decision",
+        "fatal",
+        "issuer_key_fingerprint",
+        "journal_v",
+        "kind",
+        "reason_code",
+        "robot_id",
+        "robot_id_bound",
+        "step_complete",
+        "token_id",
+        "unix_ms"
+      ]
+    },
+    "full": {
+      "payload_bytes": 556,
+      "record_bytes": 640,
+      "keys": [
+        "caller_id",
+        "caller_kind",
+        "chain_attributed",
+        "chain_id",
+        "decision",
+        "effective_mode",
+        "evidence",
+        "evidence_provenance",
+        "fatal",
+        "issuer_key_fingerprint",
+        "journal_v",
+        "kind",
+        "reason_code",
+        "robot_id",
+        "robot_id_bound",
+        "step_complete",
+        "token_id",
+        "unix_ms"
+      ]
+    }
+  }
+}

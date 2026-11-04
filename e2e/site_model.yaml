@@ -1,0 +1,39 @@
+# Site model for the e2e demo (CG-E1 format; config/site_model.example.yaml is
+# the annotated reference). The issuer compiles this at boot into its context
+# graph and resolves plan targets against these nodes.
+#
+# This file is NOT optional for the enforcement stage. With PAIL_SITE_MODEL
+# unset the issuer runs CG1 — an ephemeral per-request graph. Tokens are still
+# issued and still embed a subgraph snapshot hash, but GetActiveToken then
+# serves current_subgraph_hash EMPTY, and one empty side makes the gate's world
+# comparison indeterminate rather than equal. Indeterminate fails closed, so the
+# stack issues perfectly good tokens and blocks every command with
+# ERR_WORLD_INDETERMINATE — which reads like the policy rejecting the target
+# rather than a missing world.
+#
+# The target object below must exist here: e2e/run_e2e.sh submits a plan for it,
+# and a standing graph refuses to issue against an object it does not know
+# (fail-closed — it does not fall back to CG1).
+site: pail-e2e
+schema: v3
+
+zones:
+  - id: z1
+    type: work_area
+    adjacent: []
+
+objects:
+  - id: "880123"
+    at: z1
+
+robots:
+  # Must match PAIL_ROBOT_ID (default robot-1) — the plan is submitted for it.
+  - id: robot-1
+    capabilities: [move, grasp]
+    schema: v3
+    home: z1
+
+constraints:
+  # A human reported in a zone forbids issuance for robots homed there.
+  - type: human_exclusion
+    zone: "*"

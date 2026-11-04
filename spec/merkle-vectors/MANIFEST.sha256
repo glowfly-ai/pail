@@ -1,0 +1,19 @@
+# spec/merkle-vectors/MANIFEST.sha256 — RFC 6962 적합성 벡터 세트 해시 (BT-1c)
+#
+# 파일별 해시 = SHA-256(파일 바이트).
+# set_sha256 = SHA-256( 아래 "<hex>  <name>" 줄들을 파일명 오름차순으로 늘어놓고
+#              각 줄 끝에 LF 를 붙인 바이트열 ). 주석 줄과 set_sha256 줄은 입력이 아니다.
+#
+# 이 세트는 canon 직렬화 세트(spec/vectors/canon)와 **다른 평면**이다. 저쪽은 바이트를
+# 어떻게 적는가를, 이쪽은 그 바이트 위의 로그 산술을 정한다. 한 매니페스트에 합치지
+# 않은 이유는 그것들이 서로 다른 이유로 바뀌기 때문이다 — 합치면 한쪽 개정이 다른 쪽
+# 적합성 주장을 무효로 만든다.
+#
+# 생성: asvs/cmd/genmerklevec (내부 전용). 트리 크기 0..9 전수.
+#
+15dc1a2aa2ddc16e6a665c895e45a607bf3b0009ae7f3765e6ffe0b1ac8d2248  consistency.json
+e29b96a58c4d8fc269f050fd38331afe13e4d4c5c51444ef4230a894587e0e9f  inclusion.json
+fe1da3e56d618488ceda5cbb173c8f3bc65ea0c4a2668454a0d904134945607e  leaves.json
+4da278018e12b6fc507f15e1978a5c51e09a0874158f06c3c7056bef4a47d0eb  roots.json
+#
+set_sha256  b67f0bee29e86466f37a7b98cd345071a6db4b40a01eae50c897fe08e477aeb6

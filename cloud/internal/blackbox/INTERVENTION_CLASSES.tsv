@@ -1,0 +1,41 @@
+# INTERVENTION_CLASSES.tsv — blackbox record type → intervention class (EUC EC-3, D3)
+#
+# Machinery Regulation (EU) 2023/1230 Annex III 1.1.9 asks the machine to keep
+# "evidence of a legitimate or illegitimate intervention". The chain already
+# keeps every record; this table says, per record type, which kind of
+# intervention the record is evidence OF. It is read by the Go writer package
+# (go:embed, blackbox.ClassOf) and by the offline verifier's class summary;
+# tests/contract/test_intervention_classes.py checks it against records.go in
+# both directions (a type without a row, or a row without a type, is red).
+#
+# class vocabulary (closed):
+#   legitimate   an authorized intervention took effect (issued, accepted, granted)
+#   illegitimate an intervention was refused, or a forgery/violation was detected
+#   system       the chain's own bookkeeping — not an intervention by anyone
+#   by_payload   the record type carries both outcomes; the payload field named
+#                in `note` decides (PERMIT/OK → legitimate, BLOCK/ESTOP/failure → illegitimate)
+#
+# record_type<TAB>kind<TAB>class<TAB>note
+10	TOKEN_ISSUED	legitimate	an authorized action token was issued to a robot
+11	PLAN_ACCEPTED	legitimate	a plan passed policy and was accepted for issuance
+12	CONTEXT_SEALED	system	context bytes sealed beside the plan (evidence bookkeeping)
+13	PLAN_REJECTED	illegitimate	a plan was refused with a reject code (reject_code)
+20	GATE_DECISION	by_payload	verdict: PERMIT=legitimate · BLOCK/ESTOP=illegitimate
+21	CHAIN_REVOKED	system	authority withdrawn by the issuer (revocation, not an intervention)
+30	CHECKPOINT	system	signed checkpoint (v1)
+31	CHECKPOINT	system	signed checkpoint (v2)
+32	RECOVERY_TRUNCATE	system	declared cut of a torn tail at startup
+40	SAFE_STOP	illegitimate	NORMAL→SAFE_STOP on a reported forgery
+41	OPERATOR_EVENT	by_payload	outcome: unlock/revoke success=legitimate · failure=illegitimate attempt
+50	GRAPH_MUTATION	legitimate	authorized change of the site model
+51	CONTEXT_PROVENANCE	system	who delivered a context event (provenance)
+60	ATTESTATION	system	component measurement / build identification
+61	CONFIG_SEALED	system	deployment configuration seal
+70	LEASE_GRANTED	legitimate	edge lease granted to a robot
+71	LEASE_RECONCILED	system	lease reconciliation bookkeeping
+72	FLEET_CENSUS	system	fleet census
+73	LEASE_RETRACTED	system	issuer retracted an unused lease window
+80	HA_MEMBERSHIP	system	issuer HA membership / epoch
+90	IDENTITY_REFUSED	illegitimate	an unbound requester was refused
+100	CORE_OPERATION	system	core-comm prepared/result receipt; authority effect remains separately recorded
+101	CORE_REPORT	system	core-comm event storage/effect receipt; inspect payload for applied/rejected outcome

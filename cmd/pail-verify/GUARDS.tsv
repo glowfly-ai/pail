@@ -1,0 +1,79 @@
+# pail-verify 관문 등재부. main.go 가 거부하는 자리 전수와, 그 거부에 음성 대조군이
+# 있는지를 적는다.
+#
+# 왜 등재부인가. 2026-08-31 실측: 관문 39개를 하나씩 떼고 실린 테스트를 돌렸더니
+# **23개가 조용했다** — 통째로 지워도 초록이었다. 초록은 "관문이 산다"가 아니라
+# "관문의 생사를 아무도 재지 않는다"였고, 요약에서 둘은 같은 글자로 도착한다(H-B2).
+# 지금은 조용한 칸이 7이고 그 7은 전부 `shadowed` 로 사유가 적혀 있다.
+#
+# 「가려짐」은 그 자체로 관측점이 없으면 새로운 「통과」가 된다. 관문 A 를 떼도
+# 조용한 이유가 (a) 옆 관문 B 가 먼저 걸려서인지 (b) 아무도 그 경로를 안 지나서인지
+# 등재부만 봐서는 갈리지 않는다. 그래서 `shadowed` 행은 **반증 가능**해야 한다:
+# A 와 B 를 **함께** 떼면 붉어야 한다. 함께 떼도 조용하면 그 쌍은 가려진 것이
+# 아니라 그냥 안 덮인 것이고, 러너가 그 행을 붉힌다.
+#
+# 러너: spec/tools/spec_guards_check.py
+#   기본           정적 유도 — 앵커 유일성 · 증거 테스트 존재 · 가림 사슬 · 거부 자리 핀
+#   --mutate       실측 — covered 는 홀로 떼서 지목한 테스트가 붉는가,
+#                  shadowed 는 홀로 떼면 조용하고 짝과 함께 떼면 붉는가
+#
+# 칸: guard	status	evidence	what	old	new
+#   status    covered   홀로 떼면 evidence 의 테스트가 붉는다
+#             shadowed  홀로 떼면 조용하다. evidence 는 대신 걸리는 관문의 id
+#   old/new   main.go 에 심는 변형. old 는 파일 안에서 유일해야 한다.
+#             역슬래시 · 탭 · 줄바꿈은 \\ \t \n 으로 적는다.
+#
+# 행은 나가지 않는다. 관문을 지우면 행도 지우는 것이 아니라 그 관문이 왜 사라졌는지가
+# 리뷰에 걸려야 한다.
+#
+# 등재부는 자기가 아는 것만 지킨다 — 새로 심은 관문은 여기 없으므로 **무색**이고,
+# 무색인 칸은 요약에서 「통과」로 읽힌다. 그래서 등재부에 없는 관문의 출현 자체를
+# 재는 핀을 함께 둔다: main.go 에서 거부 자리(에러 생성 · 0 아닌 종료 반환 ·
+# stderr 출력)를 한 규칙으로 뽑아 정규화·정렬한 집합의 크기와 SHA-256 이다. 관문을
+# 더하거나 빼거나 거부 문구를 고치면 이 값이 달라지고, 사람이 등재부를 손보기
+# 전까지 붉는다. 수만 핀하면 하나 지우고 하나 더한 편집이 조용히 지나간다.
+#
+# refusal-sites: 77
+# refusal-digest: 4c6e22511100fd5f20fc30262fe833a50b4b189f63a9f9bebade327a620ddd63
+G01	covered	TestEmptyTrustRootRefuses	신뢰근 미설정 거부	if vkeyPath == "" || origin == "" {	if false {
+G02	shadowed	G03	빈 vkey 파일 거부	if line == "" {	if false {
+G03	covered	TestVkeyNeedsThreeFields	vkey 필드 수 3	if len(parts) != 3 {	if len(parts) < 1 {
+G04	shadowed	G08	hint 는 4 hex 바이트	if err != nil || len(hint) != 4 {	if false {
+G05	shadowed	G06	vkey 본체 base64	blob, err := base64.StdEncoding.DecodeString(keyB64)\n\tif err != nil {	blob, _ := base64.StdEncoding.DecodeString(keyB64)\n\tif false {
+G06	covered	TestVkeyBodyIsAlgorithmPlusKey	vkey 본체 길이	if len(blob) != 1+ed25519.PublicKeySize {	if false {
+G07	covered	TestVkeyAlgorithmIdIsEd25519Only	알고리즘 id 0x01	if blob[0] != 0x01 {	if false {
+G08	covered	TestVkeyHintIsRederived	hint 재유도 대조	if !bytes.Equal(sum[:4], hint) {	if false {
+G09	covered	TestVkeyBodyMayContainPlus	두 번만 자른다 (SplitN 3)	strings.SplitN(line, "+", 3)	strings.Split(line, "+")
+G10	covered	TestNoteWithoutBlankLineCannotBeVerified	본문/서명 구분선 존재	if cut < 0 {	if cut < -1 {
+G11	covered	TestCheckpointAuthenticates	서명 접두어는 em dash	const emDash = "— "	const emDash = "- "
+G12	covered	TestSignatureLineMustNameTheTrustedSigner	서명자 이름 대조	if len(f) != 2 || f[0] != tr.name {	if len(f) != 2 {
+G13	covered	TestShortSignatureBlobIsRefusedNotPanicked	서명 blob 길이	if err != nil || len(blob) != 4+ed25519.SignatureSize {	if err != nil {
+G14	covered	TestSignatureHintMustMatchTheTrustRoot	서명 hint 대조	if !bytes.Equal(blob[:4], tr.hint) {	if false {
+G15	covered	TestForgedSignatureRejected	ed25519 서명 확인	if ed25519.Verify(tr.pub, body, blob[4:]) {	if true {
+G16	covered	TestBytesAfterTheSignatureAreOutsideTheSignedSpan	서명 범위는 본문만	body := data[:cut+1]	body := data
+G17	shadowed	G41	본문 줄 수	if len(lines) < 4 {	if len(lines) < 1 {
+G18	covered	TestTruncatedNoteIsNotAZeroLengthRoot	루트는 32바이트	if len(root) != sha256.Size {	if false {
+G19	covered	TestOriginGateFiresAlone	origin 관문	if lines[0] != tr.origin {	if false {
+G20	covered	TestUnknownArgumentRefuses	모르는 인자 거부	if fs.NArg() > 0 {	if false {
+G21	covered	TestInclusionIndexMustBeInsideTheTree	잎 색인이 트리 안	if size == 0 || index >= size {	if false {
+G22	covered	TestInclusionProofDeeperThanTheTree	증명이 트리보다 깊다	return nil, errors.New("proof is longer than the tree is deep")	_ = sn
+G23	covered	TestInclusionProofShallowerThanTheTree	증명이 트리보다 얕다	return nil, errors.New("proof is shorter than the tree is deep")	return r, nil
+G24	covered	TestMerkleCorpusInclusion	포함증명 경계 접기	for fn%2 == 0 && fn != 0 {\n\t\t\t\tfn >>= 1\n\t\t\t\tsn >>= 1\n\t\t\t}\n\t\t} else {\n\t\t\tr = nodeHash(r, p)	} else {\n\t\t\tr = nodeHash(r, p)
+G25	covered	TestConsistencyRangeMustBeForwardAndNonEmpty	일관성 구간 방향	if from == 0 || from > to {	if false {
+G26	covered	TestSelfConsistencyCarriesNoHashes	자기일관성 증명은 빈다	if len(proof) != 0 {	if false {
+G27	covered	TestSelfConsistencySameSizeMustAgreeOnTheRoot	같은 크기 같은 루트	if !bytes.Equal(rootFrom, rootTo) {	if false {
+G28	covered	TestMerkleCorpusConsistency	거듭제곱 씨앗 선택	if from&(from-1) == 0 {	if false {
+G29	shadowed	G30	유도된 from 루트 대조	if !bytes.Equal(fr, rootFrom) {	if false {
+G30	covered	TestConsistencyPowerOfTwoTrap	유도된 to 루트 대조	if !bytes.Equal(sr, rootTo) {	if false {
+G31	covered	TestHistoricalSizeCannotBeVerifiedFromTheLatestCheckpoint	증명 크기 == 체크포인트	if r.TreeSize != cp.size {	if false {
+G32	covered	TestEchoedRootIsNotTrusted	메아리 루트 대조	} else if r.RootB64 != b64(cp.root) {	} else if false {
+G33	covered	TestEchoedRootIsNotTrusted	포함 유도 루트 대조	if !bytes.Equal(derived, cp.root) {\n\t\tfmt.Printf("inclusion   FAIL derived	if false {\n\t\tfmt.Printf("inclusion   FAIL derived
+G34	covered	TestConsistencyRangeMustMatchTheAuthenticatedNotes	일관성 구간 == 두 노트	if from.size != r.From || cp.size != r.To {	if false {
+G35	shadowed	G40	-leaf 필수	if leafPath == "" {	if false {
+G36	covered	TestBundleEntrySizeMustMatchTheCheckpoint	번들 항목 크기 대조	if e.STHTreeSize != cp.size {	if false {
+G37	covered	TestBundleIsUsedOnlyAsTransport	번들 유도 루트 대조	if !bytes.Equal(derived, cp.root) {\n\t\t\tfmt.Printf("bundle      FAIL derived	if false {\n\t\t\tfmt.Printf("bundle      FAIL derived
+G38	covered	TestProofHashesMustBeSHA256Wide	증명 해시 32바이트	if len(b) != sha256.Size {	if false {
+G39	covered	TestBundleWithoutAProofForTheLeafCannotVerify	번들에 해당 잎 없음	fmt.Fprintf(os.Stderr, "CANNOT-VERIFY: the bundle carries no inclusion proof for "+\n\t\t"leaf %d — absent evidence is not evidence of presence\\n", index)\n\treturn exitCannot	return exitVerified
+G40	covered	TestBundleLeafMustBeReadable	잎 파일 읽기 실패	if err != nil {\n\t\tfmt.Fprintf(os.Stderr, "CANNOT-VERIFY: leaf: %v\\n", err)	if false {\n\t\tfmt.Fprintf(os.Stderr, "CANNOT-VERIFY: leaf: %v\\n", err)
+G41	covered	TestTreeSizeMustBeDecimal	트리 크기는 십진수	if err != nil {\n\t\treturn nil, fmt.Errorf("%w: tree size %q", errMalformed, lines[1])	if false {\n\t\treturn nil, fmt.Errorf("%w: tree size %q", errMalformed, lines[1])
+G42	shadowed	G18	루트는 base64	if err != nil {\n\t\treturn nil, fmt.Errorf("%w: root: %v", errMalformed, err)	if false {\n\t\treturn nil, fmt.Errorf("%w: root: %v", errMalformed, err)

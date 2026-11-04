@@ -1,0 +1,48 @@
+# gitleaks 설정 — 1층 비밀 스캐너 
+#
+# 2층(`scripts/gen_known_dev_keys.py`, `tests/tools/keymat.py`)과 역할이 다르다.
+# 2층은 우리 지문 목록을 알고 base64 를 ed25519 seed 로 해석해 공개키를 파생한다 —
+# 결정적이고 오탐 0 이다. 1층은 우리가 모르는 형식의 자격증명을 휴리스틱으로 본다.
+#
+# 실측(2026-08-17, gitleaks v8.30.1)으로 둘이 서로를 덮지 않는 것이 확인됐다.
+# 합성 키 셋을 심고 각 층을 따로 잰 결과:
+#
+#   PEM 개인키 블록      1층 O (private-key)   2층 X (ed25519 seed 가 아니면 ② 에서 떨어진다)
+#   note 형식 서명키     1층 X (기본 규칙 없음)  2층 O (bound)
+#
+# 그래서 note 규칙을 여기 더한다. **한 층이 다른 층을 덮는다고 가정하면 두 층을 둔
+# 이유가 사라진다** — 덮지 않는다는 것이 위 표다.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "pail-note-private-key"
+description = "sumdb/note 형식 개인키 (golang.org/x/mod/sumdb/note). 앵커 로그 서명자가 이 형식이다"
+# `<이름>+<8 hex keyHash>+<base64(알고리즘바이트 ‖ 32바이트 seed)>`.
+# 접두어만으로는 잡지 않는다 — 문서가 형식을 설명하는 것과 키를 싣는 것을 가른다.
+regex = '''PRIVATE\+KEY\+[A-Za-z0-9._@\-]+\+[0-9a-f]{8}\+[A-Za-z0-9+/]{40,}={0,2}'''
+keywords = ["PRIVATE+KEY+"]
+entropy = 3.5
+
+[rules.allowlist]
+# 형식을 설명하는 자리표시자는 키가 아니다. `<b64>` 같은 꺾쇠 자리표시자는 위 정규식의
+# base64 부분에 애초에 걸리지 않지만, 문서가 자리표시자로 8hex 를 흉내 낼 수 있다.
+regexes = ['''PRIVATE\+KEY\+<''', '''\+<b64>''', '''\+<seed[^>]*>''']
+
+[allowlist]
+description = "SGH-2 fixture journal: an issuer-written blackbox segment shipped with cmd/pail-recompute so its tests have a real ledger. Its token_id/token_hash_hex values are UUIDs and SHA-256 digests of test tokens, not credentials — the 2nd layer (keymat) still scans these bytes for key material."
+paths = ['''cmd/pail-recompute/testdata/fixture1/journal/pail_blackbox\.[0-9]+\.seg$''']
+# go.sum checksum lines. gitleaks' own default config allowlists go.sum by *path*; the P4
+# publication-history rehearsal scans `git log -p` text, where the path is gone and a line
+# such as `modernc.org/token v1.1.0 h1:Xl7…=` matched generic-api-key (rc21, 2026-09-23,
+# after `go mod tidy` under Go 1.21 added the module's test dependencies). An `h1:` value is
+# a public SHA-256 module checksum, not a credential. The 2nd layer still scans these bytes.
+regexTarget = "line"
+regexes = ['''(?:^|\s)h1:[A-Za-z0-9+/]{43}=\s*$''',
+# cmd/pail_verify/testdata (0.2.0-preview.42): the verifier fixture's golden stdout and cases.json carry the SHA-256
+# FINGERPRINT of a TEST-ONLY Ed25519 public key (`SIGNATURE: VERIFIED key=<64 hex>`, `"test_key_fingerprint"`), the
+# same value RELEASE.md prints for the real key — a public digest, not a credential. generic-api-key matched the
+# `key=<hex>` shape. The 2nd layer (keymat) still scans these bytes.
+'''(?:^|\n)SIGNATURE: (?:VERIFIED|BAD SIGNATURE|KEY MISMATCH) key=[0-9a-f]{64}''',   # gitleaks' line target keeps the leading newline
+'''"test_key_fingerprint": "[0-9a-f]{64}"''']

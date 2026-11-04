@@ -1,0 +1,5 @@
+EVALUATION_VERIFY: PASS files=7
+SIGNATURE: VERIFIED key=82e829e6ef61aba2a3c09903fdf7019972c7a4d2e49d2faa4ca201ef13e4d1bb with pail_verify
+VERIFIER: this is the bundled verifier (pail_verify)
+PUBLISHER_KEY: MATCHED_SUPPLIED_FINGERPRINT — the recipient must establish its independent provenance
+TREE: not compared (no images.lock.json beside the tree root; run from the extracted pail-evaluation/ directory to compare)

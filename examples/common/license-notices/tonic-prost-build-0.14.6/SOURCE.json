@@ -1,0 +1,9 @@
+{
+  "package": "tonic-prost-build",
+  "version": "0.14.6",
+  "source_url": "https://raw.githubusercontent.com/hyperium/tonic/6cb6056b5a748bc5a29bd48f4602dbc4e552bb7d/LICENSE",
+  "upstream_commit": "6cb6056b5a748bc5a29bd48f4602dbc4e552bb7d",
+  "crate_sha256": "654e5643eff75d7f8c99197ce1440ed19a3474eada74c12bbac488b2cafdae27",
+  "license_sha256": "e24a56698aa6feaf3a02272b3624f9dc255d982970c5ed97ac4525a95056a5b3",
+  "reason": "Published crate omits workspace-root license; retrieved from the exact crate VCS commit."
+}

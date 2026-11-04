@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Software-only sample, version 2 budget, robots upload their observations to the collector
+# over TLS (observation_path: push). Use a new deployment UUID for a separate installation.
+schema_version: 2
+deployment_id: a1f2636b-7041-4121-803e-ef5c9c253025
+profile: software-dev
+observation_path: push
+robots:
+  - {robot_id: robot-1, display_name: Microduck 1}
+  - {robot_id: robot-2, display_name: Microduck 2}
+budget:
+  shared: {cpus: 1.0, memory_mib: 1024}
+  per_robot: {cpus: 1.0, memory_mib: 768}
+  parallelism: 2

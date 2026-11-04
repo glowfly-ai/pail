@@ -1,0 +1,22 @@
+# CA-13 (SK-2, spec/ADAPTER_CONTRACT.md §4): a named skill whose DECLARED envelope — the
+# robot's own numbers for it (`robot.skills`: command twist, duration) — exceeds the token's
+# limit is BLOCKed, never clamped. The gate compares by GUARDRAILS.tsv name (sls.linear_mps);
+# the adapter measured nothing on the wire, it measured what the robot said the skill drives.
+# The rig adds `pail_dash` to the fake with a 1.5 m/s command (robot.setSkill before the
+# adapter connects; the built-ins are zero-command and keep [0,0,0]); the token's limit is
+# the policy's 1.0.
+version: 2.0
+name: adapter_skill_envelope_over_limit_blocks
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 4.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_skill: {skill: pail_dash, dur: 1.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_CONSTRAINT}}
+  # far side: the skill's own 1.5 m/s command never reaches the fake — judged from the robot's requested
+  # velocity, not from the adapter's self-report (an adapter that forwards and writes no gate log fails here)
+  - {t: 1.1, expect_drive_never: {linear_x: 1.5, within_ms: 1500}}
+expectations_global:
+  - audit_chain: PASS

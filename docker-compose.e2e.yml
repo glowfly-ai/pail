@@ -1,0 +1,179 @@
+# PAIL end-to-end stack (dev profile) — the runnable path for this tree.
+#
+# Driven by e2e/run_e2e.sh; see README "Try it" before running by hand.
+# The runner prepares per-run runtime config and sets PAIL_E2E_CONFIG.
+# Use the runner rather than provisioning or changing ownership in the checkout.
+#
+# This stack is DEV by declaration: it runs PAIL_PROFILE=dev with generated
+# dev keys. It exists to let you watch the full chain — issue, verify,
+# enforce, journal, anchor, verify the journal — on one host with no external
+# services. It is not a deployment profile.
+#
+# State lives under ${PAIL_E2E_STATE:-/tmp/pail-e2e} on the host:
+#   blackbox/  append-only journal segments
+#   anchor/    file anchor (PAIL_ANCHOR_DIR) — an external anchor service is
+#              deliberately out of scope here; the anchor agent treats the
+#              mounted directory as its anchor store.
+
+services:
+  # gRPC northbound (:50051) + token issuer + blackbox writer + anchor agent,
+  # run as cloud + robot-agent processes inside one container.
+  pail-services:
+    image: ${PAIL_E2E_SERVICES_IMAGE:?Load the pinned Issuer evaluation image}
+    pull_policy: never
+    command: [/usr/local/bin/pail_split_entrypoint.sh]
+    network_mode: host
+    volumes:
+      - ${PAIL_E2E_CONFIG:?Run e2e/run_e2e.sh to prepare isolated runtime config}:/etc/pail:ro
+      - ${PAIL_E2E_STATE:-/tmp/pail-e2e}/blackbox:/var/log/pail_blackbox
+      - ${PAIL_E2E_STATE:-/tmp/pail-e2e}/anchor:/var/lib/pail_anchor
+      - pail-uds:/var/run/pail
+      - pail-keyring-state:/var/lib/pail_keyring
+    environment:
+      - PAIL_PROFILE=${PAIL_PROFILE:-dev}
+      - PAIL_NORTHBOUND_PORT=${PAIL_NORTHBOUND_PORT:-50051}
+      - PAIL_CLOUD_PORT=${PAIL_CLOUD_PORT:-50061}
+      # Follows PAIL_CLOUD_PORT for the same reason as the token address below:
+      # move the port alone and the robot-agent dials whatever else happens to
+      # hold the old one. That failure arrives as "issuer unreachable", which
+      # reads like a local outage rather than a wrong peer.
+      - PAIL_CLOUD_ADDR=${PAIL_CLOUD_ADDR:-127.0.0.1:${PAIL_CLOUD_PORT:-50061}}
+      - PAIL_BURST_ADDR=${PAIL_BURST_ADDR:-127.0.0.1:46000}
+      - PAIL_ROBOT_ID=${PAIL_ROBOT_ID:-robot-1}
+      # Fingerprint -> robot_id registry, produced by scripts/sros2_provision.sh.
+      # Without it the identity interceptor refuses to start — there is no
+      # empty-value fallback.
+      - PAIL_ROBOT_REGISTRY=${PAIL_ROBOT_REGISTRY:-/etc/pail/robot_registry.yaml}
+      # Issuer signing backend: local keyfile by default; "vault" with the
+      # vault overlay (docker-compose.vault.yml).
+      - PAIL_SIGNER=${PAIL_SIGNER:-local}
+      # The binary has NO default key id — unset means refuse to start.
+      # Writing the dev value here is a declaration, not a fold: this file is
+      # the dev bring-up, and reading it tells you which key signs.
+      - PAIL_ISSUER_KEY_ID=${PAIL_ISSUER_KEY_ID:-dev-key-1}
+      - PAIL_ISSUER_KEYFILE=${PAIL_ISSUER_KEYFILE:-}
+      # Keyring trust path: this dev stack opts into the unsigned keyring
+      # EXPLICITLY. Production must use bundle mode (signed keyring_bundle.json
+      # + PAIL_ROOT_PUBKEY_FILE); e2e/run_e2e.sh --keyring bundle exercises it.
+      - PAIL_KEYRING_MODE=${PAIL_KEYRING_MODE:-unsigned-dev}
+      - PAIL_KEYRING=${PAIL_KEYRING:-}
+      - PAIL_ROOT_PUBKEY_FILE=${PAIL_ROOT_PUBKEY_FILE:-}
+      - PAIL_KEYRING_BUNDLE=${PAIL_KEYRING_BUNDLE:-}
+      # Rollback state (bundle mode only). The loader's default puts this next
+      # to the bundle, and the bundle arrives on the read-only /etc/pail mount
+      # — so the default would be unwritable, and an unwritable floor is an
+      # open rewind window. Both containers point at the same file on purpose:
+      # the issuer keeps the version floor there and the gate keeps the
+      # wall-clock floor, and each merges rather than overwrites.
+      - PAIL_KEYRING_STATE=${PAIL_KEYRING_STATE:-/var/lib/pail_keyring/keyring_bundle.state.json}
+      # Bundle validity ceiling (seconds). Required in bundle mode — unset is
+      # not "unlimited", it is a startup refusal.
+      - PAIL_KEYRING_MAX_LIFETIME_SEC=${PAIL_KEYRING_MAX_LIFETIME_SEC:-}
+      # How often the robot-agent pulls a new bundle from the cloud. Also
+      # required in bundle mode, and for the same reason: revocation reach is
+      # bundle lifetime PLUS this, so leaving it unset would claim a bound
+      # while one term of the sum was never chosen. 0 is the explicit "off"
+      # — see e2e/run_e2e.sh for why this demo declares it off.
+      - PAIL_KEYRING_POLL_SEC=${PAIL_KEYRING_POLL_SEC:-}
+      # Only read when pulling is on: how a placed bundle actually reaches the
+      # gate. Pulling with no way to apply is a bundle nobody loads.
+      - PAIL_GATE_RESTART_CMD=${PAIL_GATE_RESTART_CMD:-}
+      # gRPC control-plane auth: mTLS on by default; off is DEV ONLY and the
+      # server additionally requires the explicit plaintext ack.
+      - PAIL_GRPC_TLS=${PAIL_GRPC_TLS:-on}
+      - PAIL_GRPC_INSECURE_ACK=${PAIL_GRPC_INSECURE_ACK:-}
+      - PAIL_GRPC_UDS_PATH=${PAIL_GRPC_UDS_PATH:-}
+      # robot-agent dials upstream with its robot's cert. CLIENT in the name is
+      # not decoration: the robot-agent is also a northbound server, and a
+      # shared name would make the server present the robot certificate.
+      - PAIL_GRPC_CLIENT_CERT=${PAIL_GRPC_CLIENT_CERT:-/etc/pail/grpc_certs/robot-1/client.crt}
+      - PAIL_GRPC_CLIENT_KEY=${PAIL_GRPC_CLIENT_KEY:-/etc/pail/grpc_certs/robot-1/client.key}
+      # Anchor agent: DIR mode against the mounted state directory. Anchoring
+      # failure queues locally and never blocks issuance.
+      - PAIL_ANCHOR_URL=${PAIL_ANCHOR_URL:-}
+      - PAIL_ANCHOR_DIR=${PAIL_ANCHOR_DIR:-/var/lib/pail_anchor}
+      - PAIL_ANCHOR_INTERVAL_S=${PAIL_ANCHOR_INTERVAL_S:-}
+      - PAIL_ANCHOR_KEEPALIVE_S=${PAIL_ANCHOR_KEEPALIVE_S:-}
+      # Checkpoint cadence (default 1000 records). e2e/run_e2e.sh sets this
+      # low so a short demo run actually exercises CHECKPOINT signatures —
+      # a verify pass with 0 checkpoints never fired the signature check.
+      - PAIL_CHECKPOINT_EVERY_RECORDS=${PAIL_CHECKPOINT_EVERY_RECORDS:-}
+      # Vault signer wiring (only read when PAIL_SIGNER=vault).
+      - PAIL_VAULT_ADDR=${PAIL_VAULT_ADDR:-}
+      - PAIL_VAULT_KEY_NAME=${PAIL_VAULT_KEY_NAME:-}
+      - PAIL_VAULT_TOKEN_FILE=${PAIL_VAULT_TOKEN_FILE:-}
+      - PAIL_VAULT_TIMEOUT_MS=${PAIL_VAULT_TIMEOUT_MS:-}
+      # Standing context graph. Leave this empty and the issuer runs CG1, an
+      # ephemeral per-request graph: tokens still issue, but GetActiveToken then
+      # serves current_subgraph_hash EMPTY and the gate's world comparison is
+      # indeterminate rather than equal — which fails closed on every command.
+      # e2e/run_e2e.sh stages e2e/site_model.yaml into ./config for this.
+      - PAIL_SITE_MODEL=${PAIL_SITE_MODEL:-/etc/pail/site_model.yaml}
+
+  # PAIL ROS 2 gate node. Enforcement demo: publish to the gate's input topic
+  # and watch its output topic — motion only passes while a valid permit is
+  # alive (e2e/run_e2e.sh does exactly this).
+  pail-pep-gate:
+    image: ${PAIL_E2E_GATE_IMAGE:?Load the pinned Core gate image}
+    pull_policy: never
+    network_mode: host
+    # FastDDS uses shared-memory transport between same-host participants;
+    # without a shared IPC namespace cross-container topic data is silently
+    # dropped (discovery works, delivery fails).
+    ipc: host
+    volumes:
+      - ${PAIL_E2E_CONFIG:?Run e2e/run_e2e.sh to prepare isolated runtime config}:/etc/pail:ro
+      - ${PAIL_E2E_STATE:-/tmp/pail-e2e}/blackbox:/var/log/pail_blackbox
+      - pail-uds:/var/run/pail
+      - pail-keyring-state:/var/lib/pail_keyring
+    environment:
+      - PAIL_PROFILE=${PAIL_PROFILE:-dev}
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      # SROS2 on by default; requires config/sros2_keystore from
+      # scripts/sros2_provision.sh. Turning it off is DEV ONLY.
+      - ROS_SECURITY_ENABLE=${PAIL_ROS_SECURITY_ENABLE:-true}
+      - ROS_SECURITY_STRATEGY=${PAIL_ROS_SECURITY_STRATEGY:-Enforce}
+      - ROS_SECURITY_KEYSTORE=/etc/pail/sros2_keystore
+      - PAIL_GRPC_TLS=${PAIL_GRPC_TLS:-on}
+      - PAIL_GRPC_INSECURE_ACK=${PAIL_GRPC_INSECURE_ACK:-}
+      - PAIL_GRPC_UDS_PATH=${PAIL_GRPC_UDS_PATH:-}
+      # The gate dials the issuer as its robot; the flat client.crt has no
+      # registry entry, so the identity interceptor would refuse it.
+      - PAIL_GRPC_CERT=${PAIL_GATE_GRPC_CERT:-/etc/pail/grpc_certs/robot-1/client.crt}
+      - PAIL_GRPC_KEY=${PAIL_GATE_GRPC_KEY:-/etc/pail/grpc_certs/robot-1/client.key}
+      # grpc by default: this stack exists to show the real issue->enforce
+      # chain. notoken (block everything) and static are dev diagnostics.
+      - PAIL_TOKEN_PROVIDER_MODE=${PAIL_TOKEN_PROVIDER_MODE:-grpc}
+      - PAIL_STATIC_TARGET_OBJECT_ID=${PAIL_STATIC_TARGET_OBJECT_ID:-}
+      - PAIL_ROBOT_ID=${PAIL_ROBOT_ID:-robot-1}
+      - PAIL_KEYRING_MODE=${PAIL_KEYRING_MODE:-unsigned-dev}
+      - PAIL_ROOT_PUBKEY_FILE=${PAIL_ROOT_PUBKEY_FILE:-}
+      - PAIL_KEYRING_BUNDLE=${PAIL_KEYRING_BUNDLE:-}
+      # See pail-services: in bundle mode the gate exits 78 rather than start
+      # without a persisted wall-clock floor, so this must be writable.
+      - PAIL_KEYRING_STATE=${PAIL_KEYRING_STATE:-/var/lib/pail_keyring/keyring_bundle.state.json}
+      - PAIL_KEYRING_MAX_LIFETIME_SEC=${PAIL_KEYRING_MAX_LIFETIME_SEC:-}
+      # The two freshness windows live in the policy file
+      # (preconditions[].freshness_ms), not env — the gate refuses to start if
+      # the old env vars are set, because a value that silently does not reach
+      # the gate is worse than a refusal.
+      - PAIL_EVIDENCE_CONF_THRESHOLD=${PAIL_EVIDENCE_CONF_THRESHOLD:-0.90}
+      # Follows PAIL_NORTHBOUND_PORT: the port the issuer listens on and the
+      # address the gate dials are one fact in two variables, and a port
+      # override that moved only one of them would bring up a gate that talks
+      # to nothing — while still logging a clean startup.
+      - PAIL_TOKEN_SERVICE_ADDR=${PAIL_TOKEN_SERVICE_ADDR:-127.0.0.1:${PAIL_NORTHBOUND_PORT:-50051}}
+      - PAIL_PERMIT_RATE_HZ=${PAIL_PERMIT_RATE_HZ:-20}
+      - PAIL_PERMIT_RECHECK_MS=${PAIL_PERMIT_RECHECK_MS:-100}
+      - PAIL_PERMIT_DEADLINE_MS=${PAIL_PERMIT_DEADLINE_MS:-100}
+      - PAIL_CLOCK_SKEW_MS=${PAIL_CLOCK_SKEW_MS:-}
+      - PAIL_USE_SIM_TIME=${PAIL_USE_SIM_TIME:-}
+
+volumes:
+  # Shared socket dir for the optional gRPC UDS listener (gate <-> services).
+  pail-uds:
+  # Keyring bundle rollback state (version floor + wall-clock floor). Shared
+  # by both containers and deliberately NOT under ./config: the bundle is
+  # mounted read-only, and this is the one part of the trust path that has to
+  # be written back.
+  pail-keyring-state:

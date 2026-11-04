@@ -1,0 +1,57 @@
+# Gate session: state × event → next state, with the test that proves the row (request A1, started in 0.2.0-preview.24).
+# States are the gate's reported outcomes for the served chain: NO_TOKEN (no active permit), PERMIT (a step's permit is
+# live), BLOCK (refused with a reason), ESTOP (safety UNSAFE latched for the chain), FATAL_LATCHED (an ESTOP/fatal was
+# reported for the chain; the chain and token are refused until a new plan). Events are what the gate can observe.
+# `test` names a libpail_gate CTest (test_*.cpp in libpail_gate/test), a ROS gate-node test as `node:<name>` (pail_ws, not
+# in the public Core; checked where that tree exists), or `untested` — an untested row is a gap the next
+# candidate closes with a test generated from this table; the checker (spec/tools/spec_transitions_check.py) refuses a
+# cited test that does not exist and reports how many rows are untested. Every state × event pair must have a row.
+state	event	next	reason	test	note
+NO_TOKEN	token_issued	PERMIT	-	node:test_token_id_binding	a signed token for this chain and target activates a permit
+NO_TOKEN	command	BLOCK	ERR_NO_TOKEN	test_gate_two_doors	no permit, no motion
+NO_TOKEN	safety_unsafe	ESTOP	ERR_SAFETY_UNSAFE	node:test_safety_level	UNSAFE without a permit still stops the base
+NO_TOKEN	safety_ok	NO_TOKEN	-	node:test_safety_level	OK alone grants nothing
+NO_TOKEN	issuer_unreachable	NO_TOKEN	ERR_ISSUER_UNREACHABLE	untested	refusal reason only changes; no permit was held
+NO_TOKEN	issuer_resumed	NO_TOKEN	-	untested	nothing resumes without a new plan
+NO_TOKEN	clock_jump	NO_TOKEN	ERR_CLOCK_DRIFT	node:test_clock_warning_summary	a jump is reported even with no permit
+NO_TOKEN	gate_restart	NO_TOKEN	-	test_session_snapshot	the session starts empty
+NO_TOKEN	cancel	NO_TOKEN	-	untested	cancel of nothing is a no-op
+PERMIT	command	PERMIT	-	test_gate_two_doors	forwarded within the permit's envelope
+PERMIT	command_outside_envelope	BLOCK	ERR_CONSTRAINT	node:test_constraint_zero	the permit stays live; the command is refused
+PERMIT	token_expired	NO_TOKEN	ERR_EXPIRED	node:test_gate_deadman_seal	elapsed by the gate's monotonic clock, not the wall clock
+PERMIT	token_consumed	NO_TOKEN	ERR_TOKEN_CONSUMED	test_step_clock	a single-use step ends with its token
+PERMIT	cancel	NO_TOKEN	ERR_NO_TOKEN	untested	the next command is refused; the in-flight command is not re-driven (rc12 cancel-inflight)
+PERMIT	safety_unsafe	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	stop, latch the chain
+PERMIT	issuer_unreachable	PERMIT	-	untested	a live permit outlives the link until its own deadline (observed on the real base, P22-L2)
+PERMIT	new_plan_accepted	NO_TOKEN	CHAIN_SUPERSEDED	untested	the previous plan's unspent window is not served (P7-H1, covered by test-supersede in the evaluation bundle)
+PERMIT	clock_jump	BLOCK	ERR_CLOCK_DRIFT	test_step_clock_injection	the step ends; nothing is forwarded after the clock returns
+PERMIT	deadman_silence	BLOCK	ERR_DEADMAN	node:test_gate_deadman_seal	no fresh permit statement within the window
+PERMIT	key_revoked	BLOCK	ERR_REVOKED	test_key_revocation	the signing key is withdrawn; the permit dies with it
+PERMIT	gate_restart	NO_TOKEN	-	test_session_snapshot	a restart holds no permit
+BLOCK	token_issued	PERMIT	-	node:test_token_id_binding	a fresh valid token clears a reason-only block
+BLOCK	command	BLOCK	(same reason)	test_gate_two_doors	refusal repeats with its reason
+BLOCK	safety_unsafe	ESTOP	ERR_SAFETY_UNSAFE	node:test_safety_level	UNSAFE from any state stops the base
+BLOCK	issuer_unreachable	BLOCK	ERR_ISSUER_UNREACHABLE	untested	the reason names the link
+BLOCK	clock_jump	BLOCK	ERR_CLOCK_DRIFT	node:test_clock_warning_summary	-
+BLOCK	gate_restart	NO_TOKEN	-	test_session_snapshot	-
+ESTOP	safety_ok	FATAL_LATCHED	ERR_REVOKED fatal_latched	test_fatal_latch	OK releases the stop, never the chain (P15-H1)
+ESTOP	command	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	nothing is forwarded during ESTOP
+ESTOP	token_issued	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	a new token does not end an ESTOP
+ESTOP	issuer_unreachable	ESTOP	-	node:test_fatal_report_worker	the fatal report is retried until confirmed (P18-H1)
+ESTOP	issuer_resumed	ESTOP	-	node:test_fatal_report_worker	the queued report is delivered once
+ESTOP	gate_restart	NO_TOKEN	-	untested	a restart during ESTOP: the agent's fatal attribution survives, the gate session does not (preview.25: generated test)
+FATAL_LATCHED	command	BLOCK	ERR_REVOKED fatal_latched	test_fatal_latch	the chain is refused until a new plan
+FATAL_LATCHED	token_issued_same_chain	BLOCK	ERR_REVOKED fatal_latched	test_fatal_latch	same chain, same answer
+FATAL_LATCHED	new_plan_accepted	NO_TOKEN	-	untested	a new chain starts clean (covered by the TB3 scene 8 judge, not by a unit test)
+FATAL_LATCHED	safety_unsafe	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	-
+FATAL_LATCHED	gate_restart	NO_TOKEN	-	untested	preview.25: generated test
+NO_TOKEN	gate_duplicate	NO_TOKEN	-	untested	a second gate node for the same robot id is neither refused nor reported (preview.24 evaluation P24-N3); fail-closed held under permit/outage injection with two gates; refuse-or-warn is an open decision
+PERMIT	gate_duplicate	PERMIT	-	untested	as above; the duplicate starts with no chain and asserts stop_request (robot-wide revocation) until it learns one
+BLOCK	gate_duplicate	BLOCK	-	untested	as above
+ESTOP	gate_duplicate	ESTOP	-	untested	as above
+FATAL_LATCHED	gate_duplicate	FATAL_LATCHED	-	untested	as above
+NO_TOKEN	agent_restart	NO_TOKEN	-	untested	the robot agent process dies and restarts (preview.25 evaluation P25-M2); nothing was pending
+PERMIT	agent_restart	BLOCK	ERR_ISSUER_UNREACHABLE	untested	the gate's next token request fails until the agent is back; the live permit runs to its own deadline
+ESTOP	agent_restart	ESTOP	-	untested	the fatal report is written ahead by the agent before its upstream attempt and re-queued by the next run (examples/tb3/hardware/fault_inject.py --mode agent-crash: the Issuer must record the ESTOP after the crash)
+FATAL_LATCHED	agent_restart	FATAL_LATCHED	ERR_REVOKED fatal_latched	untested	the gate's latch is local; the Issuer's revocation comes from the replayed report
+BLOCK	agent_restart	BLOCK	ERR_ISSUER_UNREACHABLE	untested	-

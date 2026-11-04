@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PVS test-rig SROS2 policy . Provisioned ON TOP OF the SUT
+  keystore (config/sros2_policy.xml) so the mock rig can participate under Enforce
+  while the SUT's own DDS access-control stays untouched.
+
+  Two principals:
+
+  /pvs_rig  — the mock AI/HAL/safety adapter + boundary monitor (one test-rig
+              enclave for convenience; in production these are separate OEM
+              principals). It may INJECT on the AI/evidence/safety planes and may
+              OBSERVE the gate verdict and, critically, /drive_cmd_vel — the v2
+              verdict 정본. It is deliberately NOT granted subscribe on
+              /safe_cmd_vel: the boundary monitor must be blind to /safe_cmd_vel
+              so that "rogue payload never reached the wheels" is proven at
+              /drive_cmd_vel (the only topic the drive stack obeys), never faked
+              by watching an upstream topic it has no right to see (§5.3).
+
+  /pvs_rogue — the underprivileged attacker. It boots WITH a valid enclave but
+              its permissions grant nothing useful, so an attempt to publish
+              /safe_cmd_vel or /pail/permit is DENIED at the DDS layer (participant
+              starts, publish is refused). The complementary "no keystore at all"
+              attack (participant creation itself rejected) needs no enclave and
+              is driven by pointing the rogue at an empty keystore.
+-->
+<policy version="0.2.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <enclaves>
+
+    <enclave path="/pvs_rig">
+      <profiles>
+        <profile ns="/" node="pvs_rig">
+          <topics publish="ALLOW">
+            <topic>cmd_vel</topic>
+            <topic>pail/evidence</topic>
+            <topic>pail/safety_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+            <!-- C3-C2/C3-C3 : the rig plays the simulator —
+                 it feeds /clock and then STOPS it, to prove held tokens still
+                 expire and the bridge watchdog still trips on system_clock.
+                 The rig is the only enclave allowed to publish time; the gate
+                 and bridge may only subscribe. -->
+            <topic>clock</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>drive_cmd_vel</topic>
+            <topic>pail/gate_state</topic>
+            <topic>pail/bridge_state</topic>
+            <topic>pail/permit</topic>
+            <topic>pail/stop_request</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW" request="ALLOW">
+            <service>/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <enclave path="/pvs_rogue">
+      <profiles>
+        <profile ns="/" node="pvs_rogue">
+          <topics publish="ALLOW">
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>parameter_events</topic>
+          </topics>
+        </profile>
+      </profiles>
+    </enclave>
+
+  </enclaves>
+</policy>

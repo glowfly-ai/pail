@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+
+syntax = "proto3";
+
+package pail.agent.v1;
+
+option go_package = "github.com/glowfly/pail/services/proto/agentv1";
+
+// AgentRelay (D1, 배치형상 §7.3): cloud-services -> robot-agent beacon relay.
+//
+// Burst UDP packets must originate from the robot side with a single
+// burst_seq counter (receivers deduplicate on the global seq). The cloud
+// therefore never sends UDP itself; it emits BeaconEvents on this
+// robot-initiated stream (NAT-friendly) and the robot-agent signs and
+// transmits the 120B burst v2 packets.
+service AgentRelay {
+  rpc SubscribeBeacons(SubscribeBeaconsRequest) returns (stream BeaconEvent);
+
+  // KM2-2 (KM LLD §7.1): the robot-agent pulls the signed keyring bundle over
+  // this channel. The transport is NOT a trust source — the cloud serves the
+  // bundle as an opaque static file (the root key is offline; the cloud cannot
+  // sign), and the robot side accepts it only after verifying the root ed25519
+  // signature over the exact payload bytes.
+  rpc GetKeyringBundle(GetKeyringBundleRequest) returns (GetKeyringBundleResponse);
+}
+
+message SubscribeBeaconsRequest {
+  string robot_id = 1;
+}
+
+message BeaconEvent {
+  uint32 event = 1;         // burst v2 event code (BLOCK/CHAIN_REVOKED/ESTOP/CHECKPOINT)
+  uint32 reason = 2;        // uint16 reason code
+  uint64 unix_ms = 3;
+  string robot_id = 4;
+  // Correlation hint only, NOT an identity claim: derived from the unsigned
+  // envelope field token_id. Receivers must not equate tokens by this value
+  // nor use it in an authorization decision . Token identity
+  // is consumption_key over signed bytes .
+  //
+  // [implementation contract] These 16 bytes carry THREE kinds of value. The field name
+  // says "token" but that is only one of them; the `event` code is what says
+  // which one arrived, and this field is NOT renamed because renaming it would
+  // change the wire contract.
+  //
+  //   event           value                    derivation
+  //   BLOCK, ESTOP    token hash               sha256(token_id)[:16]
+  //   CHAIN_REVOKED   token hash OR chain hash sha256(token_id)[:16]  ..or..
+  //                                            sha256("pail-burstchain:v1:" + chain_id)[:16]
+  //   CHECKPOINT      head_hash[:16]           truncation, not a hash
+  //
+  // CHAIN_REVOKED is emitted from more than one site and carries either kind,
+  // so its event code alone does not disambiguate. The two hash derivations are
+  // deliberately different, so a receiver holding a candidate id can test which
+  // derivation reproduces the bytes. It cannot classify the value by itself.
+  bytes token_hash16 = 5;   // see the table above; historical comment: sha256(token_id)[:16]
+}
+
+message GetKeyringBundleRequest {
+  string robot_id = 1;
+}
+
+message GetKeyringBundleResponse {
+  // Raw signed-bundle bytes exactly as stored on the cloud (BundleEnvelope
+  // JSON). Authenticity comes solely from the root signature inside.
+  bytes bundle = 1;
+}

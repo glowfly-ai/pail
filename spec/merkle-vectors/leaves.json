@@ -1,0 +1,50 @@
+{
+  "leaf_prefix": "pail-merkle-vector:",
+  "leaves": [
+    {
+      "index": 0,
+      "data": "pail-merkle-vector:0",
+      "leaf_hash": "40b7deebc2f81803101885048466500bf310719859ee5b241885940f08dad99d"
+    },
+    {
+      "index": 1,
+      "data": "pail-merkle-vector:1",
+      "leaf_hash": "ec7f4c366a9d01654078201c09056ef429fa097dc8b26fcb121a1c22cdab0b3f"
+    },
+    {
+      "index": 2,
+      "data": "pail-merkle-vector:2",
+      "leaf_hash": "2a6a2cedd03e2d0037b2ab63727611cdbb58ab60aaee9685aa4b3de9179d75e3"
+    },
+    {
+      "index": 3,
+      "data": "pail-merkle-vector:3",
+      "leaf_hash": "809821060e34c816d7488f0c00f80109b0b43bd26b6deeba0d9734bc43305ccc"
+    },
+    {
+      "index": 4,
+      "data": "pail-merkle-vector:4",
+      "leaf_hash": "9333a5dd822b95cc8507a7d095c21b5f2df595e11ca8bb5c8eecc13e34bf81fe"
+    },
+    {
+      "index": 5,
+      "data": "pail-merkle-vector:5",
+      "leaf_hash": "a0b1e01703c244a97c3a5ee6ec5c5bff58e55e40ecaa453a586efeee93ea9d57"
+    },
+    {
+      "index": 6,
+      "data": "pail-merkle-vector:6",
+      "leaf_hash": "dd60dfbddc4289944073db0393d942191325ac7941296f6814fc36acbf1c2361"
+    },
+    {
+      "index": 7,
+      "data": "pail-merkle-vector:7",
+      "leaf_hash": "ce4ded1ddbb6c720fb8362cad863d5b71715bcf964805a040898d625d967c2e1"
+    },
+    {
+      "index": 8,
+      "data": "pail-merkle-vector:8",
+      "leaf_hash": "b140f2b21a7a5f9a4c78dc26d2edcbed438db5ece2139872f0a1afdb05876d9d"
+    }
+  ]
+}

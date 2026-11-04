@@ -1,0 +1,248 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "target",
+    "platform",
+    "runtime",
+    "transport",
+    "endpoint",
+    "security",
+    "evidence",
+    "resources",
+    "sim"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 4
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "[a-z][a-z0-9-]{2,63}"
+    },
+    "target": {
+      "type": "string",
+      "enum": [
+        "isaac-sim"
+      ]
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arch",
+        "board",
+        "l4t_major",
+        "ros"
+      ],
+      "properties": {
+        "arch": {
+          "type": "string",
+          "enum": [
+            "x86_64"
+          ]
+        },
+        "board": {
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        "l4t_major": {
+          "type": "integer",
+          "enum": [
+            0
+          ]
+        },
+        "ros": {
+          "type": "string",
+          "enum": [
+            "humble"
+          ]
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "gpu"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "isaac-headless"
+          ]
+        },
+        "gpu": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "isolated-local-dds"
+      ]
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "model_timeout_ms"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "isaac-sdk"
+          ]
+        },
+        "model_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "strategy"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "const": true
+        },
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "Enforce"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hardware_verified",
+        "support_status"
+      ],
+      "properties": {
+        "hardware_verified": {
+          "type": "boolean",
+          "const": false
+        },
+        "support_status": {
+          "type": "string",
+          "enum": [
+            "UNVERIFIED"
+          ]
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min_state_free_bytes",
+        "min_host_available_memory_bytes",
+        "basis"
+      ],
+      "properties": {
+        "min_state_free_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1099511627776
+        },
+        "min_host_available_memory_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1099511627776
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "estimated"
+          ]
+        }
+      }
+    },
+    "sim": {
+      "type": "object",
+      "required": [
+        "image",
+        "version",
+        "asset_dir",
+        "assets_sha256",
+        "usd",
+        "wheel_joints",
+        "wheel_radius_um",
+        "wheel_base_um",
+        "eula_accepted"
+      ],
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "sha256:[0-9a-f]{64}"
+        },
+        "version": {
+          "type": "string",
+          "enum": [
+            "6.0.0",
+            "6.0.1"
+          ]
+        },
+        "asset_dir": {
+          "type": "string",
+          "pattern": "/[^\\x00]+"
+        },
+        "assets_sha256": {
+          "type": "string",
+          "pattern": "[0-9a-f]{64}"
+        },
+        "usd": {
+          "type": "string",
+          "pattern": "[A-Za-z0-9_./-]+\\.usd[ac]?"
+        },
+        "wheel_joints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "[A-Za-z_][A-Za-z0-9_]*"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "wheel_radius_um": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 1000000
+        },
+        "wheel_base_um": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 5000000
+        },
+        "eula_accepted": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

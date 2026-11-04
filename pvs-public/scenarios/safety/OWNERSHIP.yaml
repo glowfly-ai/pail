@@ -1,0 +1,13 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+axis: safety
+scenarios:
+  - id: sf01_unsafe_estop_revoke
+    owns: []
+    also_touched_by: [G-ENF-08]   # ERR_SAFETY_UNSAFE → ESTOP
+    future_refs: [G-ISS-07]       # 치명 보고로 체인 폐기 → 그 체인 토큰 전부 무효
+    delegated_to: null
+  - id: sf02_safety_stale_no_permit
+    owns: []
+    also_touched_by: [G-ENF-09]   # ERR_SAFETY_STALE — 침묵은 안전이 아니다
+    future_refs: []
+    delegated_to: null

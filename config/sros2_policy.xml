@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PAIL SROS2 access-control policy (HLD-v2 §2.1 matrix, M7).
+  Effect at DDS level: only pep_gate may publish /safe_cmd_vel, only
+  motion_bridge may publish /drive_cmd_vel, and the driver may subscribe
+  /drive_cmd_vel ONLY (no /cmd_vel, no /safe_cmd_vel bypass).
+  rosout/parameter_events and node-private parameter services are allowed
+  per profile so rclcpp nodes can start; everything else defaults to DENY.
+-->
+<policy version="0.2.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <enclaves>
+
+    <enclave path="/pep_gate">
+      <profiles>
+        <profile ns="/" node="pep_gate_node">
+          <topics publish="ALLOW">
+            <topic>safe_cmd_vel</topic>
+            <topic>pail/permit</topic>
+            <topic>pail/gate_state</topic>
+            <topic>pail/stop_request</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>cmd_vel</topic>
+            <topic>pail/evidence</topic>
+            <topic>pail/safety_state</topic>
+            <!-- D §7.6 (F-CPP-7, OB4 커밋18): the gate observes the bridge's
+                 reported deadman window to fill seal v2 key 27. Without this
+                 rule an Enforce deployment cannot start the gate at all
+                 (measured 2026-08-14: check_create_datareader denies
+                 rt/pail/bridge_state and the node dies before sealing).
+                 Subscribe only — the gate must not be able to impersonate
+                 the bridge's self-report. -->
+            <topic>pail/bridge_state</topic>
+            <topic>parameter_events</topic>
+            <!-- SD5 / C-B3 : simulation is a legitimate use;
+                 use_sim_time=true makes rclcpp create a /clock reader, and
+                 without this rule Fast-DDS denies the reader and the node dies
+                 before it can seal anything (measured 2026-08-12: segfault at
+                 check_create_datareader). Subscribe only — a gate that could
+                 PUBLISH time could feed itself. -->
+            <topic>clock</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <enclave path="/motion_bridge">
+      <profiles>
+        <profile ns="/" node="motion_bridge_node">
+          <topics publish="ALLOW">
+            <topic>drive_cmd_vel</topic>
+            <topic>pail/bridge_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>safe_cmd_vel</topic>
+            <topic>pail/permit</topic>
+            <topic>parameter_events</topic>
+            <!-- Same rule as pep_gate: subscribe only (C3-C3 runs the bridge
+                 under simulated time too). -->
+            <topic>clock</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- DB-2 (implementation contract D11): permit 생존 미러. **관측 전용**이다 — 게이트가
+         내는 두 토픽을 구독하고, 밖으로는 ROS 가 아니라 UDP 로 나간다.
+         publish 목록에 로봇을 움직일 수 있는 토픽이 하나도 없는 것이 이 enclave
+         의 요점이다: 화면을 위해 붙인 프로세스가 화면 밖의 권한을 갖지 않는다.
+
+         enclave 목록은 이 파일에서 유도된다(scripts/sros2_provision.sh). 여기
+         없으면 `ros2 security create_enclave` 가 돌지 않고, 그러면 컨테이너는
+         S3 로 기동을 거부한다 — 조용히 insecure 로 도는 경로는 없다. -->
+    <enclave path="/permit_mirror">
+      <profiles>
+        <profile ns="/" node="pail_permit_mirror">
+          <topics publish="ALLOW">
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>pail/permit</topic>
+            <topic>pail/gate_state</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- OEM planner: may command, may observe the gate verdict. Nothing else. -->
+    <enclave path="/oem_planner">
+      <profiles>
+        <profile ns="/" node="oem_planner">
+          <topics publish="ALLOW">
+            <topic>cmd_vel</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>pail/gate_state</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW" request="ALLOW">
+            <service>/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- OEM safety-layer adapter: feeds evidence/safety_state, receives stop_request (dual-stop path B). -->
+    <enclave path="/safety_adapter">
+      <profiles>
+        <profile ns="/" node="safety_adapter">
+          <topics publish="ALLOW">
+            <topic>pail/safety_state</topic>
+            <topic>pail/evidence</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>pail/stop_request</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW" request="ALLOW">
+            <service>/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- PAIL perception : publishes evidence ONLY. It must not be
+         able to command motion or to observe the drive topic — an RFID/vision
+         source that could publish cmd_vel would be a second command path.
+         BG (PAIL-BG-LLD-v1 §5.2): this enclave was missing while the perception
+         entrypoint already turned SROS2 on by default, so a secured deployment
+         could not start it at all (create_permission: unable to find enclave). -->
+    <enclave path="/perception">
+      <profiles>
+        <profile ns="/" node="pail_perception_evidence">
+          <topics publish="ALLOW">
+            <topic>pail/evidence</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- Drive stack: /drive_cmd_vel subscribe ONLY. The DDS-level seal that
+         prevents bypassing gate+bridge by subscribing /cmd_vel or /safe_cmd_vel.
+
+         B5-2 (실기브링업 절차서 §B5, 2026-08-21): 이 enclave 는 `node="driver"`
+         라는 존재하지 않는 노드 하나만 담고 있었다 — 실물 TB3 의 노드명은
+         turtlebot3_node / diff_drive_controller 다. 아래 목록은 문서에서 베낀 것이
+         아니라 보안 OFF 상태의 `ros2 node info` 실측(B5-1)에서 옮겼다. 문서의
+         목록을 코드로 옮기면 정책이 자기 목록만큼만 보는 채로 초록이 된다.
+
+         프로세스마다 enclave 를 나눈 이유: 생성되는 permissions.p7s 의 grant 는
+         **enclave 단위**이고 한 enclave 안의 프로파일들은 합집합이 된다. 넷을 한
+         enclave 에 두면 라이다·상태발행 프로세스까지 drive_cmd_vel 구독 권한을
+         갖는다 — 봉인이 깨지지는 않지만 최소권한은 조용히 사라진다.
+
+         turtlebot3_ros 프로세스 하나가 노드 둘(turtlebot3_node,
+         diff_drive_controller)을 만들므로 그 둘만 이 enclave 를 공유한다. -->
+    <enclave path="/driver">
+      <profiles>
+        <profile ns="/" node="turtlebot3_node">
+          <topics publish="ALLOW">
+            <topic>battery_state</topic>
+            <topic>imu</topic>
+            <topic>joint_states</topic>
+            <topic>magnetic_field</topic>
+            <topic>sensor_state</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <!-- 구독은 drive_cmd_vel 하나. cmd_vel / safe_cmd_vel 을 주지 않는 것이
+               이 정책의 존재 이유다 — 게이트와 브리지를 건너뛴 명령이 모터에
+               닿을 경로가 DDS 층에서 없어진다. -->
+          <topics subscribe="ALLOW">
+            <topic>drive_cmd_vel</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+            <service>motor_power</service>
+            <service>reset</service>
+            <service>sound</service>
+          </services>
+          <services request="ALLOW">
+            <service>~/*</service>
+            <service>reset_odometry</service>
+          </services>
+        </profile>
+        <profile ns="/" node="diff_drive_controller">
+          <topics publish="ALLOW">
+            <topic>odom</topic>
+            <topic>tf</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>imu</topic>
+            <topic>joint_states</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+            <service>reset_odometry</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- 상태 발행기: URDF 와 tf 만. 명령 경로에 아무 권한도 없다. -->
+    <enclave path="/robot_state_publisher">
+      <profiles>
+        <profile ns="/" node="robot_state_publisher">
+          <topics publish="ALLOW">
+            <topic>robot_description</topic>
+            <topic>tf</topic>
+            <topic>tf_static</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>joint_states</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+    <!-- LDS-01 라이다: /scan 발행 전용. 구독 권한 없음(파라미터 이벤트 제외). -->
+    <enclave path="/lds">
+      <profiles>
+        <profile ns="/" node="hlds_laser_publisher">
+          <topics publish="ALLOW">
+            <topic>scan</topic>
+            <topic>rosout</topic>
+            <topic>parameter_events</topic>
+          </topics>
+          <topics subscribe="ALLOW">
+            <topic>parameter_events</topic>
+          </topics>
+          <services reply="ALLOW">
+            <service>~/*</service>
+          </services>
+        </profile>
+      </profiles>
+    </enclave>
+
+  </enclaves>
+</policy>

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "profile_id": "mock-humble-v1",
+  "target": "mock",
+  "platform": {
+    "arch": "any",
+    "board": "none",
+    "l4t_major": 0,
+    "ros": "humble"
+  },
+  "runtime": {
+    "mode": "locked-evaluation",
+    "gpu": false
+  },
+  "transport": "isolated-local-dds",
+  "endpoint": {
+    "kind": "synthetic-reference",
+    "model_timeout_ms": 250
+  },
+  "security": {
+    "enabled": true,
+    "strategy": "Enforce"
+  },
+  "evidence": {
+    "hardware_verified": false,
+    "support_status": "UNVERIFIED"
+  }
+}

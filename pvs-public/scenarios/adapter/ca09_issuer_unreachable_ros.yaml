@@ -1,0 +1,21 @@
+# CA-09 on the ROS 2 gate node (ros2_pep_gate backend). Same case and expectation as
+# ca09_issuer_unreachable.yaml; the only difference is WHICH endpoint dies: the ROS gate dials
+# the issuer container (pail-services) directly on this rig, the socket adapter dials its seam.
+# Run with the gate pointed at the real issuer (PAIL_TOKEN_SERVICE_ADDR=127.0.0.1:50051) — behind
+# the rogue seam the seam would answer NO_TOKEN for a dead upstream and the case would be judged
+# by ERR_NO_TOKEN, a different rule.
+version: 2.0
+name: adapter_issuer_unreachable_fail_closed_ros
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 8.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 8.0}}
+  - {t: 1.2, expect_gate: {state: PERMIT, reason: OK}}
+  - {t: 1.2, expect_bridge: {state: FORWARDING}}
+  - {t: 2.0, fault: {kill: services, signal: 9}}
+  - {t: 2.2, expect_gate: {state: BLOCK, reason: ERR_ISSUER_UNREACHABLE, timeout: 4.0}}
+  - {t: 3.5, expect_bridge: {state: HOLD}}
+  - {t: 3.5, expect_drive_never: {linear_x: 0.2}}

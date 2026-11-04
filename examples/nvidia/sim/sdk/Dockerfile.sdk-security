@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Glowfly Identity Systems Co.,Ltd
+#
+# Step 2 of the Isaac Sim derivation used by the v4 profile. The Fast DDS bundled
+# with Isaac Sim 6.0.1's internal ROS 2 Humble libraries was built without
+# -DSECURITY=ON, so an SROS2 Enforce participant cannot be created
+# ("This Fast DDS version doesn't have the security libraries"). This recipe
+# overlays ONLY the security-capable Fast DDS, the two rmw_fastrtps libraries
+# and their direct dependency libtracetools from the matching PAIL ROS gate image
+# of the same release/architecture, together with their package notices.
+# Nothing falls back to a non-secure RMW: a missing library or a failed
+# authentication still ends the endpoint.
+#
+# Measured on Isaac Sim 6.0.1 amd64 with the PAIL gate image of 0.2.0-preview.13-amd64
+# and again with 0.2.0-preview.14-amd64 (identical result: the overlaid bytes did not
+# change; Fast DDS 2.6.12 over 2.6.10, Fast-CDR 1.0.29 on both sides). Same SONAME
+# series is not an ABI guarantee; rerun the Enforce probe after any change.
+#
+#   docker build --build-arg PAIL_GATE_IMAGE=pail/core-tb3-gate:<release>-amd64 \
+#                --build-arg ISAAC_READABLE=pail/isaac-sim:6.0.1-readable \
+#                -t pail/isaac-sim:6.0.1-security-candidate -f Dockerfile.sdk-security .
+ARG PAIL_GATE_IMAGE
+ARG ISAAC_READABLE
+FROM ${PAIL_GATE_IMAGE} AS secure_ros
+FROM ${ISAAC_READABLE}
+ARG PAIL_GATE_IMAGE
+ARG ISAAC_READABLE
+USER root
+COPY --from=secure_ros /opt/ros/humble/lib/libfastrtps.so.2.6.12 /isaac-sim/exts/isaacsim.ros2.core/humble/lib/
+COPY --from=secure_ros /opt/ros/humble/lib/librmw_fastrtps_cpp.so /isaac-sim/exts/isaacsim.ros2.core/humble/lib/
+COPY --from=secure_ros /opt/ros/humble/lib/librmw_fastrtps_shared_cpp.so /isaac-sim/exts/isaacsim.ros2.core/humble/lib/
+COPY --from=secure_ros /opt/ros/humble/lib/libtracetools.so /isaac-sim/exts/isaacsim.ros2.core/humble/lib/
+COPY --from=secure_ros /opt/ros/humble/share/fastrtps /opt/pail-ros-security-notices/fastrtps
+COPY --from=secure_ros /opt/ros/humble/share/rmw_fastrtps_cpp /opt/pail-ros-security-notices/rmw_fastrtps_cpp
+COPY --from=secure_ros /opt/ros/humble/share/rmw_fastrtps_shared_cpp /opt/pail-ros-security-notices/rmw_fastrtps_shared_cpp
+COPY --from=secure_ros /opt/ros/humble/share/tracetools /opt/pail-ros-security-notices/tracetools
+RUN cd /isaac-sim/exts/isaacsim.ros2.core/humble/lib && ln -sf libfastrtps.so.2.6.12 libfastrtps.so && ln -sf libfastrtps.so.2.6.12 libfastrtps.so.2.6
+LABEL org.pail.isaac.readable="${ISAAC_READABLE}" org.pail.isaac.security-overlay-from="${PAIL_GATE_IMAGE}" org.pail.isaac.step="security-candidate"
+USER isaac-sim

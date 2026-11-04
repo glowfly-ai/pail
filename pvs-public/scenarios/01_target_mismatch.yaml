@@ -1,0 +1,26 @@
+version: 0.1
+name: target_mismatch_blocks
+robot_id: robot-1
+
+timebase:
+  unit: sec
+
+northbound:
+  mode: plan
+  action_plan:
+    steps:
+      - step_id: s1
+        type: TWIST
+        target_object_id: "880123"
+        twist: {linear_x: 0.2, angular_z: 0.0, duration_sec: 2.0}
+
+steps:
+  - t: 0.5
+    inject_evidence:
+      source: BARCODE
+      object_id: "880456"
+      confidence: 0.95
+  - t: 1.0
+    expect_gate:
+      state: BLOCK
+      reason: ERR_TARGET_MISMATCH

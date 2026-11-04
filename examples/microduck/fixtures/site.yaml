@@ -1,0 +1,12 @@
+# Synthetic software-only site. No customer configuration or physical device.
+site: microduck-preview
+schema: v3
+zones:
+  - {id: bench, type: work_area, adjacent: []}
+objects:
+  - {id: box-12, at: bench}
+  - {id: "880123", at: bench}
+robots:
+  - {id: robot-1, robot_class: microduck, capabilities: [move], schema: v3, home: bench}
+policy:
+  unverified_targets: allow

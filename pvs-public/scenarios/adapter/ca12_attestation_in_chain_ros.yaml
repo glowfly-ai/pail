@@ -1,0 +1,11 @@
+# CA-12 on the ROS 2 gate node. The gate attests `pail-build:v1:pep_gate:<version>:<git>:<sbom>…`
+# (docker/entrypoints/pep_gate_entrypoint.sh, EC-2); the version and git tokens are the image's,
+# so the row pins the fixed prefix through the component name. An image whose entrypoint predates
+# EC-2 attests an empty build_info and this row is red (measured 2026-09-06 on pep_gate:dev of
+# 09-04 — the chain carried 668 ATTESTATION records with "build_info":"").
+version: 2.0
+name: adapter_attestation_in_chain_ros
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, expect_audit: {chain: PASS, contains: "pail-build:v1:pep_gate:"}}

@@ -1,0 +1,237 @@
+{
+  "reason": "Exact frozen vectors, deployment truth table and hash-pinned configuration-seal test fixtures. Not a directory-wide exemption.",
+  "frozen_files": [
+    {
+      "sha256": "888dc1a081d9430924c74b36d9c2fd3a868755f6e5cc4ae06715277c24108d48",
+      "path": "robot/pail_deploy_guard/test/guard_matrix.tsv"
+    },
+    {
+      "sha256": "4124d0a58bc16161772a1d1a373f95be4131fb3f696409b46eae83ac37074399",
+      "path": "spec/vectors/canon/MANIFEST.sha256"
+    },
+    {
+      "sha256": "fe6977e5fe7d01e19df5e35f232ba082af267caa9b91f851dbfffc7fc7c95325",
+      "path": "spec/vectors/canon/UNPINNED.tsv"
+    },
+    {
+      "sha256": "c47a58472bb2848e31c6952688fc261840b837dcd8137b5c432143b1b761e160",
+      "path": "spec/vectors/canon/alert_v2.vec"
+    },
+    {
+      "sha256": "0ba0ebb498614d534cda00969b7a9d30a8e077c3ebab8a83f0b80e1c4cee4198",
+      "path": "spec/vectors/canon/anchor_v2.vec"
+    },
+    {
+      "sha256": "e6637e12b0ade6ec10cddc8c34418403c8200722856e0dafba8bf20bdcfbea71",
+      "path": "spec/vectors/canon/checkpoint_v2.vec"
+    },
+    {
+      "sha256": "b1e6cf3d8db96a9399505dd6da5d976549b6d4aca9a14e553eaebd1c511267a6",
+      "path": "spec/vectors/canon/config_seal_v1.vec"
+    },
+    {
+      "sha256": "04444b9c1c2219600a375d72c6e46a2645926a3e4c1456331efcd22c3d1aba65",
+      "path": "spec/vectors/canon/config_seal_v2.vec"
+    },
+    {
+      "sha256": "40239566f8dcb1d47df92d1162a4108650749e459c0660c11221830c7da691c9",
+      "path": "spec/vectors/canon/config_seal_v3.vec"
+    },
+    {
+      "sha256": "f3fb7485a55662bca78bbcde974d3524b97933944bcfb42cc13e9e1ecfa3f588",
+      "path": "spec/vectors/canon/context_v1.vec"
+    },
+    {
+      "sha256": "c05403d91a2e01bcea1ba94dbd30c5bb3720cb03e8832c7f8d216f9d76de0ed8",
+      "path": "spec/vectors/canon/revoke_issuer_v2.vec"
+    },
+    {
+      "sha256": "138920e07df8d5c3ce911920006cda8237a89462fe3982fd5293e0e8f10a9eff",
+      "path": "spec/vectors/canon/saas_anchor_v2.vec"
+    },
+    {
+      "sha256": "938bf6661d8c0fe61ccd2c973c312ff8e6afc2c21df3ad185834a8d55a1a9cd9",
+      "path": "spec/vectors/canon/tokenkey_v1.vec"
+    },
+    {
+      "sha256": "5477d1a49828f9bcb5c9b79a9913b46c8c6dc58507dcca173880d7ba46b89b0b",
+      "path": "spec/vectors/canon/unlock_v2.vec"
+    },
+    {
+      "sha256": "c0c90de2206f5fcf39d0fd1e4fc14a5fe7fe4f01c7b30402aa283112789b6f84",
+      "path": "spec/vectors/canon/verdict_v3.vec"
+    },
+    {
+      "sha256": "0527e58a15e0eae96fe2062f6b812bb1ca3f5c42e2e22bbdbc5288faf20a795f",
+      "path": "spec/vectors/contract/MANIFEST.sha256"
+    },
+    {
+      "sha256": "25b06531b687458b08ee450b24bb1e553af7c541973a798538fec8d01be53434",
+      "path": "spec/vectors/contract/four_state.json"
+    },
+    {
+      "sha256": "2a40876e709fbc755e62a2599fdd1930c6dda0847c1418afbab729d98bf9c8d3",
+      "path": "spec/vectors/contract/ledger_v2.vec"
+    },
+    {
+      "sha256": "0ba662ac0a0f8ea4e33bfea76a5e8a32a0bd2c92a9b84d6a8b779537dc0f9c68",
+      "path": "spec/vectors/contract/proto_schema.vec"
+    },
+    {
+      "sha256": "6741d481df08fe70808bb823c215807e1783de8b158205346e0fad9d4ab05e01",
+      "path": "spec/vectors/contract/reason_dict.vec"
+    },
+    {
+      "sha256": "5d4d98709b594c0bbe49f11094cab249df13b4d0c997bc05ba32fda0a78a7746",
+      "path": "spec/vectors/contract/record_types.vec"
+    },
+    {
+      "sha256": "a200f73d1000adb4ea66b15f019359ee2c8991bca9debbf03b6cca4c8b2204f5",
+      "path": "spec/vectors/contract/ros_msgs.vec"
+    },
+    {
+      "sha256": "70b4aaf0ec9209bb4ec2da92d1dbf5613a136d108a9868cef00d2b3239541430",
+      "path": "spec/vectors/contract/verdict_states.json"
+    },
+    {
+      "sha256": "0810f323a4387110265b1d0f98080769cbd1ef50c7ddc7a02ba402fa596fad7f",
+      "path": "spec/vectors/perf/record_bytes.json"
+    },
+    {
+      "sha256": "714280219a8a94255b5548fb555b2fab392c14527c4da74797bc7c0c530dca38",
+      "path": "spec/vectors/perf/spec_instances.json"
+    },
+    {
+      "sha256": "9b260c8f8efd9443f841498d261cb3dd4c5189efbd00d3fffbd704ebfff472ff",
+      "path": "spec/vectors/token/canon.vec"
+    },
+    {
+      "sha256": "ba1ac9b585e7b0b0369dd93a363b44ee224d1b2b7e158775a5b6e8efccfd7b2a",
+      "path": "spec/vectors/token/tokens.vec"
+    },
+    {
+      "sha256": "369f48447fb4cde4a064e5302ef8c2fb5f5950b1e46936231bd1ad204472b4ae",
+      "path": "spec/proof-vectors/RESPONSES.tsv"
+    },
+    {
+      "sha256": "7f2551df3586cf299c5f8a9e844a2bd47af2401c477d19d2853a65f7fcda25ca",
+      "path": "spec/proof-vectors/checkpoint.note"
+    },
+    {
+      "sha256": "2bbef2e210c10c211b97aa96e4528a50cbd98a447b9bfaf94948b7d2824d9585",
+      "path": "spec/proof-vectors/checkpoint.vkey"
+    },
+    {
+      "sha256": "dc1629384146792223f69c84caee5dd2f28971b2f3ee8f9c4b97915a8b894650",
+      "path": "spec/proof-vectors/consistency_1_4.json"
+    },
+    {
+      "sha256": "84d60f8094fd503d79f2c68e2e0d4bd4380c52aa6563c5d044015ee40e285f00",
+      "path": "spec/proof-vectors/consistency_2_4.json"
+    },
+    {
+      "sha256": "5e7ec3fd20fd7299b2c5feb8a2568cb0f1e256ccf20a4383231dc23c5a39d322",
+      "path": "spec/proof-vectors/err_bad_leaf_index.json"
+    },
+    {
+      "sha256": "7549a97e2133e06117faea6a3ae9ef1662c93d066ffc02875abbb6bece9deaee",
+      "path": "spec/proof-vectors/err_bad_range.json"
+    },
+    {
+      "sha256": "7f923e23646e1db51b2e2fd56c6bfdec2fd31f7dc25f494018e7443b1fd92367",
+      "path": "spec/proof-vectors/err_bad_tree_size.json"
+    },
+    {
+      "sha256": "fc801cafecdcd0e4bce550a5c89038faba48e46719d4baa90139cf8a0d52f569",
+      "path": "spec/proof-vectors/err_extra_segment_cp.json"
+    },
+    {
+      "sha256": "714eb008f129c5a7541b8f0c07ecbe6af0e8271b52d4c4b0174923306002b10d",
+      "path": "spec/proof-vectors/err_leaf_out_of_range.json"
+    },
+    {
+      "sha256": "39e405056f33c347c58950f1f20c9fa674ef498926b7e777cf3e4b856869a167",
+      "path": "spec/proof-vectors/err_method_cp.json"
+    },
+    {
+      "sha256": "39e405056f33c347c58950f1f20c9fa674ef498926b7e777cf3e4b856869a167",
+      "path": "spec/proof-vectors/err_method_incl.json"
+    },
+    {
+      "sha256": "fc801cafecdcd0e4bce550a5c89038faba48e46719d4baa90139cf8a0d52f569",
+      "path": "spec/proof-vectors/err_no_tenant_cp.json"
+    },
+    {
+      "sha256": "fc801cafecdcd0e4bce550a5c89038faba48e46719d4baa90139cf8a0d52f569",
+      "path": "spec/proof-vectors/err_no_tenant_incl.json"
+    },
+    {
+      "sha256": "714eb008f129c5a7541b8f0c07ecbe6af0e8271b52d4c4b0174923306002b10d",
+      "path": "spec/proof-vectors/err_range_backwards.json"
+    },
+    {
+      "sha256": "714eb008f129c5a7541b8f0c07ecbe6af0e8271b52d4c4b0174923306002b10d",
+      "path": "spec/proof-vectors/err_range_from_zero.json"
+    },
+    {
+      "sha256": "714eb008f129c5a7541b8f0c07ecbe6af0e8271b52d4c4b0174923306002b10d",
+      "path": "spec/proof-vectors/err_tree_size_future.json"
+    },
+    {
+      "sha256": "1cbe465ca88132017ff74680dad1aa0e727a8621907099d3622471b103325e1b",
+      "path": "spec/proof-vectors/inclusion_size2_idx0.json"
+    },
+    {
+      "sha256": "507adbba1879eb66b123213e2db2a0a0e7b8f3f8e3200630cf3678eb66ca0c29",
+      "path": "spec/proof-vectors/inclusion_size4_idx0.json"
+    },
+    {
+      "sha256": "f7ad8ac8b1c6a999dc009a2f22df4c2eb538d76eb8bba463455b9208b7810e68",
+      "path": "spec/proof-vectors/inclusion_size4_idx3.json"
+    },
+    {
+      "sha256": "a59dd57b36ba76895eda6687752da9f20ccec5dba94f82c25651e88ca2dd58b1",
+      "path": "spec/merkle-vectors/MANIFEST.sha256"
+    },
+    {
+      "sha256": "15dc1a2aa2ddc16e6a665c895e45a607bf3b0009ae7f3765e6ffe0b1ac8d2248",
+      "path": "spec/merkle-vectors/consistency.json"
+    },
+    {
+      "sha256": "e29b96a58c4d8fc269f050fd38331afe13e4d4c5c51444ef4230a894587e0e9f",
+      "path": "spec/merkle-vectors/inclusion.json"
+    },
+    {
+      "sha256": "fe1da3e56d618488ceda5cbb173c8f3bc65ea0c4a2668454a0d904134945607e",
+      "path": "spec/merkle-vectors/leaves.json"
+    },
+    {
+      "sha256": "4da278018e12b6fc507f15e1978a5c51e09a0874158f06c3c7056bef4a47d0eb",
+      "path": "spec/merkle-vectors/roots.json"
+    },
+    {
+      "sha256": "c408c60d0359033c5be2f569a23c76536ad3ef858c1d0d05eafd7730c62e6836",
+      "path": "spec/subgraph-vectors/MANIFEST.sha256"
+    },
+    {
+      "sha256": "cd3d52f00fea04fe2308a8d5787306ea06c8dafc4efa604572857f5b7058d82d",
+      "path": "spec/subgraph-vectors/cases.json"
+    },
+    {
+      "sha256": "b56085bf0058c2ea04cc16da55f2f6bbc8ef20439ac6e1451328d962a4641d99",
+      "path": "spec/subgraph-vectors/selection.json"
+    },
+    {
+      "sha256": "4991709a961ac087753603c9a33f8552bfa56fd565cca6479854db2708074db1",
+      "path": "spec/subgraph-vectors/world.json"
+    },
+    {
+      "sha256": "d8e8c120a7b546b460e11d5a5eb88c93f80e8e8a3b04c651e1a9522e015fcf9f",
+      "path": "libpail_gate/test/fixtures/policy_min.yaml"
+    },
+    {
+      "sha256": "eecbd195fcbf95e59e21db462746992bea439e8d38a65349ca4a6c7fae1e0326",
+      "path": "libpail_gate/test/fixtures/policy_min_observe.yaml"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Glowfly Identity Systems Co.,Ltd
+#
+# Step 1 of the Isaac Sim derivation used by the v4 profile. The official image
+# installs /isaac-sim with mode 0750, which the isolated endpoint UID (11007)
+# cannot read. Only the top-level directory mode changes; the non-root
+# `isaac-sim` user, all file contents and the absence of write permission are
+# kept. The resulting image stays under NVIDIA's terms and is NOT redistributed
+# by PAIL: build it yourself from the pinned digest after reading the SDK EULA.
+#
+# Pinned upstream (Isaac Sim 6.0.1, measured 2026-10-15/16 on Brev L40S):
+#   index    nvcr.io/nvidia/isaac-sim@sha256:783444c706538aa76cf5126e911ddc5e618779e6105305ad4af4260362a30aa9
+#   amd64    nvcr.io/nvidia/isaac-sim@sha256:b1c542b2ecc549b3d1ebb78c25664aa3bacba1709e6ad8e0a68e09426d57dedb  (use this one)
+#   config   sha256:2d4ebfef053f740b634e30723e38ed736255f677553425ef35552437d74c3b21
+#
+#   docker login nvcr.io            # user: $oauthtoken, password: your NGC API key (masked prompt; never paste it into files)
+#   docker pull nvcr.io/nvidia/isaac-sim@sha256:b1c542b2ecc549b3d1ebb78c25664aa3bacba1709e6ad8e0a68e09426d57dedb
+#   docker build --build-arg ISAAC_BASE=nvcr.io/nvidia/isaac-sim@sha256:b1c542b2ecc549b3d1ebb78c25664aa3bacba1709e6ad8e0a68e09426d57dedb \
+#                -t pail/isaac-sim:6.0.1-readable -f Dockerfile.sdk-readable .
+#
+# The base reference is recorded as a label so a derived image can be traced afterwards.
+ARG ISAAC_BASE
+FROM ${ISAAC_BASE}
+ARG ISAAC_BASE
+USER root
+RUN chmod o+rx /isaac-sim
+LABEL org.pail.isaac.base="${ISAAC_BASE}" org.pail.isaac.step="readable"
+USER isaac-sim

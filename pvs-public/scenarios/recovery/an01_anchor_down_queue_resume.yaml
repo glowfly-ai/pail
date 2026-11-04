@@ -1,0 +1,32 @@
+version: 2.0
+name: anchor_down_queues_then_resumes
+robot_id: robot-1
+profile: insecure
+# The cloud anchor endpoint goes down. Anchoring must be non-blocking: token
+# issuance and gating continue locally while anchor records queue. When the
+# anchor server recovers, the queued records upload in order and the anchor head
+# matches the local blackbox head. fault {anchor: down|up} is driven by the mock
+# cloud lifecycle in the live backend (the AnchorServer is test-harness state,
+# not a SUT container), so this is a live scenario.
+#
+# EVENTUAL CONSISTENCY (live pre-validation finding, 2026-07-12): anchoring is
+# an async per-segment queue drain (interval PAIL_ANCHOR_INTERVAL_S=1s). The
+# anchor head can only match the local blackbox head once (a) no new segments
+# are being produced and (b) at least one drain interval has elapsed after
+# recovery. So drive activity ends by ~2.1s (cmd_vel dur 1.5, permit expires
+# with the 2.0s token), the anchor recovers at 2.5, and the head is asserted at
+# 4.5 — two drain intervals after recovery, against a quiesced local head.
+steps:
+  - {t: 0.0, fault: {anchor: down}}
+  - {t: 0.2, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 0.4, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 1.5}}   # drive ends ~2.1
+  # issuance/gating must keep working while the anchor is unreachable
+  - {t: 1.0, expect_gate: {state: PERMIT, reason: OK}}
+  - {t: 1.2, expect_drive: {linear_x: 0.2, tol: 0.02}}
+  - {t: 2.5, fault: {anchor: up}}                              # recover after quiesce
+  # after recovery, queued records drain in order → head matches the frozen local head
+  - {t: 4.5, expect_anchor: {head_matches: true}}
+expectations_global:
+  - audit_chain: PASS

@@ -1,0 +1,16 @@
+version: 2.0
+name: grpc_mode_not_built_blocks
+robot_id: robot-1
+# Requires a SUT build WITHOUT the pail_generated gRPC server (fail-closed:
+# a missing control plane must BLOCK, never default-permit). Live-only.
+# Against the normal grpc-enabled SUT this is a false test (it behaves like
+# fn01 and PERMITs) — run only with PVS_SUT_NO_GRPC=1 + a no-grpc gate build.
+requires_build: no_grpc
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 2.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_GRPC_DISABLED}}
+  - {t: 1.3, expect_drive_never: {linear_x: 0.2}}

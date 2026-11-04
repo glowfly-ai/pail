@@ -1,0 +1,1520 @@
+{
+  "cases": [
+    {
+      "id": "SEL-01",
+      "title": "agent only: its zone, executor, and the constraints on the agent and the zone",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "tb1",
+        "target_object_id": ""
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:human_excl@z7",
+          "constraint:payload@tb1",
+          "executor:tb1",
+          "robot:tb1",
+          "zone:z7"
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c534701000000000000000c00000005000000077a6f6e653a7a37040000000000000000000000000100000004747970650100000009776f726b5f6172656100000009726f626f743a74623101000000000000000003000000010000000c6361706162696c6974696573010000000a64726976652c6c6966740000000c6578656375746f723a746231020000000000000000000000000000000016636f6e73747261696e743a7061796c6f616440746231060000000000000000000000000200000005637479706501000000077061796c6f6164000000066d61785f6b6703403400000000000000000018636f6e73747261696e743a68756d616e5f6578636c407a370600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e0000000400000009726f626f743a74623101000000077a6f6e653a7a3700000009726f626f743a746231040000000c6578656375746f723a74623100000016636f6e73747261696e743a7061796c6f6164407462310300000009726f626f743a74623100000018636f6e73747261696e743a68756d616e5f6578636c407a3703000000077a6f6e653a7a37",
+      "sha256": "b6526a9f5fe3a9c3eac4be85d995f08e34e378c3650d5769000956ba7f5143ec"
+    },
+    {
+      "id": "SEL-02",
+      "title": "with a target object: the object, the synthetic TARGETS edge, and the object's zone — but not the humans in that zone",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "tb1",
+        "target_object_id": "box1"
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:human_excl@z7",
+          "constraint:payload@tb1",
+          "executor:tb1",
+          "object:box1",
+          "robot:tb1",
+          "zone:z7",
+          "zone:z8"
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 2,
+            "to": "object:box1"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c534701000000000000000c00000007000000077a6f6e653a7a37040000000000000000000000000100000004747970650100000009776f726b5f61726561000000077a6f6e653a7a38040000000000000000000000000100000004747970650100000004646f636b00000009726f626f743a74623101000000000000000003000000010000000c6361706162696c6974696573010000000a64726976652c6c6966740000000b6f626a6563743a626f78310300000000000000000100000001000000096578636c757369766504010000000c6578656375746f723a746231020000000000000000000000000000000016636f6e73747261696e743a7061796c6f616440746231060000000000000000000000000200000005637479706501000000077061796c6f6164000000066d61785f6b6703403400000000000000000018636f6e73747261696e743a68756d616e5f6578636c407a370600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e0000000600000009726f626f743a74623101000000077a6f6e653a7a3700000009726f626f743a746231020000000b6f626a6563743a626f783100000009726f626f743a746231040000000c6578656375746f723a7462310000000b6f626a6563743a626f783101000000077a6f6e653a7a3800000016636f6e73747261696e743a7061796c6f6164407462310300000009726f626f743a74623100000018636f6e73747261696e743a68756d616e5f6578636c407a3703000000077a6f6e653a7a37",
+      "sha256": "933fcc152c1fc10e892e36d98fa3971323d339dd960097b42d9efc4a0c76a0ae"
+    },
+    {
+      "id": "SEL-03",
+      "title": "a human in the agent's zone is selected, and Evaluate reports HUMAN_IN_ZONE",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "tb2",
+        "target_object_id": ""
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:human_excl@z8",
+          "executor:tb2",
+          "human:h1",
+          "robot:tb2",
+          "zone:z8"
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": true,
+        "reason": "HUMAN_IN_ZONE"
+      },
+      "canonical_hex": "5041494c534701000000000000000c00000005000000077a6f6e653a7a38040000000000000000000000000100000004747970650100000004646f636b0000000868756d616e3a6831050000000000000000000000000000000009726f626f743a74623201000000000000000000000000000000000c6578656375746f723a746232020000000000000000000000000000000018636f6e73747261696e743a68756d616e5f6578636c407a380600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e000000040000000868756d616e3a683101000000077a6f6e653a7a3800000009726f626f743a74623201000000077a6f6e653a7a3800000009726f626f743a746232040000000c6578656375746f723a74623200000018636f6e73747261696e743a68756d616e5f6578636c407a3803000000077a6f6e653a7a38",
+      "sha256": "a612f8990c6edab6ac67019bf3737cf767116dd1a67426a8d1c1ed8cb79fdc8c"
+    },
+    {
+      "id": "SEL-04",
+      "title": "unknown agent: nothing is selected (the issuer refuses with AGENT_NOT_IN_MODEL); the hash is still defined",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "ghost",
+        "target_object_id": ""
+      },
+      "selected": {
+        "node_ids": [],
+        "edges": []
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c534701000000000000000c0000000000000000",
+      "sha256": "ea1be4133baaf0faad6245abcabd8c3e93d7d789093fe8d08988d0e4e7215201"
+    },
+    {
+      "id": "SEL-05",
+      "title": "target object absent from the world: the TARGETS edge is still emitted, the node is not",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "tb1",
+        "target_object_id": "nowhere"
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:human_excl@z7",
+          "constraint:payload@tb1",
+          "executor:tb1",
+          "robot:tb1",
+          "zone:z7"
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 2,
+            "to": "object:nowhere"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c534701000000000000000c00000005000000077a6f6e653a7a37040000000000000000000000000100000004747970650100000009776f726b5f6172656100000009726f626f743a74623101000000000000000003000000010000000c6361706162696c6974696573010000000a64726976652c6c6966740000000c6578656375746f723a746231020000000000000000000000000000000016636f6e73747261696e743a7061796c6f616440746231060000000000000000000000000200000005637479706501000000077061796c6f6164000000066d61785f6b6703403400000000000000000018636f6e73747261696e743a68756d616e5f6578636c407a370600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e0000000500000009726f626f743a74623101000000077a6f6e653a7a3700000009726f626f743a746231020000000e6f626a6563743a6e6f776865726500000009726f626f743a746231040000000c6578656375746f723a74623100000016636f6e73747261696e743a7061796c6f6164407462310300000009726f626f743a74623100000018636f6e73747261696e743a68756d616e5f6578636c407a3703000000077a6f6e653a7a37",
+      "sha256": "1d2a27cc39534060dfa030b93d5e17ab61bca4e4b5994a5e9570342e1f9975b2"
+    },
+    {
+      "id": "SEL-06",
+      "title": "target object with no location: node and TARGETS edge only",
+      "mode": "site",
+      "world": {
+        "epoch": 12,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:payload@tb1",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "payload"
+              },
+              "max_kg": {
+                "t": "double",
+                "v": "20"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h1",
+            "kind": 5,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "dock"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "human:h1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 1,
+            "to": "zone:z8"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "tb1",
+        "target_object_id": "box2"
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:human_excl@z7",
+          "constraint:payload@tb1",
+          "executor:tb1",
+          "object:box2",
+          "robot:tb1",
+          "zone:z7"
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:payload@tb1",
+            "rel": 3,
+            "to": "robot:tb1"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 2,
+            "to": "object:box2"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c534701000000000000000c00000006000000077a6f6e653a7a37040000000000000000000000000100000004747970650100000009776f726b5f6172656100000009726f626f743a74623101000000000000000003000000010000000c6361706162696c6974696573010000000a64726976652c6c6966740000000b6f626a6563743a626f783203000000000000000000000000000000000c6578656375746f723a746231020000000000000000000000000000000016636f6e73747261696e743a7061796c6f616440746231060000000000000000000000000200000005637479706501000000077061796c6f6164000000066d61785f6b6703403400000000000000000018636f6e73747261696e743a68756d616e5f6578636c407a370600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e0000000500000009726f626f743a74623101000000077a6f6e653a7a3700000009726f626f743a746231020000000b6f626a6563743a626f783200000009726f626f743a746231040000000c6578656375746f723a74623100000016636f6e73747261696e743a7061796c6f6164407462310300000009726f626f743a74623100000018636f6e73747261696e743a68756d616e5f6578636c407a3703000000077a6f6e653a7a37",
+      "sha256": "6e1a810833864393194e810b063c5fedef09411995b6870c2613a3200d6f00fa"
+    },
+    {
+      "id": "SEL-EPH-01",
+      "title": "ephemeral world: linear limit only",
+      "mode": "ephemeral",
+      "ephemeral": {
+        "robot_id": "r1",
+        "target_object_id": "",
+        "max_linear_speed_mps": 0.5,
+        "max_angular_speed_rps": 0,
+        "max_duration_sec": 0
+      },
+      "world": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "constraint:speed@r1",
+            "kind": 6,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "max_linear_speed_mps": {
+                "t": "double",
+                "v": "0.5"
+              }
+            }
+          },
+          {
+            "id": "robot:r1",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:speed@r1",
+            "rel": 3,
+            "to": "robot:r1"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "r1",
+        "target_object_id": ""
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:speed@r1",
+          "robot:r1"
+        ],
+        "edges": [
+          {
+            "from": "constraint:speed@r1",
+            "rel": 3,
+            "to": "robot:r1"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c53470100000000000000000000000200000008726f626f743a7231010000000000000000010000000000000013636f6e73747261696e743a73706565644072310600000000000000000100000001000000146d61785f6c696e6561725f73706565645f6d7073033fe00000000000000000000100000013636f6e73747261696e743a73706565644072310300000008726f626f743a7231",
+      "sha256": "98437e04d30696643bb39575290f364e9542ce0a1870859a3cfa606e36122832"
+    },
+    {
+      "id": "SEL-EPH-02",
+      "title": "ephemeral world: target object and all three limits",
+      "mode": "ephemeral",
+      "ephemeral": {
+        "robot_id": "r1",
+        "target_object_id": "box",
+        "max_linear_speed_mps": 0.25,
+        "max_angular_speed_rps": 1.5,
+        "max_duration_sec": 6
+      },
+      "world": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "constraint:speed@r1",
+            "kind": 6,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "max_angular_speed_rps": {
+                "t": "double",
+                "v": "1.5"
+              },
+              "max_duration_sec": {
+                "t": "double",
+                "v": "6"
+              },
+              "max_linear_speed_mps": {
+                "t": "double",
+                "v": "0.25"
+              }
+            }
+          },
+          {
+            "id": "object:box",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "robot:r1",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:speed@r1",
+            "rel": 3,
+            "to": "robot:r1"
+          }
+        ]
+      },
+      "request": {
+        "robot_id": "r1",
+        "target_object_id": "box"
+      },
+      "selected": {
+        "node_ids": [
+          "constraint:speed@r1",
+          "object:box",
+          "robot:r1"
+        ],
+        "edges": [
+          {
+            "from": "constraint:speed@r1",
+            "rel": 3,
+            "to": "robot:r1"
+          },
+          {
+            "from": "robot:r1",
+            "rel": 2,
+            "to": "object:box"
+          }
+        ]
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c53470100000000000000000000000300000008726f626f743a723101000000000000000001000000000000000a6f626a6563743a626f78030000000000000000010000000000000013636f6e73747261696e743a73706565644072310600000000000000000100000003000000156d61785f616e67756c61725f73706565645f727073033ff8000000000000000000106d61785f6475726174696f6e5f736563034018000000000000000000146d61785f6c696e6561725f73706565645f6d7073033fd00000000000000000000200000008726f626f743a7231020000000a6f626a6563743a626f7800000013636f6e73747261696e743a73706565644072310300000008726f626f743a7231",
+      "sha256": "71eb26f5b6ce75867bcf5928f263e2f40354b5efe62a8262752c3f960b6243de"
+    },
+    {
+      "id": "SEL-EPH-03",
+      "title": "ephemeral world: no limits, no constraint node",
+      "mode": "ephemeral",
+      "ephemeral": {
+        "robot_id": "r1",
+        "target_object_id": "",
+        "max_linear_speed_mps": 0,
+        "max_angular_speed_rps": 0,
+        "max_duration_sec": 0
+      },
+      "world": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "robot:r1",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": []
+      },
+      "request": {
+        "robot_id": "r1",
+        "target_object_id": ""
+      },
+      "selected": {
+        "node_ids": [
+          "robot:r1"
+        ],
+        "edges": []
+      },
+      "evaluate": {
+        "violated": false,
+        "reason": ""
+      },
+      "canonical_hex": "5041494c53470100000000000000000000000100000008726f626f743a7231010000000000000000010000000000000000",
+      "sha256": "a5f65b8e077d0cba8b679ce3ea03113a8a761d942976d3a6eb7315d9655bc009"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+# Build-context allow list.
+#
+# Addition, not subtraction: exclude everything, then bring back only what the
+# Dockerfiles COPY. A deny list silently leaks every directory the repo grows
+# later — generated key material lives next to the code in this tree
+# (config/, and keystores users create), and a build context that carries it
+# hands it to the docker daemon even if no COPY line bakes it in.
+
+# ── Layer 1: exclude everything, then bring back ─────────────────────
+*
+!LICENSE
+!NOTICE
+
+!sdk/proto/
+# Standalone core conformance test input; never include the whole config/state tree.
+!spec/vectors/token/tokens.vec
+!robot/
+!libpail_gate/
+!examples/tb3/probe.go
+!cloud/
+!docker/entrypoints/
+!docker/pail_split_entrypoint.sh
+
+# Not scripts/ wholesale — key generators live there. _keymode.sh is the one
+# file the gate image COPYs (the run-time copy of the key-mode predicate).
+!scripts/_keymode.sh
+
+# Not config/ wholesale — keys, certs and keystores live there.
+!config/policy.yaml
+!config/site_model.example.yaml
+!config/sros2_policy.xml
+
+# ── Layer 2: re-exclude INSIDE the allowed paths ─────────────────────
+# Mostly redundant with the file-level allows above, kept because it also
+# covers mistakes like a keystore placed under robot/ — the two layers stop
+# different mistakes.
+**/keys/
+**/grpc_certs/
+**/sros2_keystore/
+**/*.pem
+**/*_ed25519*.json
+
+# Build artifacts and caches; install/ has been seen to hold keystore copies.
+**/build/
+**/install/
+**/log/
+**/__pycache__/
+**/.venv/

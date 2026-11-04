@@ -1,0 +1,30 @@
+version: 2.0
+name: operator_unlock_clears_safe_stop
+robot_id: robot-1
+profile: insecure
+# A forged token trips the operator guard NORMAL -> SAFE_STOP, which freezes
+# token issuance (IssuanceAllowed only in NORMAL). While frozen, a legitimate
+# plan cannot be served (ERR_NO_TOKEN). A verified Operator Unlock returns the
+# guard to NORMAL; a fresh valid plan then PERMITs and drives — recovery proven.
+#
+# FAIL-CLOSED ORDERING (live pre-validation finding, 2026-07-12): the gate
+# re-fetches + re-verifies the active token on EVERY cmd_vel, so an ongoing
+# forged stream emits an ERR_TAMPERED ReportDecision per sample. Each report
+# re-trips NORMAL->SAFE_STOP. Correctly, an Unlock cannot "stick" while the
+# attack is still live — the forged stream must be cut off FIRST, then unlock.
+# So the forged cmd_vel ends at 1.6 (well before the 2.0 unlock); recovery is
+# only observable once no further forgery reports are arriving.
+steps:
+  - {t: 0.0, north_cmd: submit_plan, token_variant: forge_signature, steps: [{step_id: s1,
+       type: TWIST, target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 1.0}}      # forged stream ends 1.6
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_TAMPERED}}   # SAFE_STOP entered
+  - {t: 2.0, operator_unlock: {key: op-key-1}}                    # attack stopped -> unlock sticks
+  # fresh legitimate plan after recovery
+  - {t: 2.5, north_cmd: submit_plan, steps: [{step_id: s2, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 2.8, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 3.0, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 2.0}}
+  - {t: 3.4, expect_gate: {state: PERMIT, reason: OK}}
+  - {t: 3.6, expect_drive: {linear_x: 0.2, tol: 0.02}}

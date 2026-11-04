@@ -1,0 +1,418 @@
+{
+  "cases": [
+    {
+      "id": "WLD-01",
+      "title": "compile a full declaration, then seven context events, then two requests",
+      "expect": "accept",
+      "site_yaml": "site: vector-site\nschema: \"3\"\nzones:\n  - id: z7\n    type: work_area\n    adjacent: [z9, z8]\n  - id: z8\n  - id: z9\n    type: corridor\nobjects:\n  - id: box1\n    at: z8\n  - id: box2\nrobots:\n  - id: tb1\n    home: z7\n    capabilities: [lift, drive]\n    schema: \"3\"\n    robot_class: tb3\n  - id: tb2\nconstraints:\n  - type: human_exclusion\n    zone: \"*\"\n  - type: exclusive\n    object: box1\nactions:\n  - name: go_to\n    classes: [MOVE]\npolicy:\n  unverified_targets: refuse\n",
+      "site": {
+        "actions": [
+          {
+            "classes": [
+              "MOVE"
+            ],
+            "name": "go_to"
+          }
+        ],
+        "constraints": [
+          {
+            "type": "human_exclusion",
+            "zone": "*"
+          },
+          {
+            "object": "box1",
+            "type": "exclusive"
+          }
+        ],
+        "objects": [
+          {
+            "at": "z8",
+            "id": "box1"
+          },
+          {
+            "id": "box2"
+          }
+        ],
+        "policy": {
+          "unverified_targets": "refuse"
+        },
+        "robots": [
+          {
+            "capabilities": [
+              "lift",
+              "drive"
+            ],
+            "home": "z7",
+            "id": "tb1",
+            "robot_class": "tb3",
+            "schema": "3"
+          },
+          {
+            "id": "tb2"
+          }
+        ],
+        "schema": "3",
+        "site": "vector-site",
+        "zones": [
+          {
+            "adjacent": [
+              "z9",
+              "z8"
+            ],
+            "id": "z7",
+            "type": "work_area"
+          },
+          {
+            "id": "z8"
+          },
+          {
+            "id": "z9",
+            "type": "corridor"
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "HUMAN_ENTER",
+          "node_id": "zone:z8",
+          "arg": "h1",
+          "epoch": 1,
+          "old_version": 0,
+          "new_version": 0
+        },
+        {
+          "kind": "HUMAN_ENTER",
+          "node_id": "zone:z8",
+          "arg": "h1",
+          "epoch": 2,
+          "old_version": 0,
+          "new_version": 1
+        },
+        {
+          "kind": "OBJECT_MOVE",
+          "node_id": "object:box1",
+          "arg": "z7",
+          "epoch": 3,
+          "old_version": 0,
+          "new_version": 1
+        },
+        {
+          "kind": "MAINTENANCE_ON",
+          "node_id": "robot:tb2",
+          "arg": "",
+          "epoch": 4,
+          "old_version": 0,
+          "new_version": 1
+        },
+        {
+          "kind": "HUMAN_LEAVE",
+          "node_id": "zone:z8",
+          "arg": "h1",
+          "epoch": 5,
+          "old_version": 1,
+          "new_version": 2
+        },
+        {
+          "kind": "CORDON_ON",
+          "node_id": "robot:tb1",
+          "arg": "",
+          "epoch": 6,
+          "old_version": 0,
+          "new_version": 1
+        },
+        {
+          "kind": "CORDON_OFF",
+          "node_id": "robot:tb1",
+          "arg": "",
+          "epoch": 7,
+          "old_version": 1,
+          "new_version": 2
+        }
+      ],
+      "graph": {
+        "epoch": 7,
+        "nodes": [
+          {
+            "id": "constraint:human_excl@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z8",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "constraint:human_excl@z9",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "executor:tb1",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "executor:tb2",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "object:box1",
+            "kind": 3,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "object:box2",
+            "kind": 3,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 2,
+            "attrs": {
+              "capabilities": {
+                "t": "string",
+                "v": "drive,lift"
+              },
+              "robot_class": {
+                "t": "string",
+                "v": "tb3"
+              },
+              "schema": {
+                "t": "string",
+                "v": "3"
+              }
+            }
+          },
+          {
+            "id": "robot:tb2",
+            "kind": 1,
+            "state": 1,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "adjacent": {
+                "t": "string",
+                "v": "z8,z9"
+              },
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          },
+          {
+            "id": "zone:z8",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z9",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "type": {
+                "t": "string",
+                "v": "corridor"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:human_excl@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "constraint:human_excl@z8",
+            "rel": 3,
+            "to": "zone:z8"
+          },
+          {
+            "from": "constraint:human_excl@z9",
+            "rel": 3,
+            "to": "zone:z9"
+          },
+          {
+            "from": "object:box1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 4,
+            "to": "executor:tb1"
+          },
+          {
+            "from": "robot:tb2",
+            "rel": 4,
+            "to": "executor:tb2"
+          }
+        ]
+      },
+      "graph_sha256": "104448dfd7810f059dc27366aab64cc7573e85385725326e657b287dd98708fc",
+      "requests": [
+        {
+          "robot_id": "tb1",
+          "target_object_id": "box1",
+          "node_ids": [
+            "constraint:human_excl@z7",
+            "executor:tb1",
+            "object:box1",
+            "robot:tb1",
+            "zone:z7"
+          ],
+          "sha256": "4cc4f3613009ba0aa4ff442f5933afe83101af2ff1fb69fed3d51707689763f8"
+        },
+        {
+          "robot_id": "tb2",
+          "target_object_id": "",
+          "node_ids": [
+            "executor:tb2",
+            "robot:tb2"
+          ],
+          "sha256": "8cac65a3f3679ca73f5bb9e7cc1456ff5800cfedee9b94c77eb8186e842f2f32"
+        }
+      ]
+    },
+    {
+      "id": "WLD-02",
+      "title": "minimal declaration: no nodes, no edges, epoch 0",
+      "expect": "accept",
+      "site_yaml": "site: empty-site\n",
+      "site": {
+        "site": "empty-site"
+      },
+      "events": [],
+      "graph": {
+        "epoch": 0,
+        "nodes": [],
+        "edges": []
+      },
+      "graph_sha256": "61c07ee17ec0b6cf17675cbcc0e3b11a36ca65dffe1f9d86e5cb138277844944",
+      "requests": []
+    },
+    {
+      "id": "WLD-90",
+      "title": "reject: speed_limit is refused by the compiler (per-zone limits live in the gate policy, not the world)",
+      "expect": "reject",
+      "reason": "speed_limit",
+      "site_yaml": "site: s\nzones:\n  - id: z1\nconstraints:\n  - type: speed_limit\n    zone: z1\n    max_linear_speed_mps: 0.5\n",
+      "site": {
+        "constraints": [
+          {
+            "max_linear_speed_mps": 0.5,
+            "type": "speed_limit",
+            "zone": "z1"
+          }
+        ],
+        "site": "s",
+        "zones": [
+          {
+            "id": "z1"
+          }
+        ]
+      },
+      "events": [],
+      "requests": []
+    },
+    {
+      "id": "WLD-91",
+      "title": "reject: unknown constraint type",
+      "expect": "reject",
+      "reason": "unknown_constraint_type",
+      "site_yaml": "site: s\nzones:\n  - id: z1\nconstraints:\n  - type: one_way\n    zone: z1\n",
+      "site": {
+        "constraints": [
+          {
+            "type": "one_way",
+            "zone": "z1"
+          }
+        ],
+        "site": "s",
+        "zones": [
+          {
+            "id": "z1"
+          }
+        ]
+      },
+      "events": [],
+      "requests": []
+    },
+    {
+      "id": "WLD-92",
+      "title": "reject: robot home names an undeclared zone",
+      "expect": "reject",
+      "reason": "dangling_reference",
+      "site_yaml": "site: s\nzones:\n  - id: z1\nrobots:\n  - id: r1\n    home: z9\n",
+      "site": {
+        "robots": [
+          {
+            "home": "z9",
+            "id": "r1"
+          }
+        ],
+        "site": "s",
+        "zones": [
+          {
+            "id": "z1"
+          }
+        ]
+      },
+      "events": [],
+      "requests": []
+    }
+  ]
+}

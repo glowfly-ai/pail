@@ -1,0 +1,44 @@
+# Public CI: the Core's own build and test suite, the spec checkers and the public link check — the commands a
+# recipient runs from README section 5, run on every push and pull request of the public repository.
+#
+# The two sibling workflows cover secrets (ci-secret-scan.yml) and release/spec drift (ci-spec-drift.yml); until
+# 0.2.0-preview.22 no public workflow ran `go test`, so a red README command could not be seen in CI (preview.20
+# evaluation, P19-M1 follow-up). Positive controls are not repeated here: `go test` and the checkers carry their own.
+name: core-tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cloud/go.mod
+      - name: go vet / build / test (public Core, README section 5)
+        working-directory: cloud
+        run: |
+          go vet -tags pail_generated ./...
+          go build -tags pail_generated ./...
+          go test -count=1 -tags pail_generated ./...
+
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Spec checkers (every spec/tools/spec_*_check.py)
+        run: |
+          set -euo pipefail
+          rc=0
+          for c in spec/tools/spec_*_check.py; do
+            echo "== $c"; python3 -B "$c" || rc=1
+          done
+          exit $rc
+      - name: Public onboarding file links
+        run: python3 scripts/check_public_links.py
+      - name: Public content boundaries
+        run: python3 scripts/check_public_content.py

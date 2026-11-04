@@ -1,0 +1,43 @@
+{
+  "_note": "생성물 — 손으로 고치지 마라. 굽는 법은 MKGOLDEN-PERF.md.",
+  "spec_version": 1,
+  "workload_provenance": "reference_only",
+  "workloads": [
+    {
+      "active_unflushed_bound_by": "time",
+      "active_unflushed_bytes": 285600,
+      "active_unflushed_records": 600,
+      "active_unflushed_seconds": 60,
+      "bytes_per_day": 137088000,
+      "bytes_per_second": 4760,
+      "cmd_vel_hz": 10,
+      "description": "기준 프로파일 — 실내 물류 로봇 1대, 단일 교대",
+      "hours_per_day": 8,
+      "id": "WL-1",
+      "idle_unflushed_window": "1s",
+      "payload_shape": "minimal",
+      "record_bytes": 476,
+      "records_per_day": 288000,
+      "segments_per_day": 2.0427703857421875,
+      "source": "reference"
+    },
+    {
+      "active_unflushed_bound_by": "records",
+      "active_unflushed_bytes": 640000,
+      "active_unflushed_records": 1000,
+      "active_unflushed_seconds": 50,
+      "bytes_per_day": 737280000,
+      "bytes_per_second": 12800,
+      "cmd_vel_hz": 20,
+      "description": "상한 프로파일 — 2교대 연속 운용, 고주파 permit",
+      "hours_per_day": 16,
+      "id": "WL-2",
+      "idle_unflushed_window": "1s",
+      "payload_shape": "full",
+      "record_bytes": 640,
+      "records_per_day": 1152000,
+      "segments_per_day": 10.986328125,
+      "source": "reference"
+    }
+  ]
+}

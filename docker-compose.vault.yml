@@ -1,0 +1,74 @@
+# Vault signer overlay for the e2e stack — DEV ONLY.
+#
+#   docker compose -f docker-compose.e2e.yml -f docker-compose.vault.yml up -d
+#   (or: e2e/run_e2e.sh --vault)
+#
+# What changes: the issuer stops signing with a local key file and signs through
+# HashiCorp Vault's Transit engine instead. The ed25519 private key is CREATED
+# INSIDE the vault by docker/vault-init.sh and is never exported — the issuer
+# holds a scoped token that may sign with it and read its public half, nothing
+# more. That is the point of the overlay: it demonstrates that PAIL's issuer
+# does not need custody of the signing key.
+#
+# DEV ONLY, by declaration and not by convention:
+#   - dev-mode Vault keeps everything in memory with a fixed root token, so a
+#     restart wipes the Transit key and the init step must run again;
+#   - the keyring written below is unsigned (PAIL_KEYRING_MODE=unsigned-dev).
+# Keys minted by a dev vault must never be enrolled in a production keyring.
+#
+# Licensing note: Vault Community is BUSL-1.1, which is source-available and
+# NOT an OSI-approved open-source licence. OpenBao (MPL-2.0) is a fork with the
+# same Transit API and works with this overlay by changing the image line —
+# the issuer speaks the API, not the product.
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    network_mode: host
+    cap_add:
+      # Vault locks its memory so secrets cannot be swapped to disk; without
+      # this capability it refuses to start rather than run unlocked.
+      - IPC_LOCK
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=pail-dev-root
+      - VAULT_DEV_LISTEN_ADDRESS=127.0.0.1:8200
+
+  # One-shot: enable transit, create the ed25519 issuer key inside the vault,
+  # apply a least-privilege policy (sign + read on that one key), then write the
+  # scoped token and a self-check keyring into the shared volume.
+  vault-init:
+    image: hashicorp/vault:1.15
+    network_mode: host
+    depends_on:
+      - vault
+    entrypoint: ["/bin/sh", "/vault-init.sh"]
+    volumes:
+      - ./docker/vault-init.sh:/vault-init.sh:ro
+      - pail-vault:/pail-vault
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_TOKEN=pail-dev-root
+
+  pail-services:
+    depends_on:
+      # Not "started" — the issuer reads the token file this step writes, and a
+      # race here would surface as an authentication failure against the vault,
+      # which reads like a wrong policy rather than a file that is not there yet.
+      vault-init:
+        condition: service_completed_successfully
+    volumes:
+      - pail-vault:/pail-vault:ro
+    environment:
+      - PAIL_SIGNER=vault
+      - PAIL_ISSUER_KEY_ID=vault-issuer-1
+      - PAIL_VAULT_ADDR=http://127.0.0.1:8200
+      - PAIL_VAULT_KEY_NAME=pail-issuer
+      - PAIL_VAULT_TOKEN_FILE=/pail-vault/token
+      # A signing backend that hangs must fail, not stall: issuance is
+      # fail-closed, so a bounded refusal is the safe outcome.
+      - PAIL_VAULT_TIMEOUT_MS=${PAIL_VAULT_TIMEOUT_MS:-2000}
+      # Written by vault-init; its issuer entry is the vault's public half, so
+      # the stack verifies its own output against the key that signed it.
+      - PAIL_KEYRING=/pail-vault/keyring.json
+
+volumes:
+  pail-vault:

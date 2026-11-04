@@ -1,0 +1,338 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+
+syntax = "proto3";
+
+package pail.v1;
+
+option go_package = "github.com/glowfly/pail/services/proto/pailv1;pailv1";
+
+// ---- Northbound gRPC service ----
+service PailNorthbound {
+  rpc SubmitActionPlan(SubmitActionPlanRequest) returns (SubmitActionPlanResponse);
+
+  // Optional convenience. OEM/AGI is responsible for NL -> ActionPlan.
+  rpc SubmitTextCommand(SubmitTextCommandRequest) returns (SubmitTextCommandResponse);
+
+  rpc GetPlanStatus(GetPlanStatusRequest) returns (GetPlanStatusResponse);
+  rpc CancelPlan(CancelPlanRequest) returns (CancelPlanResponse);
+}
+
+// ---- 거부 처분 계약 (O-17 / O-20 / O-14) ----
+// PAIL은 거부를 잘 하지만 거부의 의미를 기계가 읽을 수 없었다. Denial이 그 계약이다.
+// 처분(disposition)은 사유 코드에서 고정 표로 유도되며, 등급(severity)과 직교한다.
+// 둘을 합치면 경보 피로(O-20)가 되살아난다.
+
+enum Disposition {
+  DISPOSITION_UNSPECIFIED = 0;
+  PERMANENT   = 1;  // 이 계획으로는 영원히 통과하지 못한다
+  CONDITIONAL = 2;  // 세계나 계획이 바뀌어야 한다
+  TRANSIENT   = 3;  // 시간만 지나면 해소될 수 있다
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  NORMAL_DEFENSE   = 1;  // 설계된 방어. 알람 대상 아님
+  ANOMALY          = 2;  // 건강한 시스템이라면 일어나지 않는다
+  SUSPECTED_TAMPER = 3;  // 무결성 위반 의심. 즉시 조사
+}
+
+message Denial {
+  string      reason_code    = 1;  // 안정 식별자. 버스트 어휘와 같은 사전
+  uint32      reason_value   = 2;  // 버스트 수치와 동일 (증거 대조용)
+  Disposition disposition    = 3;
+  uint64      retry_after_ms = 4;  // 재시도 하한. 0 = 재시도 금지
+  Severity    severity       = 5;
+  uint64      observed_epoch = 6;  // 거부 시점 세계 버전. 0 = ephemeral
+  string      detail         = 7;  // 사람용. 기계 파싱 금지
+  string      origin_reason_code = 8;  // ERR_RETRY_TOO_SOON일 때 원 사유
+
+  // E-W6 : 위 두 영값의 뜻을 자기 자리에서 말한다.
+  //
+  // proto3 는 스칼라 영값을 **직렬화하지 않는다**. 그래서 수신자에게
+  // `retry_after_ms=0` 과 "그 필드가 오지 않았다" 는 같은 바이트다. 지금
+  // 그 하나에 세 뜻이 모여 있다 — (가) PERMANENT 의 "재시도 금지",
+  // (나) 사전 미등록 사유의 "하한을 모른다", (다) 하한이 런타임 계산인
+  // ERR_RETRY_TOO_SOON 이 호출자에게 채워지기 전. 오늘은 `disposition` 으로
+  // (가)와 (나)를 가를 수 있지만 그것은 두 필드를 엮는 추론이고,
+  // UNSPECIFIED 자체가 "모른다" 라서 추론에 구멍이 있다.
+  //
+  // 영값의 뜻을 값으로 옮기지 않고 **별도 bool** 로 세우는 이유는 구판
+  // 호환이다. 옛 발신자의 메시지는 두 bool 이 false 로 디코드되어
+  // "모른다" 로 읽힌다 — 침묵이 "금지"/"ephemeral" 로 굳지 않는다.
+  bool        retry_forbidden = 9;   // true = 재시도 금지가 **사실**이다
+  bool        epoch_ephemeral = 10;  // true = 세계 버전이 없다는 것이 **사실**이다
+
+  // SKL v2.1 : reason_code == ERR_ENVELOPE_EXCEEDED 일 때 넘은 이름표마다 한 줄.
+  // 발급자는 요청을 한도로 줄여 발급하지 않는다 — 거부하고 한도를 알려 준다.
+  // `detail` 은 기계 파싱 금지이므로 화면은 이 칸을 읽는다. 단위는
+  // oss/spec/GUARDRAILS.tsv 의 name 행이 정본이다(여기 두 벌로 싣지 않는다).
+  repeated EnvelopeExceeded exceeded = 11;
+}
+
+message EnvelopeExceeded {
+  string name      = 1;  // GUARDRAILS.tsv 이름표 (예: step.max_duration_s)
+  double requested = 2;  // 요청이 말한 값 (속도는 노름). 비유한 값은 그대로 싣는다
+  double max       = 3;  // 비교한 한도 = min(policy common, zone)
+}
+
+// ---- Requests / responses ----
+message SubmitActionPlanRequest {
+  string session_id = 1;
+  string robot_id = 2;
+  ActionPlan plan = 3;
+  string operation_id = 4;
+}
+
+message SubmitActionPlanResponse {
+  string chain_id = 1;
+  SubmitStatus status = 2;
+  string rejected_reason = 3;
+  repeated SignedToken tokens = 4; // optional pre-issued tokens
+  OperationReceipt receipt = 6;
+  Denial denial = 5;               // status == REJECTED 일 때 필수
+}
+
+message SubmitTextCommandRequest {
+  string session_id = 1;
+  string robot_id = 2;
+  string command_text = 3;
+  string lang = 4; // e.g., ko-KR
+  CommandConstraints constraints = 5;
+}
+
+message SubmitTextCommandResponse {
+  string plan_id = 1;
+  SubmitStatus status = 2;
+  string rejected_reason = 3;
+  Denial denial = 4;               // status == REJECTED 일 때 필수
+}
+
+message GetPlanStatusRequest { string plan_id = 1; string operation_id = 2; OperationKind operation_kind = 3; }
+message GetPlanStatusResponse {
+  string plan_id = 1;
+  PlanState state = 2;
+  OperationReceipt receipt = 5;
+  string detail = 3;
+  Denial denial = 4;               // 거부로 끝난 계획의 처분
+}
+
+message CancelPlanRequest { string plan_id = 1; string operation_id = 2; }
+message CancelPlanResponse {
+  string plan_id = 1;
+  bool cancelled = 2;
+  OperationReceipt receipt = 3;
+}
+
+// ---- Core domain ----
+message CommandConstraints {
+  double max_linear_speed_mps = 1;
+  double max_angular_speed_rps = 2;
+  double timeout_sec = 3;
+}
+
+enum SubmitStatus {
+  SUBMIT_STATUS_UNSPECIFIED = 0;
+  ACCEPTED = 1;
+  REJECTED = 2;
+}
+
+enum PlanState {
+  PLAN_STATE_UNSPECIFIED = 0;
+  PENDING = 1;
+  RUNNING = 2;
+  COMPLETED = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+}
+
+// ActionPlan is a deterministic representation of intent.
+message ActionPlan {
+  string plan_id = 1;
+  repeated PlanStep steps = 2;
+
+  // AL-2 (implementation contract D1) — pass-through layer. The issuer does NOT interpret these
+  // bytes: it checks they are JSON (ERR_CONTEXT_NOT_JSON), bounds them at
+  // 64 KiB each (ERR_CONTEXT_TOO_LARGE), hashes them with a domain prefix into
+  // the plan identity and the chain (CONTEXT_SEALED / PLAN_ACCEPTED v2), and
+  // stores the raw bytes content-addressed. Anything a client writes in here —
+  // including a "requester" key — is a claim, never the ledger's requester
+  // (D2: the requester is derived from the transport identity only).
+  bytes context_json = 100;
+  // Per-plan additional constraints, also pass-through: never evaluated. To
+  // enforce a constraint it must be expressed in the site model.
+  bytes constraints_json = 101;
+}
+
+message PlanStep {
+  string step_id = 1;
+  StepType type = 2;
+
+  // Optional identity target.
+  string target_object_id = 10;
+
+  // Low-level motion (phase 1)
+  TwistCommand twist = 20;
+
+  // High-level tasks (phase 2, placeholder)
+  string task_goal_json = 30;
+
+  // AL-2/AL-3 (implementation contract D3) — action = enforcement class set × name. Absent:
+  // derived from `type` (TWIST→[MOVE], PICK/PLACE→[MANIPULATE], CUSTOM→[NONE]).
+  // Enforcement (token mask, gate check) lands in AL-3; AL-2 only carries and
+  // hashes it.
+  ActionSpec action = 100;
+}
+
+// ActionSpec names what a step does in terms the gate can enforce (classes)
+// and terms an operator can read (name). params_json is pass-through.
+message ActionSpec {
+  repeated ActionClass classes = 1;  // empty = NONE
+  string name = 2;                   // "namespace/name"; empty = StepType name
+  bytes params_json = 3;             // pass-through, JSON only, hashed
+}
+
+// The four classes are the specification; extending this enum is a design
+// revision (implementation contract D3), not a code change.
+enum ActionClass {
+  ACTION_CLASS_UNSPECIFIED = 0;
+  ACTION_CLASS_MOVE = 1;
+  ACTION_CLASS_MANIPULATE = 2;
+  ACTION_CLASS_ACTUATE = 3;
+  ACTION_CLASS_NONE = 4;
+}
+
+enum StepType {
+  STEP_TYPE_UNSPECIFIED = 0;
+  STEP_TWIST = 1;
+  STEP_PICK = 2;
+  STEP_PLACE = 3;
+  STEP_CUSTOM = 99;
+}
+
+message TwistCommand {
+  double linear_x = 1;
+  double linear_y = 2;
+  double linear_z = 3;
+  double angular_x = 4;
+  double angular_y = 5;
+  double angular_z = 6;
+  double duration_sec = 7;
+}
+
+// ---- Token + signature ----
+enum ActionType {
+  ACTION_TYPE_UNSPECIFIED = 0; // verifier must BLOCK (fail-closed)
+  ACTION_MOVE = 1;             // twist gating target
+  ACTION_PICK = 2;
+  ACTION_PLACE = 3;
+  ACTION_CUSTOM = 99;
+}
+
+// Per-token execution limits, snapshotted from plan/policy at issuance.
+message TokenConstraints {
+  double max_linear_speed_mps = 1;  // 0 = policy default
+  double max_angular_speed_rps = 2;
+  double max_duration_sec = 3;
+  // ---- v5 (SKL SK-4, implementation contract · L14) ----
+  // The envelope by GUARDRAILS.tsv name. A v5 gate judges by this list only;
+  // fields 1~3 are filled with the same values so that journals, older tools and
+  // v<=4 readers keep their meaning — a v5 verifier refuses a token whose fixed
+  // field and list entry disagree (ERR_SCHEMA). Present iff schema_version >= 5.
+  repeated Guardrail guardrails = 4;
+}
+
+// One named bound of the v5 envelope. `max` alone = upper bound (le), `min`
+// alone = lower bound (ge), both = range. An entry with neither is refused
+// (ERR_BAD_TOKEN); the unit is not carried — the name resolves it in the
+// vocabulary (spec/GUARDRAILS.tsv), and a unit that could disagree with the
+// name would be a second statement of one fact.
+// Presence is carried by single-member oneofs rather than `optional`: the wire
+// bytes are identical, and the robot-side toolchain (protoc 3.12, ROS 2
+// Humble) refuses proto3 `optional` without an experimental flag. A bound that
+// is absent must be absent, not 0 — 0 is a value the verifier refuses.
+message Guardrail {
+  string name = 1;
+  oneof max_bound { double max = 2; }
+  oneof min_bound { double min = 3; }
+}
+
+message ActionToken {
+  string token_id = 1;
+  string chain_id = 2;
+  int32 sequence_index = 3;
+
+  string robot_id = 10;
+  string plan_id = 11;
+  string step_id = 12;
+
+  // If non-empty, execution requires identity evidence matching this value.
+  string target_object_id = 20;
+
+  // Validity
+  int64 issued_at_unix_ms = 30;
+  int64 not_before_unix_ms = 31;
+  int64 not_after_unix_ms = 32;
+
+  // Policy snapshot hash (so tokens are bound to policy/context intent)
+  bytes policy_hash = 40;
+
+  // ---- v2 (LLD-v2 §1.1) ----
+  ActionType action_type = 50;       // covered by signature
+  TokenConstraints constraints = 51; // per-token execution limits
+
+  // Token schema version: v2 = 2, v3 = 3. 0/unset is treated as v1 and rejected
+  // by v2+ verifiers (old-stub bypass prevention, fail-closed).
+  uint32 schema_version = 60;
+
+  // ---- v3 (CG1) ----
+  // SHA-256 (32B) of the canonical execution-authorization subgraph selected at
+  // issuance (CG0 SnapshotHash). Binds the issuance-time world state into the
+  // signed bytes. Present iff schema_version >= 3. Covered by the signature via
+  // action_token_bytes. The gate compares it with the issuer's live re-derivation
+  // (GetActiveTokenResponse.current_subgraph_hash) and refuses motion on
+  // mismatch (ERR_WORLD_CHANGED) or when either side is empty
+  // (ERR_WORLD_INDETERMINATE). Distinct from policy_hash (static rules vs world
+  // state). Computation: spec/SUBGRAPH_HASH.md.
+  bytes subgraph_snapshot_hash = 61;
+
+  // ---- v5 (SKL SK-4, implementation contract · L15 · L16) ----
+  // The registry skill this token authorizes (config/skills.<robot_class>.yaml
+  // `name`). A v5 gate compares the command's skill name with this field; the
+  // class mask in action_type is still minted (journals, v<=4 tools) but is not
+  // what a v5 gate judges by. Empty on a v5 token = ERR_SCHEMA.
+  string skill = 70;
+  // Permit slot this token occupies. The first edition issues "main" only; a
+  // gate refuses a slot it does not hold. Empty on a v5 token = ERR_SCHEMA.
+  string slot = 71;
+}
+
+message SignedToken {
+  ActionToken token = 1; // informational only — verifiers must not use for verdicts
+  bytes signature = 2;   // ed25519
+  bytes key_id = 3;      // identifies verification key
+
+  // [v2] The exact bytes the issuer signed (proto.Marshal(token) at issuance).
+  // Verifiers must verify the signature against these bytes and read all
+  // decision-relevant fields from Unmarshal(action_token_bytes) — never
+  // from a re-serialization (proto3 serialization is not canonical).
+  bytes action_token_bytes = 4;
+}
+
+// core-comm-v1 operation receipts describe authorization effects, not physical success.
+enum OperationKind { OPERATION_UNSPECIFIED = 0; SUBMIT = 1; CANCEL = 2; }
+enum OperationState { OP_STATE_UNSPECIFIED = 0; IN_PROGRESS = 1; COMMITTED = 2; OP_REJECTED = 3; OUTCOME_UNKNOWN = 4; EXPIRED_RECEIPT = 5; }
+message OperationReceipt {
+  uint32 contract_version = 1;
+  string operation_id = 2;
+  OperationKind method = 3;
+  string plan_id = 4;
+  string robot_id = 5;
+  bytes request_digest = 6;
+  OperationState operation_state = 7;
+  string original_chain_id = 8;
+  string current_authority_state = 9;
+  uint64 issuer_epoch = 10;
+  string durable_record_ref = 11;
+  string reason = 12;
+}

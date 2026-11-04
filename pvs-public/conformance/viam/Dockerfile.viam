@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Glowfly Identity Systems Co.,Ltd
+#
+# The fake robot of the Viam rig : viam-server (AGPL-3.0, run as a separate
+# process — nothing of it is linked) with a local config of `fake` components. The AppImage
+# is fetched at build time; the config is mounted at run time.
+FROM ubuntu:22.04
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates >/dev/null && rm -rf /var/lib/apt/lists/*
+ARG VIAM_CHANNEL=stable
+RUN arch="$(uname -m)"; curl -fsSL "https://storage.googleapis.com/packages.viam.com/apps/viam-server/viam-server-${VIAM_CHANNEL}-${arch}.AppImage" -o /usr/local/bin/viam-server && chmod +x /usr/local/bin/viam-server
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/viam-server", "--appimage-extract-and-run", "-config", "/etc/viam/fake.json"]

@@ -1,0 +1,18 @@
+version: 2.0
+name: consumed_token_replay_blocked
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [
+       {step_id: s1, type: TWIST, target_object_id: "880123", twist: {linear_x: 0.1, duration_sec: 1.0}},
+       {step_id: s2, type: TWIST, target_object_id: "880123", twist: {linear_x: 0.1, duration_sec: 1.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.5, inject_cmd_vel: {lin: 0.1, rate: 10, dur: 1.0}}   # s1 executes/completes
+  - {t: 1.6, expect_gate: {state: PERMIT}}                     # advanced to s2
+  - {t: 1.8, north_cmd: replay_token, step_id: s1}             # re-present consumed s1
+  # the consumed-cache check runs per cmd_vel decision — keep the stream alive
+  # so the gate must decide against the replayed s1
+  - {t: 1.9, inject_cmd_vel: {lin: 0.1, rate: 10, dur: 1.0}}
+  - {t: 2.0, expect_gate: {state: BLOCK, reason: ERR_TOKEN_CONSUMED}}
+expectations_global:
+  - audit_chain: PASS

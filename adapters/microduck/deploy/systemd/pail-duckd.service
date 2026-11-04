@@ -1,0 +1,77 @@
+# pail-duckd — the PAIL adapter in front of Microduck's robotd (interposer).
+#
+# Install to /etc/systemd/system/pail-duckd.service (deploy/install.sh does this).
+#
+# Placement (public adapter contract): robotd is moved to
+# /run/robotd/raw.sock by the drop-in in robotd.service.d/pail.conf, and this unit serves
+# the path every client already dials — /run/robotd.sock. There is NO fallback path: when
+# this unit is down nothing reaches the robot, and a robot with its own deadman stands still.
+#
+# Ordering: After=robotd so the raw socket exists when the S27 self-check runs; Wants= (not
+# Requires=) so a robotd restart during an update does not tear the adapter down — the
+# adapter reconnects to the raw socket by itself and drops client connections meanwhile
+# (fail-closed, LLD §9 "경합").
+
+[Unit]
+Description=PAIL adapter for Microduck robotd (authorization gate in front of the control socket)
+Documentation=file:///opt/pail/share/doc/INSTALL.md
+After=robotd.service local-fs.target
+Wants=robotd.service
+
+[Service]
+Type=exec
+# The public socket is created in /run (root-owned) and handed to the `robot` group so the
+# clients robotd used to serve (padd, btd, the SDK, mediad) keep working unchanged. The
+# group is named, not numbered: systemd-sysusers allocates gids per board.
+ExecStart=/opt/pail/bin/pail-duckd \
+    --public /run/robotd.sock \
+    --public-group robot \
+    --raw /run/robotd/raw.sock \
+    --policy /etc/pail/policy.yaml \
+    --keyring /etc/pail/keys/keyring.json \
+    --skills /etc/pail/duck_skills.yaml \
+    --evidence /run/pail/evidence.sock
+# Everything else — profile, agent endpoint, robot id, gate log — comes from the
+# environment file the installer writes (deploy/pail-duckd.env). PAIL_PROFILE=production is
+# the default and the refusing one: S27 failed / S28 no enforcing gate / S29 no skill table
+# do not start.
+EnvironmentFile=-/etc/pail/pail-duckd.env
+Environment=RUST_LOG=info
+# libpail_gate (AD-1) ships beside the binary.
+Environment=LD_LIBRARY_PATH=/opt/pail/lib
+
+# root: creates the public socket in /run and chowns it to `robot`. Hardware is never
+# touched. Group=pail is what lets the adapter open robotd's raw socket (root:pail 0660 in
+# /run/robotd 0750 — see robotd.service.d/pail.conf); SupplementaryGroups=robot is for the
+# hand-over of the public socket only.
+User=root
+Group=pail
+SupplementaryGroups=robot
+
+# Restart=always: an adapter that exited cleanly still leaves every client without a
+# robot — there is no exit status that should mean "stay down". RestartSec short so the
+# clients' own reconnects find the socket again.
+Restart=always
+RestartSec=1s
+
+# /run/pail — the evidence ingress socket and the gate log live here.
+RuntimeDirectory=pail
+RuntimeDirectoryMode=0750
+
+# Harder than robotd: this process touches no hardware. ProtectSystem=strict makes the whole
+# filesystem read-only except the RuntimeDirectory; /etc/pail is read (policy, keyring,
+# skill table) and never written. Tighten further (dedicated user) once the board confirms
+# which paths the interposer needs — see INSTALL.md §5.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+PrivateTmp=yes
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

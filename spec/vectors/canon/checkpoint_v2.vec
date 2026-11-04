@@ -1,0 +1,56 @@
+# tests/golden/canon/checkpoint_v2.vec — C5 체크포인트 canon v2 (LLD-OSS-A §3.2, X13·NF4)
+# 서명 대상: "pail-checkpoint:v2:" ‖ head(32B) ‖ record_count(u64BE) ‖ segment_seq(u64BE)
+# 레코드 페이로드(112B): head(32) ‖ count(u64BE) ‖ seg_seq(u64BE) ‖ sig(64)  / record_type=31
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	CP2-01
+desc	기준선 — 접두어가 붙고(X13), record_count 와 segment_seq 가 서명 안으로 들어온다(NF4).
+record_type	31
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+record_count	42
+segment_seq	7
+signed_input_hex	7061696c2d636865636b706f696e743a76323a000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000000000000002a0000000000000007
+payload_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000000000000002a000000000000000752522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+payload_len	112
+sig	52522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+expect_verify	1
+
+id	CP2-02
+desc	페이로드의 record_count 만 42→43 으로 변조(서명은 기준선 그대로). v1 에서는 count 가 서명 밖이라 이 변조가 통과했다 — 그것이 NF4 다.
+record_type	31
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+record_count	43
+segment_seq	7
+payload_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000000000000002b000000000000000752522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+sig	52522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+expect_verify	0
+
+id	CP2-03
+desc	페이로드의 segment_seq 만 7→8 로 변조 — 세그먼트 사이 체크포인트 재사용을 막는다.
+record_type	31
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+record_count	42
+segment_seq	8
+payload_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f000000000000002a000000000000000852522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+sig	52522c3fa384afcc0495d63b89d0f07be0e28cf16d460a5e3d272d651df07fb3010973bb43fd8746d02bb7acec91cdd8d0fb80e0bf6639ba5291bf0619ee6b00
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+expect_verify	0
+
+id	CP1-90
+desc	구 형식(record_type=30): 접두어 없이 Sign(head[:]), count 는 u64LE 로 서명 밖. F8 에 따라 이 레코드는 영원히 검증 가능해야 한다 — 지우면 과거 증거를 우리 손으로 파기하는 것이다.
+record_type	30
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+record_count	42
+count_endian	le
+signed_input_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+payload_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2a00000000000000b97dfcddb50c3c713905ad30906619d05efedd04e713be6d799a8586b2775b34d56177bc46409fb9cb5d247094c728d7e52773410d826d49c28ec0ffede25302
+payload_len	104
+sig	b97dfcddb50c3c713905ad30906619d05efedd04e713be6d799a8586b2775b34d56177bc46409fb9cb5d247094c728d7e52773410d826d49c28ec0ffede25302
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+expect_verify	1

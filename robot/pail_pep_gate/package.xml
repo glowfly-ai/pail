@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pail_pep_gate</name>
+  <version>0.1.0</version>
+  <description>PAIL PEP gate node for Twist gating</description>
+  <maintainer email="dev@glowfly.example">Glowfly</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>pkg-config</build_depend>
+  <depend>libsodium-dev</depend>
+
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>pail_msgs</depend>
+  <depend>pail_deploy_guard</depend>
+
+</package>

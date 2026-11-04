@@ -1,0 +1,16 @@
+# CA-06 (spec/ADAPTER_CONTRACT.md §4): a command faster than the token's constraint is
+# BLOCKed — never clamped. Uses the issuer's ordinary token (policy max_linear 1.0) and drives
+# 1.5, so no token variant is needed on any transport.
+version: 2.0
+name: adapter_speed_over_limit_blocks
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 4.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 1.5, rate: 10, dur: 2.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_CONSTRAINT}}
+  - {t: 1.3, expect_drive_never: {linear_x: 1.5}}
+expectations_global:
+  - audit_chain: PASS

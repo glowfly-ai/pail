@@ -1,0 +1,92 @@
+# PAIL PEP gate container (ROS 2 Humble) — public-tree build.
+#
+# Includes the gate, standalone decision library and motion bridge.
+FROM ros:humble-ros-base@sha256:860e53793ccf575e5369b5e9a19939de2bfcfb46a299954d06f54f2af54fed19
+
+SHELL ["/bin/bash", "-lc"]
+
+WORKDIR /opt/pail_ws
+
+# Only the ROS packages shipped in this tree.
+COPY robot/pail_msgs ./src/pail_msgs
+COPY robot/pail_deploy_guard ./src/pail_deploy_guard
+COPY robot/pail_pep_gate ./src/pail_pep_gate
+COPY robot/pail_motion_bridge ./src/pail_motion_bridge
+COPY libpail_gate /opt/libpail_gate
+COPY spec/vectors/token/tokens.vec /opt/spec/vectors/token/tokens.vec
+# Proto files needed for grpc++ stub generation at gate build time.
+COPY sdk/proto ./proto
+# COPY preserves checkout modes and git does not track the read bit. With
+# --symlink-install the install tree symlinks back into src, so a narrow mode
+# in src is a narrow mode in install — the non-root user below then cannot
+# read its own image's files. Widen BEFORE colcon build.
+RUN chmod -R go+rX /opt/pail_ws/src /opt/pail_ws/proto /opt/libpail_gate
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake procps libbrotli1 \
+    pkg-config \
+    libprotobuf-dev protobuf-compiler \
+    libgrpc++-dev protobuf-compiler-grpc \
+    libsodium-dev \
+    libyaml-cpp-dev \
+  && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge 1.0.9-2ubuntu0.1 \
+  && rm -rf /var/lib/apt/lists/*
+
+# ON by default here: the end-to-end path (token_provider_mode=grpc) needs the
+# grpc++ stubs. Build with OFF to reproduce the no-grpc gate.
+ARG PAIL_ENABLE_GRPC=ON
+ARG PAIL_BUILD_JOBS=2
+
+RUN source /opt/ros/humble/setup.bash \
+  && MAKEFLAGS="-j${PAIL_BUILD_JOBS}" colcon build --symlink-install --merge-install --executor sequential \
+       --event-handlers console_direct+ \
+       --cmake-args -DPAIL_ENABLE_GRPC=${PAIL_ENABLE_GRPC} \
+  && ls -la /opt/pail_ws/install
+
+# Narrow COPY on purpose — `COPY config /etc/pail` would bake generated key
+# material (config/keys, grpc_certs, sros2_keystore) into the image.
+COPY config/policy.yaml config/sros2_policy.xml /etc/pail/
+# Same absolute-mode rule as above: the checkout's mode is not trustworthy.
+RUN chmod 0644 /etc/pail/policy.yaml /etc/pail/sros2_policy.xml
+
+# Unprivileged runtime; same uid as the cloud image because the two containers
+# share the blackbox volume and UDS directory.
+#
+# Must come BEFORE the VOLUME declaration. /home/pail is not decoration:
+# rclcpp creates $HOME/.ros/log during startup and aborts if it cannot.
+# Pre-existing named volumes do not receive this chown (see Dockerfile.cloud).
+#
+# /var/lib/pail_keyring: in bundle mode the gate REFUSES TO START (exit 78) if
+# it cannot persist the wall-clock floor, and the loader's default state path
+# sits next to the bundle on the read-only /etc/pail mount. Same directory and
+# same uid as the cloud image on purpose — the version floor and the wall floor
+# are two keys in one file, and each side merges rather than overwrites.
+RUN groupadd -g 10001 pail && useradd -u 10001 -g 10001 -M -s /usr/sbin/nologin pail \
+ && mkdir -p /var/log/pail_blackbox /var/run/pail /home/pail /var/lib/pail_keyring \
+ && chown -R 10001:10001 /var/log/pail_blackbox /var/run/pail /home/pail /var/lib/pail_keyring
+ENV HOME=/home/pail
+
+VOLUME ["/var/log/pail_blackbox"]
+
+ENV ROS_DOMAIN_ID=0
+
+COPY docker/entrypoints/_pail_preflight.sh /usr/local/bin/_pail_preflight.sh
+COPY docker/entrypoints/pep_gate_entrypoint.sh /usr/local/bin/pep_gate_entrypoint.sh
+# The private-key-mode predicate must be the SAME file at generation time
+# (scripts/) and at run time (this image) — two copies would let a divergence
+# read as a pass.
+COPY docker/entrypoints/motion_bridge_entrypoint.sh /usr/local/bin/motion_bridge_entrypoint.sh
+COPY scripts/_keymode.sh /usr/local/bin/_keymode.sh
+# Absolute modes — shell scripts are read to be interpreted (see above).
+RUN chmod 0755 /usr/local/bin/_pail_preflight.sh \
+                /usr/local/bin/pep_gate_entrypoint.sh \
+                /usr/local/bin/motion_bridge_entrypoint.sh \
+                /usr/local/bin/_keymode.sh
+
+COPY LICENSE NOTICE /opt/pail/licenses/core/
+USER 10001:10001
+
+CMD ["/usr/local/bin/pep_gate_entrypoint.sh"]
+
+ARG PAIL_VERSION
+LABEL org.pail.component=core-tb3-gate org.pail.release=${PAIL_VERSION}

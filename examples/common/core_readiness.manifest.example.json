@@ -1,0 +1,52 @@
+{
+  "_comment": "Example operator declaration for core_readiness.py --manifest (spec/CORE_COMM.md, R). Every value below is a placeholder the operator replaces from the running rig and then reviews; the file must be owned by root or the caller and not group/world writable (UNTRUSTED_DECLARATION otherwise). The declaration states what the operator expects; core_readiness.py reports READY only when both status sockets, the gateway probe and the driver container agree with it twice in a row. It is topology and input readiness, never observed physical execution.",
+  "version": 1,
+  "robot_id": "robot-01",
+  "deployment_id": "00000000-0000-4000-8000-000000000000",
+  "components": [
+    {
+      "component": "pep_gate",
+      "socket": "/path/to/rig/state/gate_status.sock",
+      "uid": 10001,
+      "exe_sha256": "<sha256 of the gate executable inside the gate container: docker exec pailhw-gate sha256sum /proc/1/exe>",
+      "robot_id": "robot-01",
+      "deployment_id": "00000000-0000-4000-8000-000000000000",
+      "boot_id": "<docker exec pailhw-gate cat /proc/sys/kernel/random/boot_id>",
+      "config_generation": "<config_generation reported by the gate status socket>",
+      "endpoints": {
+        "cmd":      {"node_name": "<publisher node of the command topic>",  "node_namespace": "/"},
+        "evidence": {"node_name": "<publisher node of the evidence topic>", "node_namespace": "/"},
+        "safety":   {"node_name": "<publisher node of the safety topic>",   "node_namespace": "/"},
+        "safe":     {"node_name": "<subscriber node of the safe command topic (motion bridge)>", "node_namespace": "/"},
+        "permit":   {"node_name": "<subscriber node of the permit topic (motion bridge)>",       "node_namespace": "/"}
+      }
+    },
+    {
+      "component": "motion_bridge",
+      "socket": "/path/to/rig/state/bridge_status.sock",
+      "uid": 10001,
+      "exe_sha256": "<sha256 of the bridge executable inside the bridge container: docker exec pailhw-bridge sha256sum /proc/1/exe>",
+      "robot_id": "robot-01",
+      "deployment_id": "00000000-0000-4000-8000-000000000000",
+      "boot_id": "<docker exec pailhw-bridge cat /proc/sys/kernel/random/boot_id>",
+      "config_generation": "<config_generation reported by the bridge status socket>",
+      "endpoints": {
+        "safe":   {"node_name": "<publisher node of the safe command topic (gate)>", "node_namespace": "/"},
+        "permit": {"node_name": "<publisher node of the permit topic (gate)>",       "node_namespace": "/"},
+        "drive":  {"node_name": "<subscriber node of the drive topic (base driver)>", "node_namespace": "/"}
+      }
+    }
+  ],
+  "gateway": {
+    "probe_binary": "/usr/local/bin/pail_robotops_check",
+    "probe_sha256": "<sha256 of that binary on this host>",
+    "socket": "/path/to/rig/state/agent.sock",
+    "robot_id": "robot-01",
+    "deployment_id": "00000000-0000-4000-8000-000000000000",
+    "generation": "<agent_loaded_generation reported by the agent probe>",
+    "contract": "v1"
+  },
+  "driver": {
+    "container_id": "<64-hex id: docker inspect --format '{{.Id}}' pailhw-base>"
+  }
+}

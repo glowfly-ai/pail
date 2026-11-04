@@ -1,0 +1,32 @@
+# Skill registry — differential-drive mobile base (TurtleBot3 reference).
+# Skill registry format: spec/SKILLS.md. Public check: spec/tools/spec_skills_check.py.
+#
+# The three rows are the primitive skills that the plan step types map onto
+# (STEP_TWIST → twist, STEP_PICK → pick, STEP_PLACE → place — al3_action.go stepTypeMask).
+# Their `classes` must equal that table (check ⑤); envelope names must be in
+# oss/spec/GUARDRAILS.tsv (check ①) and be measured by the adapter that serves this
+# robot class (oss/spec/ADAPTERS.tsv `measures`, check ⑧).
+version: 1
+robot_class: diff_drive_amr
+skills:
+  - name: twist
+    classes: [MOVE]
+    evidence: {when: before, trust: identity_bearing}
+    envelope: [sls.linear_mps, sls.angular_rps, step.max_duration_s]
+    feeds: [safety_feed]
+    complete: {signal: duration}
+    safe_state: stop_zero_twist
+  - name: pick
+    classes: [MANIPULATE]
+    evidence: {when: before, trust: identity_bearing}
+    envelope: [step.max_duration_s]
+    feeds: [safety_feed]
+    complete: {signal: duration}
+    safe_state: stop_zero_twist
+  - name: place
+    classes: [MANIPULATE]
+    evidence: {when: before, trust: identity_bearing}
+    envelope: [step.max_duration_s]
+    feeds: [safety_feed]
+    complete: {signal: duration}
+    safe_state: stop_zero_twist

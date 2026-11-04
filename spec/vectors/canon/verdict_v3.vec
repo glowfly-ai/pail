@@ -1,0 +1,154 @@
+# tests/golden/canon/verdict_v3.vec — C3 verdict canon v3 (LLD-OSS-A §3.3, X8-A·X5·X6·NF2·NF3)
+# canon: pail-verdict:v3:<tenant>:<robot>:<generated_ms>:<verdict>:<head_hex>:<segments>:<records>
+#        :<anchors_checked>:<anchors_found>:<log_consistency>:<log_root_hex>:<log_size>:<evidence_hash_hex>
+# 고정: tenant=acme robot=robot-1 generated_ms=1700000000000 segments=3 records=128
+#       anchors_checked=5 anchors_found=5(VD3-09 만 4) log_size=512
+# evidence_hash = SHA-256("pail-verdict-evidence:v1:" ‖ LP(first_div) ‖ LP(proofs) ‖ LP(errors))
+#   LP(x) = u32BE(len) ‖ NFC(x). 목록은 두 겹으로 감싼다(§3.3, FE-2):
+#     proofs = LP( LP(proof_item_0) ‖ LP(proof_item_1) ‖ … )  — leaf_index 오름차순
+#     errors = LP( LP(error_0) ‖ LP(error_1) ‖ … )            — 발생 순서
+#   목록이 붙는 규칙을 적지 않으면 제3자가 같은 해시를 낼 수 없다(FE-2 가 겨냥한 결손).
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	VD3-01
+desc	동결된 8값 중 MATCH — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	MATCH
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:MATCH:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	95607f1f99af5a28e76043fdb7f7d3441e38b5d2a57650105509600e0bc4da5330700c7fa081cb9d7ecc297d67b9a7ca8ed94bf674d85b391d18db49e4f5810f
+expect	accept
+
+id	VD3-02
+desc	동결된 8값 중 DIVERGED — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	DIVERGED
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:DIVERGED:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	2f1a606f98f594eb96d1dd7b87a90e4cf20f294c772eb5e1e4f90b6fc3178ea774d9335df1a569f98969ecad7a723927743068c7981cd8a283fcefe519ce8907
+expect	accept
+
+id	VD3-03
+desc	동결된 8값 중 TAMPERED — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	TAMPERED
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:TAMPERED:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	8232cc913d20653c5f1a857952c364d5592c3283407834dcf0c9e8128e6b5baf4ff0b4a5375bd243353a44993f8bea88cc5a0a68996cf6ad09718649a1aa880a
+expect	accept
+
+id	VD3-04
+desc	동결된 8값 중 NO_RECORDS — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	NO_RECORDS
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:NO_RECORDS:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	50705acf33c83a54b5dae60f90127e6535f9c441c15396e1198debc9f4bfaac01a14a1203dc9d64f3a3418b63c4a99cd6bbb6598882667e01f128e8e83466409
+expect	accept
+
+id	VD3-05
+desc	동결된 8값 중 NO_EVIDENCE — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	NO_EVIDENCE
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:NO_EVIDENCE:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	0770640037583637131983ed156f462283ed31df900855e6b3d885750d6f5265c06226d755dc369f8974b140f793dba2f4442fe770526e3979b453c6ad14f60f
+expect	accept
+
+id	VD3-06
+desc	동결된 8값 중 LOG_FORKED — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	LOG_FORKED
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:LOG_FORKED:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	e7d220a15610557316ee00fc2c7f2e7523b36f6c9ac979d9f8b0ddf7f3e88596852ebea86626799c3dc641073570a5ebce34e51406d80a6a595da96931e1da05
+expect	accept
+
+id	VD3-07
+desc	동결된 8값 중 SEAL_BROKEN — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	SEAL_BROKEN
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:SEAL_BROKEN:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	0ea9792774f5260dbc001b7c2cf9e4fb1aa4aa689591c58b7f7814a3df3c4f7f75bba83c9af9ebd6a896f2b859ddf7885fd4deecd8e004529c477f3e68d1ec06
+expect	accept
+
+id	VD3-08
+desc	동결된 8값 중 INDETERMINATE — 근거 없음(각 항목 길이 0)도 서명된다.
+verdict	INDETERMINATE
+log_consistency	ok
+evidence_hash_hex	f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+canon	pail-verdict:v3:acme:robot-1:1700000000000:INDETERMINATE:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:ok:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	eb7f8cb00b4a3c2973a8188440a02457f53d6a044f7cb7879c1d02f84e71dbfb1c53addbfcb37c89b7cbfbef7aa978d63f87febcbef45add6c86723868d74104
+expect	accept
+
+id	VD3-09
+desc	근거 있음 — first_divergence·proofs·errors 가 evidence_hash 로 서명에 들어온다(F5·NF3). v2 에서는 이 전부가 서명 밖이라 고객이 근거를 지우고도 유효한 서명을 유지할 수 있었다.
+verdict	DIVERGED
+log_consistency	fail
+first_divergence_canonical	3:11:2:64:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+proof_item_0	0:512:cHJvb2YtYQ==,cHJvb2YtYg==
+proof_item_1	3:512:cHJvb2YtYw==
+error_0	inclusion self-verify leaf=3: root mismatch
+evidence_hash_hex	1c4a4e7569203ecca6f4c4c3fcdd796cd8d2328851e21c10a86f9c416acd751d
+canon	pail-verdict:v3:acme:robot-1:1700000000000:DIVERGED:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:4:fail:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:1c4a4e7569203ecca6f4c4c3fcdd796cd8d2328851e21c10a86f9c416acd751d
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	edb371e6f848ab7558bc0c65eb697bb28118b63f722651f4082ecf17820acf7c9e5cac16b757c6873f38dc510fbbc05f15fa589a8ee000c45571f073fd91420a
+expect	accept
+
+id	VD3-10
+desc	VD3-09 의 errors 마지막 1바이트만 변조 — evidence_hash 가 달라지므로 VD3-09 의 서명은 이 근거 묶음을 덮지 못한다.
+error_0	inclusion self-verify leaf=3: root mismatcH
+evidence_hash_hex	ce5f3e5517613569fcab2c770eea4fb85132dc2377754b4b0262b9e616c798b7
+evidence_hash_hex_of_VD3_09	1c4a4e7569203ecca6f4c4c3fcdd796cd8d2328851e21c10a86f9c416acd751d
+expect	evidence_hash_mismatch
+
+id	VD3-11
+desc	동결 집합 밖의 verdict 값 — 이 판(v3)에서 비적합이다. 검증기는 모르는 값을 통과로 해석하지 않는다(F6).
+verdict	PROBABLY_FINE
+expect	reject
+reject_reason	verdict value "PROBABLY_FINE" is not in the frozen set (F6)
+
+id	VD3-12
+desc	v2 의 bool 표기('true')를 그대로 쓴 경우 — 비적합. bool 은 '검사해서 통과'와 '검사 안 함'이 같은 바이트다(FE-1, H7).
+log_consistency	true
+expect	reject
+reject_reason	log_consistency "true" is not in {ok,fail,none} (FE-1)
+
+id	VD3-13
+desc	log_consistency=none — '일관성 검사가 수행되지 않았다'는 사실 자체가 서명된다(FE-1).
+verdict	INDETERMINATE
+log_consistency	none
+canon	pail-verdict:v3:acme:robot-1:1700000000000:INDETERMINATE:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:none:a98cdc6c6ee9f860466b7283267a51eceab73a342c078a1ca497011bd47e3822:512:f2f0071858f5cdcf80259a62945e27ec2cc562b3c57592e32dc63c9cae6cbb5b
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	327e68c78099130d5cf5b915900f60bb41e77bdf1a843b3cf30b592da855d3c61325cf6b8783df83faa0c49c1385db115e0f8f4cc353ebe6b3a68b1c0bdd2e0c
+expect	accept
+
+id	VD2-90
+desc	구 v2 canon — log_consistency 가 bool('true')이라 '검사해서 통과'와 '검사 안 함'이 구별되지 않고(FE-1·H7), 근거(first_divergence·proofs·errors)와 로그 좌표가 전부 서명 밖이다(X8). 현행 구현이 아직 이 판을 낸다.
+verdict	MATCH
+log_consistency	true
+expect	parse_only
+canon	pail-verdict:v2:acme:robot-1:1700000000000:MATCH:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:true
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	5e3a1c25c02371aca5bd8209aeb7ca812bfb9c1653268e050b0aa348afa9abaaa8c4e3bb4772691b7201ec7dddefc19a6c7f0736ea0149dd5bb69e107331a307
+
+id	VD1-90
+desc	구 v1 canon — tenant·robot·발급 시각이 서명 밖이라 한 로봇의 판정서를 다른 로봇의 것으로 재사용할 수 있었다(AV-10 이 겨냥한 결손). 이미 발급된 판정서가 고객 손에 있으므로 파서는 영구 유지한다(F8·§5.3).
+verdict	MATCH
+expect	parse_only
+canon	pail-verdict:v1:MATCH:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:3:128:5:5:true
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	7a9415ef7182a6eb67dae3a5d5a63835c582d8c1d8a559e28544da7ff198baf3347148e036401a278f932ac29713e9ade0571864cfa02197bb9403b45c2c0a0e

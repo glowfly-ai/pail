@@ -1,0 +1,48 @@
+# 공개 리포의 `.gitignore` 다. 내부 리포 루트의 `.gitignore` 는 내부 경로
+# (Patent/ · asvs/ · tests/tools/ …)를 참조하므로 그대로 옮기지 않고 여기 따로 둔다.
+# 스냅숏 시 `oss/gitignore → .gitignore` 로 매핑한다(PUBLIC_TREE.tsv).
+#
+# 이 파일이 목록에서 빠지면 무슨 일이 일어나는지 실측했다(P4 리허설 R8):
+# README 가 시키는 대로 `scripts/gen_dev_keys.py` 를 돌린 직후 개인키 다섯 파일이
+# `git add -A` 의 대상으로 올라온다. 첫 기여자의 한 번으로 이력에 들어가고,
+# **한 번 커밋된 개인키는 지워도 이력에 남고 이미 받아간 사본에서 계속 산다.**
+# 즉 이 파일은 편의가 아니라 위생의 일부다.
+
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# ---------------------------------------------------------------------------
+# 키 재료. 아래는 전부 이 리포가 배포하지 않고 **각자의 트리에서 생성되는** 것들이다.
+# 지우는 것보다 다시 들어오지 못하게 하는 것이 이 목록의 일이다.
+# ---------------------------------------------------------------------------
+
+# scripts/gen_dev_keys.py 가 만든다. seed 를 담으므로 개인키다.
+config/keys/
+
+# scripts/sros2_provision.sh 가 만든다.
+config/grpc_certs/
+config/sros2_keystore/
+# 발급과 동시 산출되는 지문 레지스트리. 지문이 로컬 인증서에만 맞으므로
+# 커밋하면 남의 트리에서 항상 낡아 있다.
+config/robot_registry.yaml
+
+# ---------------------------------------------------------------------------
+# 빌드 산출물. 소스와의 대응을 아무도 검증할 수 없으므로 배포하지 않는다.
+# `go build ./cmd/X` 를 `-o` 없이 돌리면 모듈 루트의 추적 경로에 써진다 —
+# 실제로 그 사고가 났고(내부 `RB-18`), 그때 미등록 키재료 4건이 바이너리에 구워졌다.
+# ---------------------------------------------------------------------------
+bin/
+cloud/pail_services
+cloud/pail_cloud
+cloud/pail_robot_agent
+cloud/submit_plan
+sdk/grpc_client_go/submit_plan
+
+# 생성된 gRPC 스텁(sdk/grpc_client_go/README.md 의 절차로 각자 만든다)
+sdk/grpc_client_go/proto/
+
+# Generated Python stubs for public PVS host/live tests.
+pvs-public/runner/live/*_pb2.py
+pvs-public/runner/live/*_pb2_grpc.py

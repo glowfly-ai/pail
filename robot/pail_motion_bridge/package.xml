@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pail_motion_bridge</name>
+  <version>0.1.0</version>
+  <description>PAIL motion bridge: forwards /safe_cmd_vel to /drive_cmd_vel only while the permit heartbeat is alive (M4 deadman)</description>
+  <maintainer email="dev@glowfly.example">Glowfly</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>pkg-config</build_depend>
+  <depend>libsodium-dev</depend>
+
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>pail_msgs</depend>
+  <depend>pail_deploy_guard</depend>
+  <!-- DC-8: wall_clock.hpp only — the shared judgment clock  -->
+  <depend>pail_pep_gate</depend>
+
+</package>

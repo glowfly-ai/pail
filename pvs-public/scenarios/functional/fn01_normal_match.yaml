@@ -1,0 +1,15 @@
+version: 2.0
+name: normal_match_permits_and_drives
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 3.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 3.0}}
+  - {t: 1.0, expect_gate: {state: PERMIT, reason: OK}}
+  - {t: 1.0, expect_bridge: {state: FORWARDING}}
+  - {t: 1.0, expect_permit: {present: true, rate_hz: 20}}
+  - {t: 1.2, expect_drive: {linear_x: 0.2, tol: 0.02}}
+expectations_global:
+  - audit_chain: PASS

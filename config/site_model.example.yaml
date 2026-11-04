@@ -1,0 +1,58 @@
+# PAIL site model (CG-E1) — declarative context graph an operator adopts as one file.
+#
+# The issuer compiles this at boot into its in-memory context graph. Dynamic
+# events (a human entering a zone, a robot going into maintenance) arrive at
+# runtime via the IngestContextEvent API and mutate node state only; the static
+# topology below is the starting world.
+#
+# Strict / fail-closed: unknown keys, unknown constraint types, and dangling
+# references abort compilation — a typo must stop issuance, never silently drop
+# a rule. Set PAIL_SITE_MODEL to this file's path to load it.
+
+site: warehouse-A        # required
+schema: v3               # recorded only (boot log); no issuance path reads it
+
+zones:
+  - id: z6
+    type: charge
+    adjacent: [z7]
+  - id: z7
+    type: work_area
+    adjacent: [z6, z8]
+  - id: z8
+    type: corridor
+    adjacent: [z7]
+
+objects:
+  - id: box-12
+    at: z7
+
+robots:
+  - id: robot-01
+    robot_class: diff_drive_amr   # SK-1: picks config/skills.diff_drive_amr.yaml (SKILL_VOCAB.tsv)
+    capabilities: [move, grasp]
+    schema: v3
+    home: z7
+  - id: robot-02
+    capabilities: [move]
+    schema: v3
+    home: z8
+
+constraints:
+  - type: human_exclusion   # a human in the zone forbids issuance for robots there
+    zone: "*"               # "*" = every declared zone
+  # speed_limit was removed on 2026-09-09 (SK-1, G-POL-11): the site model never
+  # enforced it. Per-zone bounds live in policy.yaml `guardrails.zones.<zone>` and
+  # ride in the token envelope; a speed_limit constraint here is now refused.
+  - type: exclusive         # CG4/P4 hook: marks the object; v1 issuance does not yet evaluate occupancy
+    object: box-12
+
+# AG-8: customer-defined world events. Each id is "<namespace>.<name>" and maps
+# to one built-in ContextEventKind; a CUSTOM event whose custom_kind is not
+# declared here is refused (fail-closed). node_id/arg follow the effect's rule.
+custom_events:
+  - id: acme.gas_alarm
+    effect: CORDON_ON
+    description: "gas detector fired near the robot: isolate it until cleared"
+  - id: acme.gas_clear
+    effect: CORDON_OFF

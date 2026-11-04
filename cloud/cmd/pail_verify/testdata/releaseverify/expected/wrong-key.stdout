@@ -1,0 +1,3 @@
+EVALUATION_VERIFY: FAIL (signature) files=7
+SIGNATURE: BAD SIGNATURE key=65b60673d6ed884bf01c2c222d82ada0740f29ac3355d6a925c81f17f47a27b8
+VERIFIER: this is the bundled verifier (pail_verify)

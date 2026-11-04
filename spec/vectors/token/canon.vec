@@ -1,0 +1,57 @@
+# tests/golden/token/canon.vec — TB-2 운영자 canon 문자열 골든 (LLD-D §3, G-CTR-06)
+# 형식: key<TAB>value (§2.1). 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값 (트레일링 탭은 편집기가 지울 수 있어 금지 — CV-02 nonce).
+# canon 조립 정본: Go internal/operator/operator.go UnlockCanon/RevokeCanon.
+# Python 미러: pvs/runner/live/backend_live.py:401 (f-string) — 동일 문자열을 내야 한다.
+# 손 계산 값: base64(0x00..0x0f) = AAECAwQFBgcICQoLDA0ODw== (인코딩 검증 완료).
+# func: unlock = UnlockCanon(arg_id=robot_id) / revoke = RevokeCanon(arg_id=issuer_key_id).
+#
+# 2026-08-06 개정 (LLD-OSS-A §4.4, A1-4): CV-03 에 'expect reject' 를 추가했다.
+# arg_id 는 식별자이므로 F3 R-A 가 걸린다 — ':' 를 포함하면 조립 함수가 거부한다(X23).
+# CV-03 의 'canon' 값은 지우지 않고 남긴다. 그 줄은 이제 기대값이 아니라 기록이다 —
+# 수정 전 구현이 실제로 무엇을 내놓았는지, 즉 우리가 무엇을 알고 있었고 언제 고쳤는지의
+# 유일한 증거다. 'expect' 가 없는 레코드는 종전대로 accept 다(CV-01/02/04/05 무변경).
+
+id	CV-01
+desc	기준선 — robot-1, 고정 ms, 논스 0x00..0x0f. PVS 라이브가 매일 만드는 그 문자열.
+func	unlock
+arg_id	robot-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+canon	pail-unlock:v1:robot-1:1700000000000:AAECAwQFBgcICQoLDA0ODw==
+
+id	CV-02
+desc	빈 논스 — base64("")="" 이므로 canon 은 ':' 로 끝난다. 조립 계층은 통과(거부는 Guard.verifyLocked 의 ErrNonceEmpty 소관 — 조립≠수리).
+func	unlock
+arg_id	robot-1
+unix_ms	1700000000000
+nonce
+canon	pail-unlock:v1:robot-1:1700000000000:
+
+id	CV-03
+desc	robot_id 에 구분자 ':' 포함("ro:bot") — 필드 경계 모호(D-F4 관측). 현재 동작 핀: 이스케이프 없이 그대로 연결된다. 수정 시 이 벡터가 먼저 운다.
+func	unlock
+arg_id	ro:bot
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+canon	pail-unlock:v1:ro:bot:1700000000000:AAECAwQFBgcICQoLDA0ODw==
+expect	reject
+reject_reason	separator ':' in identifier (F3 R-A, X23)
+canon_note	위 canon 은 수정 전 구현이 실제로 낸 문자열이다 — 기대값이 아니라 기록이다.
+frozen_by	LLD-OSS-A-2026-V1 §4.4 (2026-08-06)
+
+id	CV-04
+desc	음수 unix_ms — FormatInt 가 '-' 부호를 그대로 낸다. 시간 타당성은 canon 소관 아님(§2.4 절대시간 규약과 무관한 조립 계층).
+func	unlock
+arg_id	robot-1
+unix_ms	-1
+nonce	000102030405060708090a0b0c0d0e0f
+canon	pail-unlock:v1:robot-1:-1:AAECAwQFBgcICQoLDA0ODw==
+
+id	CV-05
+desc	RevokeCanon — 프리픽스 pail-revoke-issuer:v1, arg=issuer_key_id. unlock 과 프리픽스만 달라야 하며 교차 재사용되면 안 된다.
+func	revoke
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+canon	pail-revoke-issuer:v1:dev-key-1:1700000000000:AAECAwQFBgcICQoLDA0ODw==

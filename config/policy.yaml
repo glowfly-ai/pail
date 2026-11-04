@@ -1,0 +1,151 @@
+# PAIL policy config (phase 1)
+
+human_safety:
+  enabled: true
+  # If true => ESTOP when a human is detected within safety radius.
+  estop_on_human_detect: true
+
+evidence:
+  # window_ms moved to preconditions[id=evidence_claim].freshness_ms on
+  # 2026-08-23 (D-L1, implementation contract, 단계 6). Do not restore it here: while
+  # both clauses named the window they happened to say 2000, and that
+  # coincidence is what let the gate ignore this file for months (P-19).
+  confidence_threshold: 0.90
+  # The lowest source grade an evidence claim may carry. Enforcement is the
+  # gate's (D-L5); today the issuer only refuses to start if this does not
+  # resolve against trust_classes below.
+  min_trust_class: identity_bearing
+
+motion:
+  max_linear_speed_mps: 1.0
+  max_angular_speed_rps: 1.0
+
+# SK-1 : the guardrail envelope by GUARDRAILS.tsv name. `common` is
+# the absolute ceiling; `zones.<zone>.<name>` may only tighten it (S34). The two
+# `sls.*` entries are the same values as `motion.*` above (S34b — one value, two
+# names). A skill registry may only ask for names that have a value here: the
+# TB3 primitives ask for step.max_duration_s, so it is declared (30 s cap on one
+# permit; a step's own twist duration still caps it lower).
+guardrails:
+  common:
+    sls.linear_mps: 1.0
+    sls.angular_rps: 1.0
+    step.max_duration_s: 30
+  zones: {}
+
+# --- implementation contract D-L3: four required sections ----------------------------
+#
+# These four sections exist because the classification they encode used to live
+# only in prose and in C++ constants. A vocabulary that is not in the policy
+# file cannot be reviewed, diffed, or sealed.
+
+# Facts that must be live at decision time, and how fresh "live" means.
+preconditions:
+  - id: safety_feed
+    class: must_check_live
+    freshness_ms: 1000
+    # gate_core.cpp:55-58 already grants this exemption; writing it here is how
+    # an operator gets to read when their freshness bound stops applying.
+    exempt_in_progress_step: true
+  - id: evidence_claim
+    class: must_check_live
+    freshness_ms: 2000
+    exempt_in_progress_step: false
+
+# How long a revoked fact keeps having effect, per fact. `unbounded` is a legal
+# value on purpose: issuer_key has no reload channel today, and writing a finite
+# number there would make the system look bounded when it is not.
+revocation_classes:
+  - id: world_state
+    mechanism: recheck_at_decision
+    max_effective_delay_ms: 0
+  - id: operator_key
+    mechanism: recheck_at_use
+    max_effective_delay_ms: 0
+  - id: issuer_key
+    mechanism: reload_scoped
+    max_effective_delay_ms: unbounded
+
+# Grades for the five evidence sources of pail_msgs/Evidence.msg:5. Every source
+# must be graded exactly once — a source graded nowhere would arrive ungraded,
+# and a source graded twice has no single answer.
+trust_classes:
+  - id: identity_bearing
+    rank: 3
+    sources: [RFID, NFC, BARCODE]
+  - id: inferential
+    rank: 2
+    sources: [VISION]
+  - id: asserted
+    rank: 1
+    sources: [MANUAL]
+
+# The issuer's authority horizon — the ONLY source since 2026-08-23 (D-L9,
+# implementation contract step 6). An environment variable is not covered by the config
+# seal; this section is.
+#
+# IN FORCE. grpcserver.New() builds the lease policy from here
+# (LeasePolicyFromPolicy). PAIL_LEASE_TTL_MS / PAIL_LEASE_MAX_STEPS are no longer
+# read, and setting either one refuses startup with S16j instead of being
+# silently ignored — an operator who believes they shortened the window must not
+# receive tokens that live as long as this file says.
+#
+# Before the rewire these two numbers happened to equal the code's defaults, so
+# the sealed value and the running value agreed by coincidence and editing this
+# section changed nothing at all. That coincidence was the whole of P-19. Do not
+# reintroduce a second place that carries either number.
+horizon:
+  token_ttl_ms: 3600000
+  max_steps: 5
+
+# Issuer authorization table (implementation contract, B6-7).
+#
+# This lives inside policy.yaml on purpose: the config seal covers it through
+# the existing `policy_file_sha256` canon key. A separate file would need a new
+# seal key, which is a canon change (R1).
+#
+# caller_kind/caller_id are the axes the journal already records
+# (grpcauth.CallerFromContext) — not the certificate CN. The id form differs per
+# kind: mtls is the SHA-256 of the client leaf DER, uds is uid=<n>,gid=<n>.
+#
+# Enforcement is implementation contract's seam. Startup refusal on a missing table is all
+# this file buys today, so the presence of this section does not mean issuer
+# authorization is enforced.
+authz:
+  callers:
+    # The PEP gate over the local socket. Both images run as 10001:10001
+    # (docker/Dockerfile.pail_pep_gate, docker/Dockerfile.pail_services_go).
+    - caller_kind: uds
+      caller_id: "uid=10001,gid=10001"
+      allow: [GetActiveToken, ReportDecision, Attest]
+    # mTLS callers are added at provisioning time: the id is the fingerprint of
+    # a certificate that does not exist until scripts/sros2_provision.sh runs.
+    # A placeholder here would be a 64-hex string nobody can satisfy.
+# --- EC-1 (EU conformity track, D1): evidence retention -----------------------
+#
+# Declared here, not in the environment, because the config seal covers this
+# file (`policy_file_sha256`) — the number an auditor reads is the number the
+# chain says the robot ran under. It is a floor, not a timer: the blackbox
+# writer has no deletion path for a healthy segment, and nothing in this tree
+# deletes on expiry. `blackbox_verify -retention -policy <this file>` reports
+# per segment whether it is still within the declared window.
+#
+# production refuses to start without this section (S24). A declaration that
+# contradicts itself is refused in every profile (S25): lower_bound_years >= 5,
+# blackbox_years >= lower_bound_years, anchor_years >= blackbox_years.
+retention:
+  blackbox_years: 5
+  anchor_years: 7
+  lower_bound_years: 5
+
+# AS-5 (O-8): revocation-storm hysteresis. A world mutation still revokes an
+# intersecting chain immediately; only the issuer's UNATTENDED recompile is
+# damped. When one node has mutated >= flap_threshold times inside
+# flap_window_ms, the re-grant waits until the node has been quiet for
+# settle_ms (every further mutation restarts the wait); the robot stays stopped
+# under the REVOKED chain meanwhile. Operator plans are never damped. Omit the
+# section for no damping (logged at startup); when present all keys are required.
+revocation_hysteresis:
+  flap_window_ms: 10000
+  flap_threshold: 3
+  settle_ms: 5000

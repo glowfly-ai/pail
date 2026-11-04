@@ -1,0 +1,122 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+//
+// libpail_gate ABI v1 (see spec/ARCHITECTURE.md). The C functions in
+// include/pail_gate/pail_gate.h take and return these messages as protobuf BINARY bytes.
+// One schema for every language that links the library (prost / protobuf-python / C++);
+// nothing here is a chain format — this is the library's call surface, not canon.
+//
+// Adding a field is compatible; removing or renumbering one is an ABI bump
+// (pail_gate_abi_version).
+
+syntax = "proto3";
+
+package pail.gate.abi.v1;
+
+import "token_service.proto";
+
+message Config {
+  string robot_id = 1;
+  string policy_path = 2;              // policy.yaml ; refused when absent
+  string keyring_path = 3;             // legacy keyring.json path; trust mode from PAIL_KEYRING_MODE
+  int32 permit_grace_n = 4;            // 0 = library default (3)
+  int64 clock_skew_ms = 5;             // 0 = library default (500)
+  string static_target_object_id = 6;  // static provider mode only; empty otherwise
+  string config_digest = 7;            // sealed effective-config digest, if the caller sealed
+  string provider_mode = 8;            // "" = "grpc"
+  string skills_file = 9;              // SK-3: skills.<robot_class>.yaml; "" = no registry (deadline-only)
+  string robot_class = 10;             // SK-3: must match the file's robot_class when both set
+}
+
+// SK-3: the adapter relays the robot's own "done" for a named skill (robot_report rows).
+message CompleteInput {
+  int64 now_ms = 1;        // 0 = now
+  string skill = 2;        // registry name (the skill the permit was granted for)
+}
+
+message TokenInput {
+  bool reachable = 1;                                  // false = UNREACHABLE (no body is read)
+  pail.token.v1.GetActiveTokenResponse response = 2;
+}
+
+message SafetyInput {
+  string level = 1;
+  string source = 2;
+  string detail = 3;
+  int64 observed_ms = 4;   // 0 = now
+}
+
+message EvidenceInput {
+  string object_id = 1;
+  double confidence = 2;
+  string source = 3;
+  int64 received_ms = 4;   // 0 = now
+}
+
+message CommandInput {
+  double linear_norm = 1;
+  double angular_norm = 2;
+  int64 now_ms = 3;        // 0 = now (tests inject; production leaves 0)
+  // kClass* bit the command asks for: MOVE=1 MANIPULATE=2 ACTUATE=4 NONE=8. 0 = MOVE
+  // (the ROS node's implicit class); the token's mask must carry the bit.
+  int32 requested_class = 4;
+  // SK-2 : what the adapter measured, by GUARDRAILS.tsv name. Empty =
+  // the two norms above only. An adapter that fills it must fill every name the
+  // token's envelope carries (unmeasured → BLOCK ERR_BAD_TOKEN, detail names it).
+  map<string, double> measured = 5;
+  // SK-4 : the skill name the command asks for. A v5 token is judged by
+  // this name (must equal the token's skill); empty = refused under a v5 token.
+  string skill = 6;
+}
+
+message TickInput {
+  int64 now_ms = 1;        // 0 = now
+}
+
+message Outcome {
+  string path = 1;                 // command | recheck | step | safety
+  string state = 2;                // PERMIT | BLOCK | ESTOP | "" (no publication)
+  string reason = 3;               // OK | ERR_*
+  bool forward = 4;
+  bool report = 5;
+  string report_chain_id = 6;
+  string report_token_id = 7;
+  bool step_complete = 8;
+  bool fatal = 9;
+  bool permit_active = 10;
+  bool step_active = 11;
+  bool estop_active = 12;
+  int32 unreachable_streak = 13;
+  string effective_mode = 14;      // enforce | observe
+  bool hold_permit = 15;
+  bool fired = 16;                 // step path only
+  bool enter_permit = 17;
+  bool stop_permit = 18;
+  bool begin_step = 19;
+  string detail = 20;              // SK-2: which name/value/bound — never a new reason code
+}
+
+message TickOutcome {
+  Outcome recheck = 1;
+  Outcome step = 2;
+}
+
+message Info {
+  uint32 abi_version = 1;
+  string gate_mode = 2;
+  bool human_safety_enabled = 3;
+  int32 min_trust_rank = 4;
+  int64 safety_stale_ms = 5;
+  int64 evidence_window_ms = 6;
+  double evidence_conf_threshold = 7;
+  bool safety_exempt_in_progress_step = 8;
+  uint32 keys = 9;
+  uint32 revoked_keys = 10;
+  string keyring_mode = 11;
+  string keyring_error = 12;       // non-empty = no trust anchor; every token is refused
+  bool permit_active = 13;
+  bool step_active = 14;
+  bool estop_active = 15;
+  int32 unreachable_streak = 16;
+  uint32 consumed_size = 17;
+}

@@ -1,0 +1,14 @@
+version: 2.0
+name: rogue_subscribe_denied
+robot_id: robot-1
+# A rogue node tries to subscribe to the privileged /cmd_vel (pre-gate) topic to
+# siphon commands. Under sros2 the subscription is denied at participant
+# creation; on insecure/uds this is SKIPped (cannot prove the boundary).
+profile: sros2
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 1.0, rogue_subscribe: {topic: /cmd_vel, key: none}}
+expectations_global:
+  - audit_chain: PASS

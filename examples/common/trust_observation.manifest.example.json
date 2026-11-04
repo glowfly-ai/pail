@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "target_id": "operator-selected-target",
+  "deployment_id": "operator-selected-deployment",
+  "configured_mode": "bundle",
+  "bundle_path": "/absolute/path/to/existing/keyring_bundle.json",
+  "root_public_path": "/absolute/path/to/existing/root_pub.b64",
+  "root_fingerprint_sha256": "replace-with-sha256-of-the-32-decoded-root-public-key-bytes",
+  "helper_path": "/absolute/path/to/native/pail-keyring-sign",
+  "helper_sha256": "replace-with-sha256-of-that-native-executable"
+}

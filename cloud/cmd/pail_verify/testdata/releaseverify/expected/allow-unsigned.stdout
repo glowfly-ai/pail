@@ -1,0 +1,6 @@
+EVALUATION_VERIFY: PASS files=7
+SIGNATURE: no signature file beside the manifest (PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json.sig)
+Checksums only; the publisher was not authenticated by this run.
+VERIFIER: this is the bundled verifier (pail_verify)
+PUBLISHER_KEY: NOT_AUTHENTICATED — signature not verified
+TREE: not compared (no images.lock.json beside the tree root; run from the extracted pail-evaluation/ directory to compare)

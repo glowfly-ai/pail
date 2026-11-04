@@ -1,0 +1,15 @@
+name	kind	unit	compare	classes	standard	desc	since
+sls.linear_mps	A	m/s	le	*	IEC 61800-5-2 SLS · ISO 3691-4	Safely-limited linear speed of the commanded motion (today: TokenConstraints.max_linear_speed_mps)	2026-09-09
+sls.angular_rps	A	rad/s	le	*	IEC 61800-5-2 SLS	Safely-limited angular speed of the commanded motion (today: TokenConstraints.max_angular_speed_rps)	2026-09-09
+step.max_duration_s	A	s	le	*	PAIL (permit lifetime)	Longest time one skill call may hold its permit (today: TokenConstraints.max_duration_sec)	2026-09-09
+sls.gait_mps	A	m/s	le	humanoid,quadruped	ISO 13482 · manufacturer value	Safely-limited walking speed of a legged base	2026-09-09
+sls.joint_rps	A	rad/s	le	arm,humanoid	IEC 61800-5-2 SLS · ISO 10218-1:2025	Safely-limited joint speed (per joint, the largest one is measured)	2026-09-09
+sls.tcp_mmps	A	mm/s	le	arm	ISO 10218-1:2025 (collaborative speed)	Safely-limited tool-centre-point speed	2026-09-09
+slt.joint_nm	A	N·m	le	arm,humanoid	IEC 61800-5-2 SLT	Safely-limited joint torque target	2026-09-09
+slp.joint_deg	A	deg	range	arm,humanoid	IEC 61800-5-2 SLP	Safely-limited joint position (range = [min,max])	2026-09-09
+slp.zone	B	zone_id	feed	*	PAIL site model (human_exclusion, exclusive)	Allowed zone of the site model — a positioning feed, not a number; judged by the issuer's site model	2026-09-09
+ssm.separation_m	B	m	ge	arm,humanoid	ISO 10218-2:2025 SSM (ex ISO/TS 15066)	Measured separation distance to the nearest person (lower bound; the speed=f(distance) curve stays with the safety function)	2026-09-09
+sdh.human_distance_m	B	m	ge	*	ISO 13482 · ISO 3691-4	Measured distance to the nearest person, reported by the robot's safety layer (lower bound)	2026-09-09
+sdr.robot_distance_m	B	m	ge	*	PAIL (fleet feed)	Measured distance to the nearest other robot, reported by the fleet or adapter (lower bound)	2026-09-09
+sfc.contact_n	B	N	le	*	ISO 10218-2:2025 PFL (ex ISO/TS 15066)	Measured contact force at the effector (upper bound; the body-region table stays with the safety function)	2026-09-09
+sfc.jaw_n	A	N	le	microduck	manufacturer value	Commanded jaw/gripper closing force	2026-09-09

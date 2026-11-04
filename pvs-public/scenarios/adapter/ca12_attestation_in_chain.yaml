@@ -1,0 +1,9 @@
+# CA-12 (contract I-8): the issuer's chain carries an ATTESTATION record for the adapter — its
+# build_info string is unique to the adapter under test, so `contains` pins the adapter, not
+# some other component's attestation. The chain itself must verify (audit_chain PASS).
+version: 2.0
+name: adapter_attestation_in_chain
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, expect_audit: {chain: PASS, contains: "pail-build:v1:pep_gate:"}}

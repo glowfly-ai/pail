@@ -1,0 +1,16 @@
+# Synthetic TurtleBot3 base reference; not a customer deployment.
+site: tb3-reference
+schema: v3
+zones:
+  - id: demo-zone
+    type: work_area
+    adjacent: []
+objects:
+  - id: sample-box
+    at: demo-zone
+robots:
+  - id: robot-01
+    capabilities: [move]
+    schema: v3
+    home: demo-zone
+    robot_class: diff_drive_amr

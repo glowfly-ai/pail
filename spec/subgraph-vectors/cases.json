@@ -1,0 +1,621 @@
+{
+  "format": "PAILSG",
+  "format_version": 1,
+  "cases": [
+    {
+      "id": "SG-01",
+      "title": "legacy golden G1: three nodes, two edges, four attribute types",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 7,
+        "nodes": [
+          {
+            "id": "constraint:speed@z7",
+            "kind": 6,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "hard": {
+                "t": "bool",
+                "v": true
+              },
+              "max_linear_speed_mps": {
+                "t": "double",
+                "v": "0.5"
+              }
+            }
+          },
+          {
+            "id": "robot:tb1",
+            "kind": 1,
+            "state": 0,
+            "version": 3,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z7",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "adjacent_count": {
+                "t": "int64",
+                "v": 2
+              },
+              "type": {
+                "t": "string",
+                "v": "work_area"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:speed@z7",
+            "rel": 3,
+            "to": "zone:z7"
+          },
+          {
+            "from": "robot:tb1",
+            "rel": 1,
+            "to": "zone:z7"
+          }
+        ]
+      },
+      "canonical_hex": "5041494c534701000000000000000700000003000000077a6f6e653a7a3704000000000000000001000000020000000e61646a6163656e745f636f756e7402000000000000000200000004747970650100000009776f726b5f6172656100000009726f626f743a746231010000000000000000030000000000000013636f6e73747261696e743a7370656564407a37060000000000000000010000000200000004686172640401000000146d61785f6c696e6561725f73706565645f6d7073033fe00000000000000000000200000009726f626f743a74623101000000077a6f6e653a7a3700000013636f6e73747261696e743a7370656564407a3703000000077a6f6e653a7a37",
+      "sha256": "58b631c03edf4600000aec54715c022b0c5505d29b1639af021abf79d1474aa1"
+    },
+    {
+      "id": "SG-02",
+      "title": "empty subgraph at epoch 0",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [],
+        "edges": []
+      },
+      "canonical_hex": "5041494c53470100000000000000000000000000000000",
+      "sha256": "589aefd8f29bac6b1eaa403b38f26c99ea23e1fae8fa1a41c822d2e535512ebf"
+    },
+    {
+      "id": "SG-03",
+      "title": "one node, every attribute tag; keys sorted by NFC bytes; negative int64; negative zero; false",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 1,
+        "nodes": [
+          {
+            "id": "zone:z1",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "a": {
+                "t": "string",
+                "v": "first"
+              },
+              "b": {
+                "t": "bool",
+                "v": false
+              },
+              "d": {
+                "t": "double",
+                "v": "-0"
+              },
+              "i": {
+                "t": "int64",
+                "v": -5
+              },
+              "s": {
+                "t": "string",
+                "v": "héllo"
+              },
+              "é": {
+                "t": "string",
+                "v": "last"
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_hex": "5041494c534701000000000000000100000001000000077a6f6e653a7a310400000000000000000100000006000000016101000000056669727374000000016204000000000164030000000000000000000000016902fffffffffffffffb0000000173010000000668c3a96c6c6f00000002c3a901000000046c61737400000000",
+      "sha256": "dd461d5d104233951e70f3acef9566a78831da52d1b2dc91b5ef0c3263330974"
+    },
+    {
+      "id": "SG-04a",
+      "title": "NFC: decomposed identifier input",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 2,
+        "nodes": [
+          {
+            "id": "zone:café",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "café": {
+                "t": "string",
+                "v": "café"
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_hex": "5041494c5347010000000000000002000000010000000a7a6f6e653a636166c3a9040000000000000000010000000100000005636166c3a90100000005636166c3a900000000",
+      "sha256": "0dce5d7743692e6d7f60fbb539aff453d16caf02fc01153dcf6c46288b16e73f"
+    },
+    {
+      "id": "SG-04b",
+      "title": "NFC: composed identifier input (same bytes as SG-04a)",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 2,
+        "nodes": [
+          {
+            "id": "zone:café",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {
+              "café": {
+                "t": "string",
+                "v": "café"
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_hex": "5041494c5347010000000000000002000000010000000a7a6f6e653a636166c3a9040000000000000000010000000100000005636166c3a90100000005636166c3a900000000",
+      "sha256": "0dce5d7743692e6d7f60fbb539aff453d16caf02fc01153dcf6c46288b16e73f"
+    },
+    {
+      "id": "SG-05",
+      "title": "ordering is over encoded bytes: length-major (zone:b before zone:aa); edges likewise",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 3,
+        "nodes": [
+          {
+            "id": "robot:r",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "zone:aa",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "zone:b",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": [
+          {
+            "from": "robot:r",
+            "rel": 1,
+            "to": "zone:aa"
+          },
+          {
+            "from": "robot:r",
+            "rel": 1,
+            "to": "zone:b"
+          }
+        ]
+      },
+      "canonical_hex": "5041494c534701000000000000000300000003000000067a6f6e653a62040000000000000000010000000000000007726f626f743a720100000000000000000100000000000000077a6f6e653a616104000000000000000001000000000000000200000007726f626f743a7201000000067a6f6e653a6200000007726f626f743a7201000000077a6f6e653a6161",
+      "sha256": "b9ec5568b2fc2dca02a535c5253808cb689f88d070bdae745dd54eb383b10413"
+    },
+    {
+      "id": "SG-06",
+      "title": "identical duplicate edges are both kept (edge count 2)",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 4,
+        "nodes": [
+          {
+            "id": "robot:r",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": [
+          {
+            "from": "robot:r",
+            "rel": 1,
+            "to": "zone:z"
+          },
+          {
+            "from": "robot:r",
+            "rel": 1,
+            "to": "zone:z"
+          }
+        ]
+      },
+      "canonical_hex": "5041494c534701000000000000000400000002000000067a6f6e653a7a040000000000000000010000000000000007726f626f743a7201000000000000000001000000000000000200000007726f626f743a7201000000067a6f6e653a7a00000007726f626f743a7201000000067a6f6e653a7a",
+      "sha256": "94310c26ff1a378c1c0c2b051d19021d42a9a17482d2ed4d0448c46509e4b29f"
+    },
+    {
+      "id": "SG-07",
+      "title": "every node kind and every node state; every edge relation",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 5,
+        "nodes": [
+          {
+            "id": "constraint:c",
+            "kind": 6,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "ctype": {
+                "t": "string",
+                "v": "human_exclusion"
+              }
+            }
+          },
+          {
+            "id": "executor:a",
+            "kind": 2,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "human:h",
+            "kind": 5,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "object:o",
+            "kind": 3,
+            "state": 2,
+            "version": 9,
+            "attrs": {
+              "exclusive": {
+                "t": "bool",
+                "v": true
+              }
+            }
+          },
+          {
+            "id": "robot:a",
+            "kind": 1,
+            "state": 1,
+            "version": 2,
+            "attrs": {}
+          },
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "adjacent": {
+                "t": "string",
+                "v": "y,z"
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": "constraint:c",
+            "rel": 3,
+            "to": "zone:z"
+          },
+          {
+            "from": "human:h",
+            "rel": 1,
+            "to": "zone:z"
+          },
+          {
+            "from": "robot:a",
+            "rel": 1,
+            "to": "zone:z"
+          },
+          {
+            "from": "robot:a",
+            "rel": 2,
+            "to": "object:o"
+          },
+          {
+            "from": "robot:a",
+            "rel": 4,
+            "to": "executor:a"
+          },
+          {
+            "from": "robot:a",
+            "rel": 5,
+            "to": "object:o"
+          }
+        ]
+      },
+      "canonical_hex": "5041494c534701000000000000000500000006000000067a6f6e653a7a04000000000000000000000000010000000861646a6163656e740100000003792c7a0000000768756d616e3a68050000000000000000010000000000000007726f626f743a610101000000000000000200000000000000086f626a6563743a6f0302000000000000000900000001000000096578636c757369766504010000000a6578656375746f723a6102000000000000000000000000000000000c636f6e73747261696e743a630600000000000000000000000001000000056374797065010000000f68756d616e5f6578636c7573696f6e000000060000000768756d616e3a6801000000067a6f6e653a7a00000007726f626f743a6101000000067a6f6e653a7a00000007726f626f743a6102000000086f626a6563743a6f00000007726f626f743a61040000000a6578656375746f723a6100000007726f626f743a6105000000086f626a6563743a6f0000000c636f6e73747261696e743a6303000000067a6f6e653a7a",
+      "sha256": "9fa8c6bf4278607697ef91b76313962f08a45ba74e56c9c54e47765ab6603cb0"
+    },
+    {
+      "id": "SG-08",
+      "title": "extreme values: epoch and version 2^64-1; int64 min and max; large and subnormal doubles",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 18446744073709551615,
+        "nodes": [
+          {
+            "id": "zone:x",
+            "kind": 4,
+            "state": 0,
+            "version": 18446744073709551615,
+            "attrs": {
+              "big": {
+                "t": "double",
+                "v": "1e+308"
+              },
+              "half": {
+                "t": "double",
+                "v": "0.5"
+              },
+              "max": {
+                "t": "int64",
+                "v": 9223372036854775807
+              },
+              "min": {
+                "t": "int64",
+                "v": -9223372036854775808
+              },
+              "tiny": {
+                "t": "double",
+                "v": "5e-324"
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_hex": "5041494c534701ffffffffffffffff00000001000000067a6f6e653a780400ffffffffffffffff0000000500000003626967037fe1ccf385ebc8a00000000468616c66033fe0000000000000000000036d6178027fffffffffffffff000000036d696e0280000000000000000000000474696e7903000000000000000100000000",
+      "sha256": "1e32b42bc3e7bb9c1ceb3c5c96748100cd1e6b982ae520e77154b0d72fd8342d"
+    },
+    {
+      "id": "SG-09",
+      "title": "an edge may reference an id that is not a node of the subgraph; the encoder does not resolve ids",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 6,
+        "nodes": [
+          {
+            "id": "robot:r",
+            "kind": 1,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": [
+          {
+            "from": "robot:r",
+            "rel": 2,
+            "to": "object:nowhere"
+          }
+        ]
+      },
+      "canonical_hex": "5041494c53470100000000000000060000000100000007726f626f743a7201000000000000000001000000000000000100000007726f626f743a72020000000e6f626a6563743a6e6f7768657265",
+      "sha256": "36fc02f4ba509d46b0bf8e01da09f64b55a5df389ed59c3f470b5ca223e7c4c4"
+    },
+    {
+      "id": "SG-10",
+      "title": "attribute count 0: absent map and empty map encode identically",
+      "expect": "accept",
+      "subgraph": {
+        "epoch": 6,
+        "nodes": [
+          {
+            "id": "zone:p",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          },
+          {
+            "id": "zone:q",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": []
+      },
+      "canonical_hex": "5041494c534701000000000000000600000002000000067a6f6e653a700400000000000000000100000000000000067a6f6e653a71040000000000000000010000000000000000",
+      "sha256": "db93f79c28866178d23bb242446dc193deb64ed279c9134a188165c561007f28"
+    },
+    {
+      "id": "SG-90",
+      "title": "reject: node kind 0 (unspecified)",
+      "expect": "reject",
+      "reason": "kind_unspecified",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "x",
+            "kind": 0,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-91",
+      "title": "reject: double attribute NaN",
+      "expect": "reject",
+      "reason": "non_finite_double",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "v": {
+                "t": "double",
+                "v": "NaN"
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-92",
+      "title": "reject: double attribute +Inf",
+      "expect": "reject",
+      "reason": "non_finite_double",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "v": {
+                "t": "double",
+                "v": "+Inf"
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-93",
+      "title": "reject: double attribute -Inf",
+      "expect": "reject",
+      "reason": "non_finite_double",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "v": {
+                "t": "double",
+                "v": "-Inf"
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-94",
+      "title": "reject: duplicate node id",
+      "expect": "reject",
+      "reason": "duplicate_node_id",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:dup",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:dup",
+            "kind": 4,
+            "state": 0,
+            "version": 1,
+            "attrs": {}
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-95",
+      "title": "reject: duplicate node id after NFC (composed and decomposed spellings of one id)",
+      "expect": "reject",
+      "reason": "duplicate_node_id",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:café",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          },
+          {
+            "id": "zone:café",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {}
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "id": "SG-96",
+      "title": "reject: unknown attribute tag 0x09",
+      "expect": "reject",
+      "reason": "unknown_attr_tag",
+      "subgraph": {
+        "epoch": 0,
+        "nodes": [
+          {
+            "id": "zone:z",
+            "kind": 4,
+            "state": 0,
+            "version": 0,
+            "attrs": {
+              "v": {
+                "t": "unknown",
+                "tag": 9
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    }
+  ]
+}

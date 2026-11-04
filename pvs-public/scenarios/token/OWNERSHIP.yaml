@@ -1,0 +1,33 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+axis: token
+scenarios:
+  - id: ti01_replay_consumed
+    owns: []
+    also_touched_by: [G-ENF-07, G-ISS-04]   # 게이트 측 재생 차단 + 이슈어 측 소비 표시
+    future_refs: []
+    delegated_to: null
+  - id: ti02_swap_action_type
+    owns: []
+    also_touched_by: [G-ENF-04]
+    future_refs: []
+    delegated_to: null
+  - id: ti03_forged_signature_safe_stop
+    owns: []
+    also_touched_by: [G-ENF-16]   # strict_verify 위조 거부; SAFE_STOP 회복은 rc01 소관
+    future_refs: []
+    delegated_to: null
+  - id: ti04_constraint_exceeded
+    owns: []
+    also_touched_by: [G-ENF-05]
+    future_refs: []
+    delegated_to: null
+  - id: ti05_expiry_boundary
+    owns: []
+    also_touched_by: [G-ENF-06]
+    future_refs: []
+    delegated_to: null
+    note: >
+      not_after 경계만 검사(nightly, faketime 부트 프로파일). ERR_CLOCK(런타임
+      시계 왜곡)은 컨테이너가 호스트 CLOCK_REALTIME 을 공유해 격리 불가 —
+      Go 단위 테스트로 위임된 사실이 시나리오 주석에만 산문으로 있다.
+      DELEGATED.md 3장(E-9-3 대상) 밖이므로 여기서는 기록만 한다.

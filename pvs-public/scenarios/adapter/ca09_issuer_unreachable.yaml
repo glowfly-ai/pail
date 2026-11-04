@@ -1,0 +1,22 @@
+# CA-09 (spec/ADAPTER_CONTRACT.md §4, contract I-5/I-4): with a permit held, the AGENT the adapter
+# talks to stops answering (`kill: agent` — the token seam in the Microduck rig, the services
+# container on ROS; a dead issuer behind a live seam would be served as NO_TOKEN instead) →
+# the grace ladder ends the permit (ERR_ISSUER_UNREACHABLE) and forwarding stops; the robot's
+# deadman shows HOLD on the far side. Nothing is forwarded on the strength of a stale token.
+version: 2.0
+name: adapter_issuer_unreachable_fail_closed
+robot_id: robot-1
+profile: insecure
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 8.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 8.0}}
+  - {t: 1.2, expect_gate: {state: PERMIT, reason: OK}}
+  - {t: 1.2, expect_bridge: {state: FORWARDING}}
+  - {t: 2.0, fault: {kill: agent, signal: 9}}
+  - {t: 2.2, expect_gate: {state: BLOCK, reason: ERR_ISSUER_UNREACHABLE, timeout: 4.0}}
+  - {t: 3.5, expect_bridge: {state: HOLD}}
+  # far side, a 1.5 s window: the harness's 0.2 m/s stream keeps coming until t=8.6, so an adapter that still
+  # forwards it after the grace ladder (whatever its self-report says) is caught from the robot's side
+  - {t: 3.5, expect_drive_never: {linear_x: 0.2, within_ms: 1500}}

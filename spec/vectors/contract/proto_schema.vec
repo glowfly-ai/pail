@@ -1,0 +1,387 @@
+# tests/golden/contract/proto_schema.vec — G-CTR-02 proto 와이어 스키마 동결 (LLD-D §4.1)
+# .proto 원문에서 손으로 전사했다 (2026-08-04, HLD §4.3 규율 — 자동 생성 금지:
+# 생성하면 대조가 아니라 복사이고, 필드 번호를 바꾼 커밋이 골든까지 함께 바꿔 조용히 통과한다).
+# 행 형식 (플랫 TSV — §2.1 id-레코드형 아님, 설계 §4.1 예시 형식):
+#   file<TAB><path><TAB><package>                      — PG-04: 순회 대상 파일 리터럴 (정확히 5개)
+#   field<TAB><full_name><TAB><number><TAB><kind><TAB><cardinality>
+#   enum<TAB><enum_full_name>.<value_name><TAB><number>
+#   reserved<TAB><full_name><TAB>range<TAB><lo><TAB><hi>   — 닫힌 구간 (양끝 포함)
+#   reserved<TAB><full_name><TAB>name<TAB><field_name>
+# kind/cardinality 는 protoreflect 표기 (string/int32/.../message, optional/repeated).
+#
+# 2026-09-04 AL-2(LLD-LED D1/D3, 동결 창 R1): ActionPlan.context_json(100)·constraints_json(101) ·
+# PlanStep.action(100) · ActionSpec{classes,name,params_json} · enum ActionClass(0~4) 추가.
+# 기존 번호는 하나도 바뀌지 않았다(후방 호환 덧셈). 이 골든 갱신이 곧 의도 선언이다.
+# 2026-09-14 SKL v2.1(S2 정정): Denial.exceeded(11) · EnvelopeExceeded{name,requested,max} 추가.
+# 서명되지 않는 응답 메시지의 후방 호환 덧셈이다(토큰·canon 무변경) — 한도 초과 요청을 줄여
+# 발급하던 것을 거부로 바꾸면서 요청자에게 넘은 한도를 기계 칸으로 알려 준다.
+# reserved 행은 현재 0건이다. 없는 것이 아니라 **예약할 것이 없다** — 골든 이력
+# 전수에서 필드 삭제 0건이다(proto_contract_check.py PS-03 실측). 규율은
+# codex_spec/01_INTERFACES.md §0 에 적혀 있고, 삭제가 생기면 그때 여기 행이 는다.
+#
+# 이 파일을 읽는 검사는 둘이고 보는 변이 다르다:
+#   PG-01~05 (proto_golden_test.go)      골든 ↔ **체크인된 생성 디스크립터**
+#   PS-01~03 (tests/tools/proto_contract_check.py)  골든 ↔ **proto/*.proto 원문**
+# PG 쪽은 원문을 안 읽는다 — 재생성 없이 원문만 고친 변경은 PG 전건이 침묵한다.
+
+file	pail.proto	pail.v1
+file	token_service.proto	pail.token.v1
+file	operator_service.proto	pail.operator.v1
+file	agent_relay.proto	pail.agent.v1
+file	ha_replication.proto	pail.ha.v1
+
+# ---- pail.proto (pail.v1) ----
+field	pail.v1.Denial.reason_code	1	string	optional
+field	pail.v1.Denial.reason_value	2	uint32	optional
+field	pail.v1.Denial.disposition	3	enum	optional
+field	pail.v1.Denial.retry_after_ms	4	uint64	optional
+field	pail.v1.Denial.severity	5	enum	optional
+field	pail.v1.Denial.observed_epoch	6	uint64	optional
+field	pail.v1.Denial.detail	7	string	optional
+field	pail.v1.Denial.origin_reason_code	8	string	optional
+field	pail.v1.Denial.retry_forbidden	9	bool	optional
+field	pail.v1.Denial.epoch_ephemeral	10	bool	optional
+field	pail.v1.Denial.exceeded	11	message	repeated
+field	pail.v1.EnvelopeExceeded.name	1	string	optional
+field	pail.v1.EnvelopeExceeded.requested	2	double	optional
+field	pail.v1.EnvelopeExceeded.max	3	double	optional
+field	pail.v1.SubmitActionPlanRequest.session_id	1	string	optional
+field	pail.v1.SubmitActionPlanRequest.robot_id	2	string	optional
+field	pail.v1.SubmitActionPlanRequest.plan	3	message	optional
+field	pail.v1.SubmitActionPlanResponse.chain_id	1	string	optional
+field	pail.v1.SubmitActionPlanResponse.status	2	enum	optional
+field	pail.v1.SubmitActionPlanResponse.rejected_reason	3	string	optional
+field	pail.v1.SubmitActionPlanResponse.tokens	4	message	repeated
+field	pail.v1.SubmitActionPlanResponse.denial	5	message	optional
+field	pail.v1.SubmitTextCommandRequest.session_id	1	string	optional
+field	pail.v1.SubmitTextCommandRequest.robot_id	2	string	optional
+field	pail.v1.SubmitTextCommandRequest.command_text	3	string	optional
+field	pail.v1.SubmitTextCommandRequest.lang	4	string	optional
+field	pail.v1.SubmitTextCommandRequest.constraints	5	message	optional
+field	pail.v1.SubmitTextCommandResponse.plan_id	1	string	optional
+field	pail.v1.SubmitTextCommandResponse.status	2	enum	optional
+field	pail.v1.SubmitTextCommandResponse.rejected_reason	3	string	optional
+field	pail.v1.SubmitTextCommandResponse.denial	4	message	optional
+field	pail.v1.GetPlanStatusRequest.plan_id	1	string	optional
+field	pail.v1.GetPlanStatusResponse.plan_id	1	string	optional
+field	pail.v1.GetPlanStatusResponse.state	2	enum	optional
+field	pail.v1.GetPlanStatusResponse.detail	3	string	optional
+field	pail.v1.GetPlanStatusResponse.denial	4	message	optional
+field	pail.v1.CancelPlanRequest.plan_id	1	string	optional
+field	pail.v1.CancelPlanResponse.plan_id	1	string	optional
+field	pail.v1.CancelPlanResponse.cancelled	2	bool	optional
+field	pail.v1.CommandConstraints.max_linear_speed_mps	1	double	optional
+field	pail.v1.CommandConstraints.max_angular_speed_rps	2	double	optional
+field	pail.v1.CommandConstraints.timeout_sec	3	double	optional
+field	pail.v1.ActionPlan.plan_id	1	string	optional
+field	pail.v1.ActionPlan.steps	2	message	repeated
+field	pail.v1.ActionPlan.context_json	100	bytes	optional
+field	pail.v1.ActionPlan.constraints_json	101	bytes	optional
+field	pail.v1.PlanStep.step_id	1	string	optional
+field	pail.v1.PlanStep.type	2	enum	optional
+field	pail.v1.PlanStep.target_object_id	10	string	optional
+field	pail.v1.PlanStep.twist	20	message	optional
+field	pail.v1.PlanStep.task_goal_json	30	string	optional
+field	pail.v1.PlanStep.action	100	message	optional
+field	pail.v1.ActionSpec.classes	1	enum	repeated
+field	pail.v1.ActionSpec.name	2	string	optional
+field	pail.v1.ActionSpec.params_json	3	bytes	optional
+field	pail.v1.TwistCommand.linear_x	1	double	optional
+field	pail.v1.TwistCommand.linear_y	2	double	optional
+field	pail.v1.TwistCommand.linear_z	3	double	optional
+field	pail.v1.TwistCommand.angular_x	4	double	optional
+field	pail.v1.TwistCommand.angular_y	5	double	optional
+field	pail.v1.TwistCommand.angular_z	6	double	optional
+field	pail.v1.TwistCommand.duration_sec	7	double	optional
+field	pail.v1.TokenConstraints.max_linear_speed_mps	1	double	optional
+field	pail.v1.TokenConstraints.max_angular_speed_rps	2	double	optional
+field	pail.v1.TokenConstraints.max_duration_sec	3	double	optional
+field	pail.v1.TokenConstraints.guardrails	4	message	repeated
+field	pail.v1.Guardrail.name	1	string	optional
+field	pail.v1.Guardrail.max	2	double	optional
+field	pail.v1.Guardrail.min	3	double	optional
+field	pail.v1.ActionToken.token_id	1	string	optional
+field	pail.v1.ActionToken.chain_id	2	string	optional
+field	pail.v1.ActionToken.sequence_index	3	int32	optional
+field	pail.v1.ActionToken.robot_id	10	string	optional
+field	pail.v1.ActionToken.plan_id	11	string	optional
+field	pail.v1.ActionToken.step_id	12	string	optional
+field	pail.v1.ActionToken.target_object_id	20	string	optional
+field	pail.v1.ActionToken.issued_at_unix_ms	30	int64	optional
+field	pail.v1.ActionToken.not_before_unix_ms	31	int64	optional
+field	pail.v1.ActionToken.not_after_unix_ms	32	int64	optional
+field	pail.v1.ActionToken.policy_hash	40	bytes	optional
+field	pail.v1.ActionToken.action_type	50	enum	optional
+field	pail.v1.ActionToken.constraints	51	message	optional
+field	pail.v1.ActionToken.schema_version	60	uint32	optional
+field	pail.v1.ActionToken.subgraph_snapshot_hash	61	bytes	optional
+field	pail.v1.ActionToken.skill	70	string	optional
+field	pail.v1.ActionToken.slot	71	string	optional
+field	pail.v1.SignedToken.token	1	message	optional
+field	pail.v1.SignedToken.signature	2	bytes	optional
+field	pail.v1.SignedToken.key_id	3	bytes	optional
+field	pail.v1.SignedToken.action_token_bytes	4	bytes	optional
+enum	pail.v1.Disposition.DISPOSITION_UNSPECIFIED	0
+enum	pail.v1.Disposition.PERMANENT	1
+enum	pail.v1.Disposition.CONDITIONAL	2
+enum	pail.v1.Disposition.TRANSIENT	3
+enum	pail.v1.Severity.SEVERITY_UNSPECIFIED	0
+enum	pail.v1.Severity.NORMAL_DEFENSE	1
+enum	pail.v1.Severity.ANOMALY	2
+enum	pail.v1.Severity.SUSPECTED_TAMPER	3
+enum	pail.v1.SubmitStatus.SUBMIT_STATUS_UNSPECIFIED	0
+enum	pail.v1.SubmitStatus.ACCEPTED	1
+enum	pail.v1.SubmitStatus.REJECTED	2
+enum	pail.v1.PlanState.PLAN_STATE_UNSPECIFIED	0
+enum	pail.v1.PlanState.PENDING	1
+enum	pail.v1.PlanState.RUNNING	2
+enum	pail.v1.PlanState.COMPLETED	3
+enum	pail.v1.PlanState.FAILED	4
+enum	pail.v1.PlanState.CANCELLED	5
+enum	pail.v1.StepType.STEP_TYPE_UNSPECIFIED	0
+enum	pail.v1.StepType.STEP_TWIST	1
+enum	pail.v1.StepType.STEP_PICK	2
+enum	pail.v1.StepType.STEP_PLACE	3
+enum	pail.v1.StepType.STEP_CUSTOM	99
+enum	pail.v1.ActionClass.ACTION_CLASS_UNSPECIFIED	0
+enum	pail.v1.ActionClass.ACTION_CLASS_MOVE	1
+enum	pail.v1.ActionClass.ACTION_CLASS_MANIPULATE	2
+enum	pail.v1.ActionClass.ACTION_CLASS_ACTUATE	3
+enum	pail.v1.ActionClass.ACTION_CLASS_NONE	4
+enum	pail.v1.ActionType.ACTION_TYPE_UNSPECIFIED	0
+enum	pail.v1.ActionType.ACTION_MOVE	1
+enum	pail.v1.ActionType.ACTION_PICK	2
+enum	pail.v1.ActionType.ACTION_PLACE	3
+enum	pail.v1.ActionType.ACTION_CUSTOM	99
+
+# ---- token_service.proto (pail.token.v1) ----
+field	pail.token.v1.SealConfigRequest.robot_id	1	string	optional
+field	pail.token.v1.SealConfigRequest.component	2	string	optional
+field	pail.token.v1.SealConfigRequest.seal_version	3	int32	optional
+field	pail.token.v1.SealConfigRequest.canonical	4	bytes	optional
+field	pail.token.v1.SealConfigRequest.verifies_authorization	5	bool	optional
+field	pail.token.v1.SealConfigRequest.degraded	6	string	repeated
+field	pail.token.v1.SealConfigRequest.build_info	7	string	optional
+field	pail.token.v1.SealConfigResponse.status	1	string	optional
+field	pail.token.v1.SealConfigResponse.config_digest	2	bytes	optional
+field	pail.token.v1.GatewayCensusRequest.robot_id	1	string	optional
+field	pail.token.v1.GatewayCensusRequest.chain_id	2	string	optional
+field	pail.token.v1.GatewayCensusRequest.last_consumed_index	3	int32	optional
+field	pail.token.v1.GatewayCensusRequest.held_lease_max_index	4	int32	optional
+field	pail.token.v1.GatewayCensusRequest.seen_issuer_epoch	5	uint64	optional
+field	pail.token.v1.GatewayCensusResponse.accepted	1	bool	optional
+field	pail.token.v1.GatewayCensusResponse.verdict	2	string	optional
+field	pail.token.v1.GatewayCensusResponse.issuer_epoch	3	uint64	optional
+field	pail.token.v1.AttestRequest.robot_id	1	string	optional
+field	pail.token.v1.AttestRequest.component	2	string	optional
+field	pail.token.v1.AttestRequest.measurement_sha256	3	bytes	optional
+field	pail.token.v1.AttestRequest.build_info	4	string	optional
+field	pail.token.v1.AttestResponse.status	1	string	optional
+field	pail.token.v1.AttestResponse.ttl_s	2	uint64	optional
+field	pail.token.v1.GetActiveTokenRequest.robot_id	1	string	optional
+field	pail.token.v1.GetActiveTokenResponse.status	1	enum	optional
+field	pail.token.v1.GetActiveTokenResponse.chain_id	2	string	optional
+field	pail.token.v1.GetActiveTokenResponse.expected_sequence_index	3	int32	optional
+field	pail.token.v1.GetActiveTokenResponse.token	4	message	optional
+field	pail.token.v1.GetActiveTokenResponse.current_subgraph_hash	5	bytes	optional
+field	pail.token.v1.GetActiveTokenResponse.graph_epoch	6	uint64	optional
+field	pail.token.v1.GetActiveTokenResponse.lease_tokens	7	message	repeated
+field	pail.token.v1.GetActiveTokenResponse.lease_max_index	8	int32	optional
+field	pail.token.v1.GetActiveTokenResponse.issuer_epoch	9	uint64	optional
+field	pail.token.v1.EvidenceSummary.source	1	string	optional
+field	pail.token.v1.EvidenceSummary.object_id	2	string	optional
+field	pail.token.v1.EvidenceSummary.confidence	3	float	optional
+field	pail.token.v1.EvidenceSummary.unix_ms	4	int64	optional
+field	pail.token.v1.ReportDecisionRequest.robot_id	1	string	optional
+field	pail.token.v1.ReportDecisionRequest.chain_id	2	string	optional
+field	pail.token.v1.ReportDecisionRequest.token_id	3	string	optional
+field	pail.token.v1.ReportDecisionRequest.decision	4	enum	optional
+field	pail.token.v1.ReportDecisionRequest.reason_code	5	string	optional
+field	pail.token.v1.ReportDecisionRequest.evidence	6	message	optional
+field	pail.token.v1.ReportDecisionRequest.step_complete	7	bool	optional
+field	pail.token.v1.ReportDecisionRequest.fatal	8	bool	optional
+field	pail.token.v1.ReportDecisionRequest.evidence_provenance	9	string	optional
+# 2026-08-22 (LLD-SHADOW §5.2 D-S5): effective_mode — 판정에 적용된 모드 스탬프.
+# 이 행 추가가 의도 선언이다(G-CTR 규율). 필드 추가이지 삭제가 아니므로 reserved 행 없음(PS-03).
+field	pail.token.v1.ReportDecisionRequest.effective_mode	10	string	optional
+field	pail.token.v1.ReportDecisionRequest.detail	11	string	optional
+# 2026-10-01 OI-01: ReportDecisionRequest.decided_unix_ms(12), agent_seq(13), agent_run_id(14), delivery(15).
+# The robot agent's delivery metadata (decided time, run id, sequence, live/replayed): a report replayed
+# after a link outage is journaled as the late fact it is, and exactly once. Backward-compatible addition;
+# no existing number changed; signatures and canon are untouched. This golden update is the declaration.
+field	pail.token.v1.ReportDecisionRequest.decided_unix_ms	12	int64	optional
+field	pail.token.v1.ReportDecisionRequest.agent_seq	13	uint64	optional
+field	pail.token.v1.ReportDecisionRequest.agent_run_id	14	string	optional
+field	pail.token.v1.ReportDecisionRequest.delivery	15	string	optional
+field	pail.token.v1.ReportDecisionResponse.accepted	1	bool	optional
+enum	pail.token.v1.ActiveTokenStatus.ACTIVE_TOKEN_STATUS_UNSPECIFIED	0
+enum	pail.token.v1.ActiveTokenStatus.OK	1
+enum	pail.token.v1.ActiveTokenStatus.NO_TOKEN	2
+enum	pail.token.v1.ActiveTokenStatus.REVOKED	3
+enum	pail.token.v1.ActiveTokenStatus.ERROR	4
+enum	pail.token.v1.Decision.DECISION_UNSPECIFIED	0
+enum	pail.token.v1.Decision.PERMIT	1
+enum	pail.token.v1.Decision.BLOCK	2
+enum	pail.token.v1.Decision.ESTOP	3
+
+# ---- operator_service.proto (pail.operator.v1) ----
+field	pail.operator.v1.ContextEvent.node_id	1	string	optional
+field	pail.operator.v1.ContextEvent.kind	2	enum	optional
+field	pail.operator.v1.ContextEvent.arg	3	string	optional
+field	pail.operator.v1.ContextEvent.unix_ms	4	int64	optional
+# 2026-09-22 AG-8: customer-defined world events. custom_kind names a site-model-declared event; kind CUSTOM selects it (fail-closed otherwise).
+field	pail.operator.v1.ContextEvent.custom_kind	5	string	optional
+field	pail.operator.v1.ContextEventAck.accepted	1	bool	optional
+field	pail.operator.v1.ContextEventAck.epoch	2	uint64	optional
+field	pail.operator.v1.ContextEventAck.detail	3	string	optional
+# 2026-09-22 AS-3b LOTO lock register (hand-transcribed from operator_service.proto; the lock's
+# target is target_robot_id on purpose — see the proto comment on the identity-binding interceptor)
+field	pail.operator.v1.ApplyLockRequest.target_robot_id	1	string	optional
+field	pail.operator.v1.ApplyLockRequest.tag	2	string	optional
+field	pail.operator.v1.ReleaseLockRequest.lock_id	1	string	optional
+field	pail.operator.v1.ReleaseLockRequest.reason	2	string	optional
+field	pail.operator.v1.ListLocksRequest.robot_filter	1	string	optional
+field	pail.operator.v1.ListLocksRequest.include_released	2	bool	optional
+field	pail.operator.v1.LockRecord.lock_id	1	string	optional
+field	pail.operator.v1.LockRecord.robot_id	2	string	optional
+field	pail.operator.v1.LockRecord.applier_kind	3	string	optional
+field	pail.operator.v1.LockRecord.applier_id	4	string	optional
+field	pail.operator.v1.LockRecord.tag	5	string	optional
+field	pail.operator.v1.LockRecord.applied_at_ms	6	int64	optional
+field	pail.operator.v1.LockRecord.state	7	string	optional
+field	pail.operator.v1.LockRecord.released_at_ms	8	int64	optional
+field	pail.operator.v1.LockRecord.released_by_id	9	string	optional
+field	pail.operator.v1.LockRecord.release_mode	10	string	optional
+field	pail.operator.v1.LockRecord.release_reason	11	string	optional
+field	pail.operator.v1.LockResponse.accepted	1	bool	optional
+field	pail.operator.v1.LockResponse.detail	2	string	optional
+field	pail.operator.v1.LockResponse.lock_id	3	string	optional
+field	pail.operator.v1.LockResponse.epoch	4	uint64	optional
+field	pail.operator.v1.LockResponse.active_locks	5	uint32	optional
+field	pail.operator.v1.LockResponse.node_maintenance	6	bool	optional
+field	pail.operator.v1.ListLocksResponse.locks	1	message	repeated
+field	pail.operator.v1.UnlockRequest.robot_id	1	string	optional
+field	pail.operator.v1.UnlockRequest.unix_ms	2	int64	optional
+field	pail.operator.v1.UnlockRequest.nonce	3	bytes	optional
+field	pail.operator.v1.UnlockRequest.operator_sig	4	bytes	optional
+field	pail.operator.v1.UnlockRequest.operator_key_id	5	string	optional
+field	pail.operator.v1.UnlockResponse.accepted	1	bool	optional
+field	pail.operator.v1.UnlockResponse.detail	2	string	optional
+field	pail.operator.v1.RevokeKeyRequest.issuer_key_id	1	string	optional
+field	pail.operator.v1.RevokeKeyRequest.unix_ms	2	int64	optional
+field	pail.operator.v1.RevokeKeyRequest.nonce	3	bytes	optional
+field	pail.operator.v1.RevokeKeyRequest.operator_sig	4	bytes	optional
+field	pail.operator.v1.RevokeKeyRequest.operator_key_id	5	string	optional
+field	pail.operator.v1.RevokeKeyResponse.accepted	1	bool	optional
+field	pail.operator.v1.RevokeKeyResponse.detail	2	string	optional
+enum	pail.operator.v1.ContextEventKind.CONTEXT_EVENT_KIND_UNSPECIFIED	0
+enum	pail.operator.v1.ContextEventKind.HUMAN_ENTER	1
+enum	pail.operator.v1.ContextEventKind.HUMAN_LEAVE	2
+enum	pail.operator.v1.ContextEventKind.OBJECT_MOVE	3
+enum	pail.operator.v1.ContextEventKind.MAINTENANCE_ON	4
+enum	pail.operator.v1.ContextEventKind.MAINTENANCE_OFF	5
+enum	pail.operator.v1.ContextEventKind.CORDON_ON	6
+enum	pail.operator.v1.ContextEventKind.CORDON_OFF	7
+enum	pail.operator.v1.ContextEventKind.CUSTOM	8
+
+# ---- agent_relay.proto (pail.agent.v1) ----
+field	pail.agent.v1.SubscribeBeaconsRequest.robot_id	1	string	optional
+field	pail.agent.v1.BeaconEvent.event	1	uint32	optional
+field	pail.agent.v1.BeaconEvent.reason	2	uint32	optional
+field	pail.agent.v1.BeaconEvent.unix_ms	3	uint64	optional
+field	pail.agent.v1.BeaconEvent.robot_id	4	string	optional
+field	pail.agent.v1.BeaconEvent.token_hash16	5	bytes	optional
+field	pail.agent.v1.GetKeyringBundleRequest.robot_id	1	string	optional
+field	pail.agent.v1.GetKeyringBundleResponse.bundle	1	bytes	optional
+
+# ---- ha_replication.proto (pail.ha.v1) ----
+field	pail.ha.v1.LeaderFrame.segment_seq	1	uint64	optional
+field	pail.ha.v1.LeaderFrame.offset	2	uint64	optional
+field	pail.ha.v1.LeaderFrame.data	3	bytes	optional
+field	pail.ha.v1.LeaderFrame.commit_id	4	uint64	optional
+field	pail.ha.v1.StandbyAck.commit_id	1	uint64	optional
+field	pail.ha.v1.StandbyAck.have_segment_seq	2	uint64	optional
+field	pail.ha.v1.StandbyAck.have_bytes	3	uint64	optional
+
+# core-comm-v1: additive fields reviewed against LLD sections 4-6; existing rows unchanged.
+field	pail.v1.SubmitActionPlanRequest.operation_id	4	string	optional
+field	pail.v1.SubmitActionPlanResponse.receipt	6	message	optional
+field	pail.v1.GetPlanStatusRequest.operation_id	2	string	optional
+field	pail.v1.GetPlanStatusRequest.operation_kind	3	enum	optional
+field	pail.v1.GetPlanStatusResponse.receipt	5	message	optional
+field	pail.v1.CancelPlanRequest.operation_id	2	string	optional
+field	pail.v1.CancelPlanResponse.receipt	3	message	optional
+field	pail.v1.OperationReceipt.contract_version	1	uint32	optional
+field	pail.v1.OperationReceipt.operation_id	2	string	optional
+field	pail.v1.OperationReceipt.method	3	enum	optional
+field	pail.v1.OperationReceipt.plan_id	4	string	optional
+field	pail.v1.OperationReceipt.robot_id	5	string	optional
+field	pail.v1.OperationReceipt.request_digest	6	bytes	optional
+field	pail.v1.OperationReceipt.operation_state	7	enum	optional
+field	pail.v1.OperationReceipt.original_chain_id	8	string	optional
+field	pail.v1.OperationReceipt.current_authority_state	9	string	optional
+field	pail.v1.OperationReceipt.issuer_epoch	10	uint64	optional
+field	pail.v1.OperationReceipt.durable_record_ref	11	string	optional
+field	pail.v1.OperationReceipt.reason	12	string	optional
+field	pail.token.v1.ReportDecisionRequest.report_id	16	string	optional
+field	pail.token.v1.ReportDecisionRequest.report_digest	17	bytes	optional
+field	pail.token.v1.ReportDecisionRequest.receipt_contract_version	18	uint32	optional
+field	pail.token.v1.ReportDecisionRequest.attribution	19	message	optional
+field	pail.token.v1.ReportDecisionResponse.receipt	2	message	optional
+field	pail.token.v1.ReportAttribution.chain_id	1	string	optional
+field	pail.token.v1.ReportAttribution.basis	2	string	optional
+field	pail.token.v1.ReportAttribution.gateway_instance_id	3	string	optional
+field	pail.token.v1.ReportReceipt.contract_version	1	uint32	optional
+field	pail.token.v1.ReportReceipt.report_id	2	string	optional
+field	pail.token.v1.ReportReceipt.report_digest	3	bytes	optional
+field	pail.token.v1.ReportReceipt.receiver_instance_id	4	string	optional
+field	pail.token.v1.ReportReceipt.robot_id	5	string	optional
+field	pail.token.v1.ReportReceipt.storage	6	enum	optional
+field	pail.token.v1.ReportReceipt.effect	7	enum	optional
+field	pail.token.v1.ReportReceipt.disposition	8	enum	optional
+field	pail.token.v1.ReportReceipt.journal_record_ref	9	string	optional
+field	pail.token.v1.ReportReceipt.reason	10	string	optional
+field	pail.token.v1.ReportReceipt.effect_scope	11	enum	optional
+enum	pail.v1.OperationKind.OPERATION_UNSPECIFIED	0
+enum	pail.v1.OperationKind.SUBMIT	1
+enum	pail.v1.OperationKind.CANCEL	2
+enum	pail.v1.OperationState.OP_STATE_UNSPECIFIED	0
+enum	pail.v1.OperationState.IN_PROGRESS	1
+enum	pail.v1.OperationState.COMMITTED	2
+enum	pail.v1.OperationState.OP_REJECTED	3
+enum	pail.v1.OperationState.OUTCOME_UNKNOWN	4
+enum	pail.v1.OperationState.EXPIRED_RECEIPT	5
+enum	pail.token.v1.StorageLevel.STORAGE_UNSPECIFIED	0
+enum	pail.token.v1.StorageLevel.STORAGE_NONE	1
+enum	pail.token.v1.StorageLevel.LOCAL_BUFFERED	2
+enum	pail.token.v1.StorageLevel.LOCAL_DURABLE	3
+enum	pail.token.v1.StorageLevel.ISSUER_DURABLE	4
+enum	pail.token.v1.EffectStatus.EFFECT_UNSPECIFIED	0
+enum	pail.token.v1.EffectStatus.NOT_APPLICABLE	1
+enum	pail.token.v1.EffectStatus.PENDING	2
+enum	pail.token.v1.EffectStatus.APPLIED	3
+enum	pail.token.v1.EffectStatus.REJECTED	4
+enum	pail.token.v1.EffectStatus.UNKNOWN	5
+enum	pail.token.v1.ReceiptDisposition.RECEIPT_UNSPECIFIED	0
+enum	pail.token.v1.ReceiptDisposition.NEW	1
+enum	pail.token.v1.ReceiptDisposition.DUPLICATE	2
+enum	pail.token.v1.ReceiptDisposition.RETRYABLE	3
+enum	pail.token.v1.ReceiptDisposition.CONFLICT	4
+enum	pail.token.v1.ReceiptDisposition.TERMINAL_REJECTED	5
+enum	pail.token.v1.EffectScope.SCOPE_UNSPECIFIED	0
+enum	pail.token.v1.EffectScope.SCOPE_NONE	1
+enum	pail.token.v1.EffectScope.LOCAL_LEASE	2
+enum	pail.token.v1.EffectScope.ISSUER_CHAIN	3
+
+# p39 TOA: additive effect contract, original Attest fields 1/2 unchanged.
+enum	pail.token.v1.AttestAuthorityEffect.ATTEST_EFFECT_UNSPECIFIED	0
+enum	pail.token.v1.AttestAuthorityEffect.ATTEST_EFFECT_PRESERVE	1
+enum	pail.token.v1.AttestAuthorityEffect.ATTEST_EFFECT_REFRESH_CACHE_ONLY	2
+enum	pail.token.v1.AttestAuthorityEffect.ATTEST_EFFECT_WITHHOLD	3
+field	pail.token.v1.AttestResponse.effect_contract_version	3	uint32	optional
+field	pail.token.v1.AttestResponse.enforcement_mode	4	string	optional
+field	pail.token.v1.AttestResponse.authority_effect	5	enum	optional
+field	pail.token.v1.AttestResponse.robot_id	6	string	optional
+field	pail.token.v1.AttestResponse.issuer_epoch	7	uint64	optional
+field	pail.token.v1.AttestResponse.component	8	string	optional
+field	pail.token.v1.AttestResponse.measurement_sha256	9	bytes	optional

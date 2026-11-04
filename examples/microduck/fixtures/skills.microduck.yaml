@@ -1,0 +1,110 @@
+# Synthetic software-preview configuration.
+version: 1
+robot_class: microduck
+skills:
+- name: twist
+  classes:
+  - MOVE
+  evidence:
+    when: none
+  envelope:
+  - sls.linear_mps
+  - sls.angular_rps
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: walk
+  classes:
+  - MOVE
+  evidence:
+    when: none
+  envelope:
+  - sls.linear_mps
+  - sls.angular_rps
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: roulade
+  classes:
+  - MOVE
+  evidence:
+    when: none
+  envelope:
+  - sls.linear_mps
+  - sls.angular_rps
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: kick_left
+  classes:
+  - MOVE
+  evidence:
+    when: none
+  envelope:
+  - sls.linear_mps
+  - sls.angular_rps
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: kick_right
+  classes:
+  - MOVE
+  evidence:
+    when: none
+  envelope:
+  - sls.linear_mps
+  - sls.angular_rps
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: ground_pick
+  classes:
+  - MANIPULATE
+  evidence:
+    when: none
+  envelope:
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: wave
+  classes:
+  - NONE
+  evidence:
+    when: none
+  envelope:
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist
+- name: sit_toggle
+  classes:
+  - NONE
+  evidence:
+    when: none
+  envelope:
+  - step.max_duration_s
+  feeds:
+  - safety_feed
+  complete:
+    signal: duration
+  safe_state: stop_zero_twist

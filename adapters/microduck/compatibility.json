@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "status": "candidate-validation-pending",
+  "adapter_version": "0.1.0",
+  "upstream_commit": "942e58e3aa6dbb28e7037203fff11866122c7567",
+  "api_version": 44,
+  "hardware_tested": false,
+  "core_abi_version": 1,
+  "validation_reports": [],
+  "not_validated": [
+    "Physical Microduck",
+    "Native Windows",
+    "WSL2",
+    "x86_64"
+  ],
+  "limitations": [
+    "CA-15: fake built-in skill list unavailable",
+    "Dev-only isolated control transport and unsigned test keyring",
+    "No physical stop-time or sensor validation"
+  ],
+  "source_manifest_excludes": [
+    "spec/reports/**",
+    "adapters/microduck/compatibility.json",
+    "*.log",
+    ".git/**",
+    "__pycache__/**",
+    "target/**",
+    ".venv/**"
+  ],
+  "validated_profiles": []
+}

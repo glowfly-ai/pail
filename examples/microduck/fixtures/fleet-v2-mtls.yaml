@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Software-only sample, version 2 budget, authenticated transport (software-fleet-mtls).
+# Use a new deployment UUID for a separate installation.
+schema_version: 2
+deployment_id: f0c06f77-3bb9-4291-9277-867fdc9681c6
+profile: software-fleet-mtls
+robots:
+  - {robot_id: robot-1, display_name: Microduck 1}
+  - {robot_id: robot-2, display_name: Microduck 2}
+budget:
+  shared: {cpus: 1.0, memory_mib: 1024}
+  per_robot: {cpus: 1.0, memory_mib: 768}
+  parallelism: 2

@@ -1,0 +1,13 @@
+kind	name	desc	since
+robot_class	diff_drive_amr	Differential-drive mobile base (TurtleBot3 reference, AMR/AGV class of ISO 3691-4)	2026-09-09
+robot_class	agv	Automated guided vehicle on fixed paths (ISO 3691-4)	2026-09-09
+robot_class	arm	Industrial or collaborative manipulator (ISO 10218-1/-2:2025)	2026-09-09
+robot_class	humanoid	Legged humanoid or service robot with arms (ISO 13482, ISO/CD 25785-1)	2026-09-09
+robot_class	quadruped	Legged quadruped base (Spot class)	2026-09-09
+robot_class	drone	Unmanned aircraft (EU 2019/947, SORA)	2026-09-09
+robot_class	microduck	Pollen Robotics Open Duck Mini — bipedal toy driven by robotd skills	2026-09-09
+robot_class	viam_base	Viam RDK base component (rdk:component:base — fake model in the rig, any Viam-driven wheeled base in the field) behind the gRPC interposer	2026-09-09
+action_class	MOVE	Moves the base (token mask bit ClassMove)	2026-09-09
+action_class	MANIPULATE	Moves an effector against the world (token mask bit ClassManipulate)	2026-09-09
+action_class	ACTUATE	Drives an actuator without base motion or world contact (lights, sound, tool spin)	2026-09-09
+action_class	NONE	Posture or expression only — a token must still cover it, but nothing moves that matters (ClassNone)	2026-09-09

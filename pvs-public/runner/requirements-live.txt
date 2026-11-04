@@ -1,0 +1,5 @@
+grpcio>=1.60
+grpcio-tools>=1.60
+pyyaml>=6.0
+# ROS 2 Python packages are provided by the ROS 2 installation:
+# rclpy

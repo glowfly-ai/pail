@@ -1,0 +1,22 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+# tc-au-03 은 DELEGATED.md 산문 위임을 기계 판독 필드로 이전한 것이다 (E-9-3).
+axis: audit
+scenarios:
+  - id: au01_cross_segment_chain
+    owns: []
+    also_touched_by: [G-EVI-03]   # 세그먼트 경계 체인 연속 — 소유자는 TB-4 (internal/replay)
+    future_refs: [G-EVI-01, G-EVI-02]   # 체인 연결 + 체크포인트 서명도 관통
+    delegated_to: null
+  - id: au02_segment_tamper_detected
+    owns: []
+    also_touched_by: [G-EVI-04]   # 1바이트 변조 탐지 — E2E 판정 반전만 여기서 확인
+    future_refs: []
+    delegated_to: null
+  - id: tc-au-03_logrotate
+    owns: []
+    also_touched_by: []
+    future_refs: [G-EVI-07]   # 로그 로테이트에도 감사 연속성
+    delegated_to:
+      - pvs/tests/test_audit_logrotate.py      # 정적 절반: copytruncate 금지 설정 단정
+      - pvs/tests/test_verifiers.py            # 회전 걸친 체인 절반(+ au01 시나리오)
+    delegation_note: pvs/scenarios/audit/DELEGATED.md

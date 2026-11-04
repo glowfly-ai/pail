@@ -1,0 +1,74 @@
+# record_types.vec — 블랙박스 레코드 타입 골든 (TB-3, LLD-D §4.4)
+#
+# 정본은 Go internal/blackbox/records.go 의 상수 16종이다. 이 골든은
+# RT-02(골든 ≡ Go 전건)로 신선도를 보증받고, 파이썬 미러
+# (pvs/runner/verifiers/segment_chain.py 8종 + pvs/tests/golden.py 의
+# REC_CHECKPOINT 재선언)를 RT-03/RT-05 가 이 골든에 대조한다.
+#
+# 구현 시 정정: 설계서 §1.6/RT-01/RT-02 는 "16종"이라 적었으나 records.go
+# 실측은 15종이었다 (10,11,20,21,30,40,41,50,60,61,70,71,72,73,80).
+# 리터럴은 실측을 따른다.
+#
+# 2026-08-06 OR2(LLD-OSS-B §1.8 B2-1/B2-2/B2-3): 51 RecordContextProvenance
+# 추가로 정본이 16종이 되었다. 미러는 51 을 받아 8종이 되었고, 미러 누락은
+# 여전히 8종이다(50,60,61,70,71,72,73,80) — 기존 격차는 하나도 손대지 않았다.
+#
+# 2026-08-12 OB3(LLD-OSSB-C §4.1 C2-C6): 90 RecordIdentityRefused 추가로
+# 정본이 17종. 미러는 받지 않았다(RT-03 은 부분집합 규약이고 PVS 는 거부
+# 레코드를 파싱할 소비자가 아직 없다) — 미러 누락은 9종이 된다.
+#
+# 2026-08-14 OB6(LLD-OSSB-E §4.3 E-C3): 31 RecordCheckpointV2 추가로 정본이
+# 18종. 미러는 받았다(9종) — segment_chain.py 는 체크포인트를 파싱하는 소비자
+# 자신이므로, 정본이 v2 를 쓰기 시작한 뒤에도 미러가 30 만 알면 미러는 "검증
+# 실패"가 아니라 **체크포인트 0건**을 보고한다(H-B2). 미러 누락은 9종 그대로.
+# 30 은 지우지 않는다 — 읽기 형식은 영구 유지(F8)이고, 번호를 비우면 그 번호가
+# 재사용 가능해 보인다.
+#
+# 이 파일은 tests/golden/canon 의 동결집합이 아니다. 세트 해시(set_sha256)는
+# canon/MANIFEST.sha256 만을 대상으로 하며 이 추가는 그 값을 바꾸지 않는다.
+# 31 자체는 A §3 에서 이미 동결됐고 canon/checkpoint_v2.vec 이 그 정본이다 —
+# 여기서 일어나는 일은 형식 변경이 아니라 이미 동결된 번호의 대조표 등재다.
+#
+# 2026-08-23 LLD-DUR(§4 DUR-L3): 32 RecordRecoveryTruncate 추가로 정본이 19종.
+# 미러는 받지 않았다(RT-03 부분집합 규약) — 미러 누락은 10종이 된다. 미러가 이
+# 레코드를 모르면 PVS 는 "복구가 일어났다"를 **레코드 0건**으로 읽는데, 그것은
+# "복구가 없었다"와 같은 바이트다(H-B2). 그 격차를 여기에 적어 둔다: 미러가 복구
+# 선언을 소비해야 하는 것은 PVS 가 기동 복구를 판정 대상으로 삼는 날이며, 그
+# 날짜는 §11 4번(손실 창 수치) 트랙에 걸린다.
+#
+# 2026-09-04 AL-2(LLD-LED D5): 12 RecordContextSealed · 13 RecordPlanRejected 추가로
+# 정본이 21종. 미러는 받지 않았다(RT-03 부분집합 규약) — 미러 누락은 12종이 된다.
+# 미러가 13 을 모르면 PVS 는 "거부가 일어났다"를 **레코드 0건**으로 읽는데, 그것은
+# "거부가 없었다"와 같은 바이트다(H-B2) — 미러가 거부 레코드를 소비해야 하는 날은
+# PVS 가 요청자 거부를 판정 대상으로 삼는 날이다(LLD-LED AL-5 이후).
+#
+# 형식(§2.1 변형, 평면 TSV):
+#   record<TAB><Go 상수 이름><TAB><번호(10진)>
+# 정렬은 번호 오름차순.
+#
+# 손으로 옮겨 적음 (2026-08-04). 자동 생성 금지: 생성하면 대조가 아니라 복사다.
+record	RecordTokenIssued	10
+record	RecordPlanAccepted	11
+record	RecordContextSealed	12
+record	RecordPlanRejected	13
+record	RecordGateDecision	20
+record	RecordChainRevoked	21
+record	RecordCheckpoint	30
+record	RecordCheckpointV2	31
+record	RecordRecoveryTruncate	32
+record	RecordSafeStop	40
+record	RecordOperatorEvent	41
+record	RecordGraphMutation	50
+record	RecordContextProvenance	51
+record	RecordAttestation	60
+record	RecordConfigSealed	61
+record	RecordLeaseGranted	70
+record	RecordLeaseReconciled	71
+record	RecordFleetCensus	72
+record	RecordLeaseRetracted	73
+record	RecordHaMembership	80
+record	RecordIdentityRefused	90
+
+# core-comm-v1 LLD: additive durable operation and critical-report receipts.
+record	RecordCoreOperation	100
+record	RecordCoreReport	101

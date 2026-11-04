@@ -1,0 +1,22 @@
+version: 2.0
+name: safety_unsafe_triggers_estop_and_revoke
+robot_id: robot-1
+profile: insecure
+# A live PERMIT is running, then safety publishes UNSAFE. The gate must ESTOP
+# (outranks everything, fail-closed): gate=ESTOP/ERR_SAFETY_UNSAFE, the permit
+# heartbeat stops, the chain is revoked via a fatal ReportDecision, and a ROS
+# stop_request is asserted. While UNSAFE persists, any further cmd_vel is refused
+# (ESTOP) — the revoked chain cannot resume without operator recovery (rc01).
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 6.0}}]}
+  - {t: 0.2, inject_safety: {level: OK}}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 6.0}}
+  - {t: 1.0, expect_gate: {state: PERMIT, reason: OK}}      # positive control
+  - {t: 1.2, expect_drive: {linear_x: 0.2, tol: 0.02}}
+  - {t: 2.0, inject_safety: {level: UNSAFE, source: lidar_guard}}
+  - {t: 2.3, expect_gate: {state: ESTOP, reason: ERR_SAFETY_UNSAFE}}
+  - {t: 2.3, expect_stop_request: {asserted: true}}
+  - {t: 2.4, expect_permit: {present: false, observe_window_ms: 300}}
+  - {t: 2.5, expect_drive_never: {linear_x: 0.2, within_ms: 500}}

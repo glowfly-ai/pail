@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "profile_id": "mock-humble-v2",
+  "target": "mock",
+  "platform": {
+    "arch": "any",
+    "board": "none",
+    "l4t_major": 0,
+    "ros": "humble"
+  },
+  "runtime": {
+    "mode": "managed-synthetic",
+    "gpu": false
+  },
+  "transport": "isolated-local-dds",
+  "endpoint": {
+    "kind": "ros-synthetic",
+    "model_timeout_ms": 250
+  },
+  "security": {
+    "enabled": true,
+    "strategy": "Enforce"
+  },
+  "evidence": {
+    "hardware_verified": false,
+    "support_status": "UNVERIFIED"
+  },
+  "resources": {
+    "min_state_free_bytes": 1073741824,
+    "min_host_available_memory_bytes": 536870912,
+    "basis": "estimated"
+  }
+}

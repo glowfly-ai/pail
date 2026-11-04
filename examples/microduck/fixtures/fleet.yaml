@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Software-only sample. Use a new deployment UUID for a separate installation.
+schema_version: 1
+deployment_id: 514a97fa-6a8a-4e32-bc51-cb8b43f2583a
+profile: software-dev
+robots:
+  - {robot_id: robot-1, display_name: Microduck 1}
+  - {robot_id: robot-2, display_name: Microduck 2}
+budget:
+  cpus: 2
+  memory_mib: 3072
+  parallelism: 2

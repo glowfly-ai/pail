@@ -1,0 +1,95 @@
+# tests/golden/canon/saas_anchor_v2.vec — C2 투명성 로그 leaf canon v2 (LLD-OSS-A §2 F1, X23·NF3)
+# leaf: pail-saas-anchor:v2:<tenant>:<robot>:<key_id>:<server_seq>:<server_recv_ms>
+#       :<anchor_sha256>:<segment_seq>:<record_count>:<head_hash_hex>
+# v1  : pail-saas-anchor:v1:<tenant>:<robot>:<key_id>:<server_seq>:<server_recv_ms>:<anchor_sha256>
+# leaf 는 서명 대상이 아니라 로그에 들어가는 바이트 자체다 — 그래서 sig 칸이 없다.
+# anchor_sha256 = SHA-256("golden-anchor-record") 로 고정한 임의 값이다. leaf 조립은 이 값을
+#   해석하지 않는다 — 실제 운영에서는 수신한 앵커 바이트의 해시다.
+# expect: accept(조립) | reject(R-A 조립 실패) | parse_only(구 판, 생성 종료·파싱 영구 유지)
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	SA2-01
+desc	기준선 — v1 이 빠뜨린 체인 좌표(segment_seq·record_count·head)가 leaf 안으로 들어온다. 로그만 가지고 감사 상태를 재구성할 수 있다(AV-6).
+tenant_id	acme
+robot_id	robot-1
+key_id	dev-key-1
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+segment_seq	7
+record_count	42
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+expect	accept
+leaf	pail-saas-anchor:v2:acme:robot-1:dev-key-1:9:1700000000000:17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a:7:42:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+
+id	SA2-02
+desc	tenant_id 에 ':' 포함 — 조립 지점에서 거부(R-A). 경계(ingest.go)만 막으면 LeafCanon 을 직접 부르는 경로가 무방비다.
+tenant_id	ac:me
+robot_id	robot-1
+key_id	dev-key-1
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+segment_seq	7
+record_count	42
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+expect	reject
+reject_reason	separator ':' in identifier
+
+id	SA2-03
+desc	robot_id 가 'r:k' — SA2-04 와 짝이다. 수정 전에는 이 둘이 같은 leaf 바이트를 만들었다(X23 충돌의 실물).
+tenant_id	t
+robot_id	r:k
+key_id	k
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+segment_seq	7
+record_count	42
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+expect	reject
+reject_reason	separator ':' in identifier
+
+id	SA2-04
+desc	tenant_id 가 't:r' — SA2-03 과 같은 바이트로 접히던 다른 범위. 둘 다 거부되어야 충돌이 사라진다.
+tenant_id	t:r
+robot_id	k
+key_id	k
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+segment_seq	7
+record_count	42
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+expect	reject
+reject_reason	separator ':' in identifier
+
+id	SA2-05
+desc	빈 key_id — 인접한 두 구분자가 붙어 같은 종류의 모호성을 만든다.
+tenant_id	acme
+robot_id	robot-1
+key_id
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+segment_seq	7
+record_count	42
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+expect	reject
+reject_reason	empty identifier
+
+id	SA1-90
+desc	구 6필드 leaf 보존 — 이미 봉인된 leaf 는 로그 안에 실물로 남아 있고, 파서를 지우면 과거 증거가 검증 불가능해진다(F8·§5.3). 체인 좌표가 없으므로 재구성 시 '모른다'로 남는다.
+tenant_id	acme
+robot_id	robot-1
+key_id	dev-key-1
+server_seq	9
+server_recv_ms	1700000000000
+anchor_sha256	17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a
+has_chain_coord	0
+expect	parse_only
+leaf	pail-saas-anchor:v1:acme:robot-1:dev-key-1:9:1700000000000:17f15ff5686b3e8584f77dd21b14d3b0ce8d7d3c772a0df91117630a9f45d48a

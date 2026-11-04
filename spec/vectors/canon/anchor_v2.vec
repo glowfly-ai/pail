@@ -1,0 +1,78 @@
+# tests/golden/canon/anchor_v2.vec — C1 앵커 canon v2 (LLD-OSS-A §3.1, X7)
+# canon: pail-anchor:v2:<tenant_id>:<robot_id>:<head_hash_hex>:<segment_seq>:<record_count>:<unix_ms>
+# expect: accept(조립+서명) | reject(R-A 조립 실패) | parse_only(구 판, 생성 금지·검증 유지)
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	AN2-01
+desc	기준선 — v1 이 빠뜨린 tenant·robot 이 서명 안으로 들어온다(X7). 로봇 A 의 앵커 서명이 로봇 B 의 앵커로 재사용될 수 없다.
+tenant_id	acme
+robot_id	robot-1
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	7
+record_count	42
+unix_ms	1700000000000
+expect	accept
+canon	pail-anchor:v2:acme:robot-1:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:7:42:1700000000000
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	76468f816dd9317a7cc7317cb3905ab4c34a498073f8d28c1f2d6d04746f183cb0cea8e3e9c17bd99cc3e9993ecf824bac11ad58d99c5d2e3deae4684e12e401
+
+id	AN2-02
+desc	tenant_id 에 ':' 포함 — R-A 로 조립 자체가 실패해야 한다. 경계(HTTP)가 아니라 조립 지점에서 거부하는 것이 규칙의 전부다.
+tenant_id	ac:me
+robot_id	robot-1
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	7
+record_count	42
+unix_ms	1700000000000
+expect	reject
+reject_reason	separator ':' in identifier
+
+id	AN2-03
+desc	robot_id 에 ':' 포함 — 같은 이유로 실패.
+tenant_id	acme
+robot_id	ro:bot
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	7
+record_count	42
+unix_ms	1700000000000
+expect	reject
+reject_reason	separator ':' in identifier
+
+id	AN2-04
+desc	빈 tenant_id — 허용하면 '::' 로 필드가 접혀 v1 과 같은 모호성이 생긴다(§3.1).
+tenant_id
+robot_id	robot-1
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	7
+record_count	42
+unix_ms	1700000000000
+expect	reject
+reject_reason	empty identifier
+
+id	AN2-05
+desc	최대 길이 식별자(64자 ×2) — A 는 길이 상한을 정하지 않는다. 이 벡터는 절단·해시 대체 없이 그대로 조립됨을 못박는다.
+tenant_id	tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
+robot_id	rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	18446744073709551615
+record_count	18446744073709551615
+unix_ms	1700000000000
+expect	accept
+canon	pail-anchor:v2:tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt:rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:18446744073709551615:18446744073709551615:1700000000000
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	8becff15d52ac99967b121c302e5f065658985df4f14009931e6bd00c3b4b7d22e9964e1d46c9277e98d1561ab5045be3b5235fd7984f3ec778c159c4e642009
+
+id	AN1-90
+desc	구 v1 canon 보존 — 생성은 §5 T0 에서 끝나지만 파싱·검증은 영원히 유지된다(F8). 이 벡터를 지우는 것은 과거 증거를 검증 불가능하게 만드는 것이다.
+head_hash_hex	000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+segment_seq	7
+record_count	42
+unix_ms	1700000000000
+expect	parse_only
+canon	pail-anchor:v1:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f:7:42:1700000000000
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	8a544de836acf87444781294f40772468fefcda9fce5d1a7d3f85148848ba60f91bb80807fff37335bda26b63d316635e7c3f93b228f3953783441693c1bf309

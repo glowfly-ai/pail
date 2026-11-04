@@ -1,0 +1,21 @@
+# libpail_gate on plain Debian — no ROS anywhere in this image. Builds the shared library,
+# runs its batteries, and leaves the artefacts an adapter needs under /out.
+#
+#   docker build -f libpail_gate/Dockerfile.ci -t pail/libpail_gate:ci .
+#   docker run --rm pail/libpail_gate:ci                      # ctest
+#   docker run --rm -v "$PWD/out":/out pail/libpail_gate:ci sh -c 'cp -a /opt/pail_gate/. /out/'
+#
+# Context is the public repository root; no ROS or private source layout is required.
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential cmake pkg-config \
+      libprotobuf-dev protobuf-compiler libsodium-dev libyaml-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY sdk/proto ./sdk/proto
+COPY spec/vectors/token/tokens.vec ./spec/vectors/token/tokens.vec
+COPY libpail_gate ./libpail_gate
+RUN cmake -S libpail_gate -B /build -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=/opt/pail_gate \
+    && cmake --build /build -j2 \
+    && cmake --install /build
+CMD ["ctest", "--test-dir", "/build", "--output-on-failure"]

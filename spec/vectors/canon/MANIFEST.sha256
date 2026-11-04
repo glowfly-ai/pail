@@ -1,0 +1,63 @@
+# tests/golden/canon/MANIFEST.sha256 — 벡터 세트 해시 (LLD-OSS-A §4.3, FD-2)
+#
+# 적합성 주장 = 프로파일 이름 PAIL-CORE-2026.1 + 아래 set_sha256 한 줄.
+# 파일별 해시 = SHA-256(파일 바이트).
+# set_sha256 = SHA-256( 아래 "<hex>  <name>" 줄들을 파일명 오름차순으로 늘어놓고
+#              각 줄 끝에 LF 를 붙인 바이트열 ). 주석 줄과 set_sha256 줄은 입력이 아니다.
+# 벡터를 바꾸면 세트 해시가 바뀌고, 세트 해시가 바뀌면 그것은 다른 프로파일이다.
+#
+# 개정 2026-08-08b (OB1 A2-5 운영자 canon v2). 이전 세트 해시:
+#   b1932a8d0bef6fd0cfd7eb2f8127d1ec5d6887f4e04d046736c5c376ed4440c3  (A2-2, 9파일)
+# 바뀐 것: unlock_v2.vec · revoke_issuer_v2.vec 신설. 둘은 형제로 함께 들어온다(§2.3) —
+#       같은 결손이 두 자리에 따로 있고, 한쪽만 올리면 다른 쪽은 조용히 v1 로 남는다.
+#       각 6레코드: 01 기준선 / 01b 서명자만 다른 짝 / 02 operator_key_id ':' reject /
+#       03 빈 값 reject / 04 첫 식별자 ':' reject(구 R-A 생존) / 90 v1 parse_only.
+# 생성 방식: 둘 다 MANUAL(§4.1). 전사 벡터가 고정하는 것은 구현의 산출이 아니라 설계서
+#       §3.2.2 의 기술이므로, 생성기를 두면 대조가 복창으로 바뀐다.
+# 바뀌지 않은 것: 기존 9파일의 바이트(§4.2). 판을 올리는 것은 구판을 고치는 것이 아니다 —
+#       tests/golden/token/canon.vec 의 v1 레코드도 그대로 두고 대조 상대만
+#       UnlockCanonV1/RevokeCanonV1 로 옮겼다. 그것이 F8 의 기계 증거다.
+# 개정 2026-09-09 (OB1 제3 창 — SKL SK-4, LLD-SKL §1.4·§5). 이전 세트 해시:
+#   5e58bc675246a05a6c7474288c43324e7c05f6161e64f4221c2e037eda9f11ca  (2026-09-04 LED, 11파일)
+# 바뀐 것: config_seal_v3.vec 신설(CS3-01~04 accept, CS3-05~07 reject) — v2 의 31키에
+#       skills_file_sha256 이 policy_file_sha256 다음에 삽입된 32키. 같은 창에서 토큰 v5
+#       (tests/golden/token/tokens.vec TV-21~27, 별도 관할)가 올라갔다.
+# 바뀌지 않은 것: 기존 11파일의 바이트. config_seal_v2.vec 는 같은 해시로 남고, 그것을
+#       내는 CanonicalizeSealV2 가 헤더에 남는다(F8) — 재산출 diff 무출력으로 실측.
+# 이 변경은 OB1 동결 창 안에서만 정당하다(OR1 규율 승계, 검사 3).
+#
+# 개정 2026-08-08 (OB1 A2-2 config seal v2). 이전 세트 해시:
+#   766d278744297627d3ee859b4fef9a80ad61aabc2f9a7182a420e0ccd09ccfb7  (A1-3, 8파일)
+# 바뀐 것: config_seal_v2.vec 신설(CS2-01~05·09 accept, CS2-06~08·10 reject).
+# 바뀌지 않은 것: 기존 8파일의 바이트(LLD-OSSB-A §4.2). 판을 올리는 것은 구판을 고치는
+#       것이 아니다 — config_seal_v1.vec 는 여기서도 같은 해시로 남아 있고, 그것을 내는
+#       CanonicalizeSealV1 도 헤더에 남아 있다(F8).
+# 이 변경은 OB1 동결 창 안에서만 정당하다(OR1 규율 승계, 검사 3).
+#
+# 개정 2026-08-06b (A1-3 config seal). 이전 세트 해시:
+#   15614644b0a5d067ee1aba1524d794097e7148304fd847132882b78517d7dd2e  (A1-6, 7파일)
+# 바뀐 것: config_seal_v1.vec 신설(CS1-01~05 accept, CS1-06 reject).
+# 사유: C13 정규문이 §3 에 없어 벡터도 없었고 UNPINNED.tsv 가 비지 않았다.
+#       등록부가 비는 것이 A1-8(동결 선언)의 기계 판정 기준이다.
+#
+# 개정 2026-08-06 (A1-6 검사 2). 이전 세트 해시:
+#   57566f35ec0e9fedcc223eec84e702238a93e05a2f8b85f4bacad14213256d9b  (A1-4, 6파일)
+# 바뀐 것: saas_anchor_v2.vec 신설, alert_v2.vec += AL1-90, verdict_v3.vec += VD2-90·VD1-90.
+# 사유: 벡터 세트가 '앞으로의 판'만 고정하고 지금 라이브인 판(alert v1·verdict v2·
+#       saas-anchor v2)을 고정하지 않아 검사 2 가 사본을 대조할 기준을 갖지 못했다.
+# 이 변경은 OR1 동결 창 안에서만 정당하다(검사 3).
+#
+c47a58472bb2848e31c6952688fc261840b837dcd8137b5c432143b1b761e160  alert_v2.vec
+0ba0ebb498614d534cda00969b7a9d30a8e077c3ebab8a83f0b80e1c4cee4198  anchor_v2.vec
+e6637e12b0ade6ec10cddc8c34418403c8200722856e0dafba8bf20bdcfbea71  checkpoint_v2.vec
+b1e6cf3d8db96a9399505dd6da5d976549b6d4aca9a14e553eaebd1c511267a6  config_seal_v1.vec
+04444b9c1c2219600a375d72c6e46a2645926a3e4c1456331efcd22c3d1aba65  config_seal_v2.vec
+40239566f8dcb1d47df92d1162a4108650749e459c0660c11221830c7da691c9  config_seal_v3.vec
+f3fb7485a55662bca78bbcde974d3524b97933944bcfb42cc13e9e1ecfa3f588  context_v1.vec
+c05403d91a2e01bcea1ba94dbd30c5bb3720cb03e8832c7f8d216f9d76de0ed8  revoke_issuer_v2.vec
+138920e07df8d5c3ce911920006cda8237a89462fe3982fd5293e0e8f10a9eff  saas_anchor_v2.vec
+938bf6661d8c0fe61ccd2c973c312ff8e6afc2c21df3ad185834a8d55a1a9cd9  tokenkey_v1.vec
+5477d1a49828f9bcb5c9b79a9913b46c8c6dc58507dcca173880d7ba46b89b0b  unlock_v2.vec
+c0c90de2206f5fcf39d0fd1e4fc14a5fe7fe4f01c7b30402aa283112789b6f84  verdict_v3.vec
+#
+set_sha256  bbddff16fb5997faeff47bf6913e64d9675178d2ddffd5828aa898a235688701

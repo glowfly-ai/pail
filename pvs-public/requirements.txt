@@ -1,0 +1,24 @@
+# PVS v2 test framework dependencies .
+# Python 3.10+ — the generated stubs under runner/live/ were produced by protobuf 7.35.1 and
+# grpcio 1.83.0, and both of those are Requires-Python >=3.10. On 3.9 the install succeeds and
+# every stub import then fails with google.protobuf.runtime_version.VersionError.
+# Binary parsers + verdict engine (pure python) need only pynacl for Ed25519.
+pynacl>=1.5.0
+pyyaml>=6.0
+
+# Live orchestration (profile != insecure unit tests). Installed in Dockerfile.pvs.
+# The floors below are not taste: runner/live/*_pb2.py call
+# ValidateProtobufRuntimeVersion(PUBLIC, 7, 35, 1) and runner/live/*_pb2_grpc.py carry
+# GRPC_GENERATED_VERSION = '1.83.0', so a lower runtime is refused by the stubs themselves.
+# tests/contract/test_public_requirements_match_stubs.py keeps these in step with the stubs.
+protobuf>=7.35.1
+grpcio>=1.83.0
+grpcio-tools>=1.83.0
+pytest>=7.4.0
+pytest-timeout>=2.2.0
+docker>=7.0.0
+
+# rclpy is provided by the ROS 2 base image, NOT pip. Do not add it here.
+# `cryptography` is NOT a dependency of this profile: the public README states it is an
+# alternative signature-verification backend, not a prerequisite. The contract suite needs it;
+# it is declared in tests/requirements-dev.txt, which is internal and does not ship.

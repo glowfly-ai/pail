@@ -1,0 +1,40 @@
+# TB-7 배선 픽스처의 **observe 판** (LLD-SHADOW §4.2, L-9 S7).
+#
+# 왜 두 번째 파일인가: `policy_min.yaml` 의 바이트는 고칠 수 없다 — 그 sha256 이
+# `tb7_policy_fixture.hpp` 에 리터럴 거울로 박혀 있고 test_gate_profile /
+# test_gate_deadman_seal 이 그것을 봉인 입력으로 잰다(RQ-7, DD-4). 그래서 모드만
+# 다른 사본을 따로 둔다.
+#
+# 아래 본문은 `policy_min.yaml` 과 **`gate_mode` 한 줄만 다르다.** 다른 절까지
+# 달라지면 observe 단계가 붉었을 때 「모드 때문」과 「임계 때문」이 같은 붉은
+# 줄로 도착한다(H-B2).
+#
+# 이 파일이 존재하는 이유는 `deform_shadow.py` 의 DF-SH7 이다: 소비 캐시 등재를
+# `gate_mode_ != "observe"` 조건 아래로 밀어 넣는 변형이 **enforce 에서는 무동작**
+# 이라 enforce 전용 배터리로는 영원히 관측되지 않는다.
+
+gate_mode: observe
+human_safety:
+  enabled: true
+evidence:
+  confidence_threshold: 0.90
+  min_trust_class: inferential
+preconditions:
+  - id: safety_feed
+    class: must_check_live
+    freshness_ms: 1000
+    exempt_in_progress_step: true
+  - id: evidence_claim
+    class: must_check_live
+    freshness_ms: 2000
+    exempt_in_progress_step: false
+trust_classes:
+  - id: identity_bearing
+    rank: 3
+    sources: [RFID, NFC, BARCODE]
+  - id: inferential
+    rank: 2
+    sources: [VISION]
+  - id: asserted
+    rank: 1
+    sources: [MANUAL]

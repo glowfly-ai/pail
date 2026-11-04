@@ -1,0 +1,35 @@
+name: Installation or behavior report
+description: Report reproducible non-sensitive behavior in the public candidate.
+body:
+  - type: markdown
+    attributes:
+      value: "For security issues use SECURITY.md, not this public form. Never attach keys, tokens, full keystores or unreviewed customer data."
+  - type: input
+    id: release
+    attributes:
+      label: VERSION and ZIP SHA-256
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: OS, CPU, Docker/Compose and Python versions
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command and exit code
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected behavior, observed behavior and reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reviewed evidence or relevant log excerpts
+      description: Include run ID and timestamps; redact private material before submission.

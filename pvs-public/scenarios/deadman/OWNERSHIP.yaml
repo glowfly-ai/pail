@@ -1,0 +1,18 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+axis: deadman
+scenarios:
+  - id: dm01_pep_kill_bridge_hold
+    owns: []
+    also_touched_by: [G-ENF-20]   # M4 데드맨: 상류(pep) 사망 → 허가 침묵 → HOLD
+    future_refs: []
+    delegated_to: null
+  - id: dm02_bridge_kill_stops_drive
+    owns: []
+    also_touched_by: [G-ENF-20]   # 브리지 자신이 죽어도 구동이 지속되지 않는다
+    future_refs: []
+    delegated_to: null
+  - id: dm03_pep_pause_hang_hold
+    owns: []
+    also_touched_by: [G-ENF-20]   # SIGSTOP 행업 = 침묵도 죽음과 같게 취급(HOLD)
+    future_refs: []
+    delegated_to: null

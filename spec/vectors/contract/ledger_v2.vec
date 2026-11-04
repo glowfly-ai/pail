@@ -1,0 +1,15 @@
+# ledger_v2.vec — 통로 필드 해시 골든 (LLD-LED D5, AL-2 동결 창 R1)
+#
+# 정본은 Go internal/canon 의 CtxV1 / ConstraintsV1 / ParamsV1 접두어와 sha256 이다.
+# 같은 바이트가 접두어에 따라 다른 산출을 내는 것(도메인 분리)이 이 벡터의 요점이며,
+# CX2-03 은 「본문의 requester 는 봉인될 뿐 해석되지 않는다」의 재료다.
+# 생성: MKVEC-LEDGER.md 절차 — 1회 산출(2026-09-04, python3 hashlib): sha256(prefix ‖ body). 테스트는 재생성하지 않고 대조한다.
+#
+# 형식(평면 TSV): hash<TAB><id><TAB><prefix><TAB><body utf-8, 빈 값은 ->(empty)><TAB><sha256 hex>
+hash	CX2-01	pail-ctx:v1:	(empty)	5e1dcca475360060128c65b3f49e764585677601e60eb77f952b7f441c6d78df
+hash	CX2-02	pail-ctx:v1:	{"job":"j1"}	c5b0c87c78e38182140541a19b2ca309088c2c46cf536e5332625fe768648fb6
+hash	CX2-03	pail-ctx:v1:	{"requester":{"kind":"agentic_ai","id":"impostor"}}	3eabf0a569e3b26c646a46a14401daa0b4ad998ffa9e609ebbb23f81f18b979c
+hash	CN2-01	pail-constraints:v1:	(empty)	3919cbb0be3f88fe398fe409f928cea55230a1892e96e8c7c096e2da3a5ce2a9
+hash	CN2-02	pail-constraints:v1:	{"job":"j1"}	a8409ccc71d0cfcfc0d5c7ac7b6f49602f8f15d0c4f62f4687781a7e6be0fa92
+hash	PM2-01	pail-params:v1:	(empty)	1dca4c1c44711536a70444e7c3deab4b3d49a271b7795dd14f6152a45491e60d
+hash	PM2-02	pail-params:v1:	{"l":2}	e40c68aeb1df6deb1b5344e9762d3d62a31ed7b769a57d411aaedfbca7a2538c

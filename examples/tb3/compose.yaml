@@ -1,0 +1,85 @@
+# Development reference only. No host network, published ports, privileged mode or hardware devices.
+x-ros: &ros
+  ROS_DOMAIN_ID: "0"
+  ROS_SECURITY_ENABLE: "true"
+  ROS_SECURITY_STRATEGY: Enforce
+  ROS_SECURITY_KEYSTORE: /etc/pail/sros2_keystore
+  FASTRTPS_DEFAULT_PROFILES_FILE: /reference/fastdds_loopback.xml
+services:
+  netspace:
+    cpus: 0.05
+    mem_limit: 64m
+    memswap_limit: 64m
+    pids_limit: 256
+    image: ${PAIL_TB3_CLOUD_IMAGE:-pail/tb3-cloud:local}
+    command: [sleep, infinity]
+    ipc: shareable
+    cap_drop: [ALL]
+  issuer:
+    command: [/usr/local/bin/pail_split_entrypoint.sh]
+    cpus: 0.6
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    image: ${PAIL_TB3_CLOUD_IMAGE:-pail/tb3-cloud:local}
+    network_mode: service:netspace
+    cap_drop: [ALL]
+    volumes:
+      - ${PAIL_TB3_STATE}/runtime/config:/etc/pail:ro
+      - ${PAIL_TB3_STATE}/blackbox:/var/log/pail_blackbox
+      - ${PAIL_TB3_STATE}/keyring-state:/var/lib/pail_keyring
+      # P25-M2: the agent's report queue lives in the state directory, so a fatal report that has not reached the
+      # Issuer survives an agent or container restart (the queue was memory-only here before)
+      - ${PAIL_TB3_STATE}/agent-state:/var/lib/pail_robot_agent
+    environment:
+      PAIL_REPORT_QUEUE_DIR: /var/lib/pail_robot_agent/report_queue
+      PAIL_PROFILE: dev
+      PAIL_ROBOT_ID: robot-01
+      PAIL_ISSUER_KEY_ID: dev-key-1
+      PAIL_GRPC_TLS: "on"
+      PAIL_GRPC_CLIENT_CERT: /etc/pail/grpc_certs/robot-01/client.crt
+      PAIL_GRPC_CLIENT_KEY: /etc/pail/grpc_certs/robot-01/client.key
+      PAIL_KEYRING_MODE: bundle
+      PAIL_KEYRING_BUNDLE: /etc/pail/keys/keyring_bundle.json
+      PAIL_ROOT_PUBKEY_FILE: /etc/pail/keys/root_pub.b64
+      PAIL_KEYRING_STATE: /var/lib/pail_keyring/state.json
+      PAIL_KEYRING_MAX_LIFETIME_SEC: "86400"
+      PAIL_KEYRING_POLL_SEC: "0"
+      PAIL_SITE_MODEL: /etc/pail/site_model.yaml
+      PAIL_REQUESTERS: /etc/pail/requesters.yaml
+      PAIL_CHECKPOINT_EVERY_RECORDS: "10"
+  robot:
+    cpus: 1.35
+    mem_limit: 2496m
+    memswap_limit: 2496m
+    pids_limit: 256
+    image: ${PAIL_TB3_GATE_IMAGE:-pail/tb3-gate:local}
+    network_mode: service:netspace
+    ipc: service:netspace
+    cap_drop: [ALL]
+    entrypoint: [/bin/bash, -c]
+    command: ['source /opt/ros/humble/setup.bash && source /opt/pail_ws/install/setup.bash && exec ros2 launch /reference/tb3_reference.launch.py']
+    volumes:
+      - ${PAIL_TB3_STATE}/runtime/config:/etc/pail:ro
+      - ${PAIL_TB3_STATE}/keyring-state:/var/lib/pail_keyring
+      - ${PAIL_TB3_STATE}/evidence:/evidence
+      - ${PAIL_TB3_STATE}/control:/control:ro
+      - ${PAIL_TB3_STATE}/runtime/reference:/reference:ro
+    environment:
+      <<: *ros
+      PAIL_PROFILE: dev
+      PAIL_ROBOT_ID: robot-01
+      PAIL_GRPC_TLS: "on"
+      PAIL_GRPC_CERT: /etc/pail/grpc_certs/robot-01/client.crt
+      PAIL_GRPC_KEY: /etc/pail/grpc_certs/robot-01/client.key
+      PAIL_TOKEN_PROVIDER_MODE: grpc
+      PAIL_TOKEN_SERVICE_ADDR: 127.0.0.1:50051
+      PAIL_KEYRING_MODE: bundle
+      PAIL_KEYRING_BUNDLE: /etc/pail/keys/keyring_bundle.json
+      PAIL_ROOT_PUBKEY_FILE: /etc/pail/keys/root_pub.b64
+      PAIL_KEYRING_STATE: /var/lib/pail_keyring/state.json
+      PAIL_KEYRING_MAX_LIFETIME_SEC: "86400"
+
+networks:
+  default:
+    internal: true

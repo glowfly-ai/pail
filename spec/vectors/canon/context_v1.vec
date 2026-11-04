@@ -1,0 +1,57 @@
+# tests/golden/canon/context_v1.vec — C16 컨텍스트 출처 레코드 (LLD-OSS-A §3.6, X2 / FB-1·FB-2)
+# record_type=51 / payload = "pail-context:v1:" ‖ LP(event_kind) ‖ LP(caller_kind) ‖ LP(caller_id)
+#                            ‖ u8(context_verified) ‖ LP(event_body_hash_hex)
+# event_body_hash = SHA-256("pail-ctxbody:v1:" ‖ LP(node_id) ‖ LP(kind_name) ‖ LP(arg) ‖ u64BE(claimed_unix_ms))
+# 고정 본문: node_id=node-7 kind=CONTEXT_EVENT_HUMAN_PRESENT arg=zone:z7 claimed_unix_ms=1700000000000
+#   — arg 에 ':' 가 들어 있는 것은 의도다. 자유 텍스트는 R-B(LP)이므로 구분자를 포함해도 안전하다.
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	CX1-01
+desc	mTLS 호출자 + context_verified=0 — 실측상 서명 검증 경로가 없으므로 현재는 언제나 0 이다. 못 막으면 최소한 남긴다(H7·H10).
+event_kind	CONTEXT_EVENT_HUMAN_PRESENT
+caller_kind	mtls
+caller_id	a40f59b5605f70a29d338c78bd734857b45d3971cb7eb70e14475d580afe6165
+context_verified	0
+event_body_hash_hex	ed3bb80d80521e02b006b620c5c0a8959a0429eafa03761ec6f2b6c78f6de6ff
+payload_hex	7061696c2d636f6e746578743a76313a0000001b434f4e544558545f4556454e545f48554d414e5f50524553454e54000000046d746c730000004061343066353962353630356637306132396433333863373862643733343835376234356433393731636237656237306531343437356435383061666536313635000000004065643362623830643830353231653032623030366236323063356330613839353961303432396561666130333736316563366632623663373866366465366666
+payload_len	192
+
+id	CX1-02
+desc	같은 호출자, context_verified=1 — 검증 경로가 생긴 뒤의 형상. 두 벌을 나란히 두어야 이 바이트 하나가 무엇을 바꾸는지가 보인다.
+event_kind	CONTEXT_EVENT_HUMAN_PRESENT
+caller_kind	mtls
+caller_id	a40f59b5605f70a29d338c78bd734857b45d3971cb7eb70e14475d580afe6165
+context_verified	1
+event_body_hash_hex	ed3bb80d80521e02b006b620c5c0a8959a0429eafa03761ec6f2b6c78f6de6ff
+payload_hex	7061696c2d636f6e746578743a76313a0000001b434f4e544558545f4556454e545f48554d414e5f50524553454e54000000046d746c730000004061343066353962353630356637306132396433333863373862643733343835376234356433393731636237656237306531343437356435383061666536313635010000004065643362623830643830353231653032623030366236323063356330613839353961303432396561666130333736316563366632623663373866366465366666
+payload_len	192
+
+id	CX1-03
+desc	UDS 호출자 — 인증서가 애초에 존재하지 않는 경로다. caller_id 는 uid/gid.
+event_kind	CONTEXT_EVENT_HUMAN_PRESENT
+caller_kind	uds
+caller_id	uid=0,gid=0
+context_verified	0
+event_body_hash_hex	ed3bb80d80521e02b006b620c5c0a8959a0429eafa03761ec6f2b6c78f6de6ff
+payload_hex	7061696c2d636f6e746578743a76313a0000001b434f4e544558545f4556454e545f48554d414e5f50524553454e54000000037564730000000b7569643d302c6769643d30000000004065643362623830643830353231653032623030366236323063356330613839353961303432396561666130333736316563366632623663373866366465366666
+payload_len	138
+
+id	CX1-04
+desc	caller_kind=unknown + 빈 caller_id — 지문 한 필드만 있었다면 이 상태가 UDS 와 같은 바이트가 된다(FB-1 이 겨냥한 H7 위반).
+event_kind	CONTEXT_EVENT_HUMAN_PRESENT
+caller_kind	unknown
+caller_id
+context_verified	0
+event_body_hash_hex	ed3bb80d80521e02b006b620c5c0a8959a0429eafa03761ec6f2b6c78f6de6ff
+payload_hex	7061696c2d636f6e746578743a76313a0000001b434f4e544558545f4556454e545f48554d414e5f50524553454e5400000007756e6b6e6f776e00000000000000004065643362623830643830353231653032623030366236323063356330613839353961303432396561666130333736316563366632623663373866366465366666
+payload_len	131
+
+id	CX1-05
+desc	동결 집합 밖의 caller_kind — 비적합(F6).
+caller_kind	tcp
+expect	reject
+reject_reason	caller_kind "tcp" is not in {mtls,uds,unknown} (FB-1/F6)

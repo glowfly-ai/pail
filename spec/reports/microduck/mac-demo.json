@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "hardware_tested": false,
+  "source_manifest_sha256": "b3f1d07b96c335c1ae331ecea5c6df7bb293c80ad7a774716dd4d63f4fb063f7",
+  "access_contract": {
+    "status": "PASS",
+    "private_key_mode": "0600",
+    "service_uid": 10001,
+    "requester_uid": 12345,
+    "public_access": true,
+    "raw_access_denied": true,
+    "private_key_read_denied": true
+  },
+  "environment": {
+    "host": "Darwin",
+    "machine": "arm64",
+    "docker_os": "linux",
+    "container_arch": "arm64",
+    "umask": "0022"
+  },
+  "image_id": "sha256:268e2ad1dea09e2fc8c02feb17fd23b7cfcd1f5ced2f5c5d952a12ef63e2d17e",
+  "checks": [
+    {
+      "id": "no_token_blocks",
+      "status": "PASS",
+      "detail": "Live observer plus explicit NO_TOKEN refusal"
+    },
+    {
+      "id": "authorized_forward",
+      "status": "PASS",
+      "detail": "PERMIT plus far-side observation"
+    },
+    {
+      "id": "over_limit_blocks",
+      "status": "PASS",
+      "detail": "1.2 exceeds configured 1.0; no far-side matching command"
+    }
+  ],
+  "date": "2026-09-14",
+  "upstream_commit": "bc41fb5c9a9b39894669c1e022e375cf83800382",
+  "core_version": "0.1.0-rc.20260913.7"
+}

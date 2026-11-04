@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Fleet configuration, version 2 (design 14.1): the budget grows with the robots.
+# The shared containers (issuer, ledger copy, collector) divide `shared`; the robot-side
+# containers of ONE robot divide `per_robot`. A robot's share is the same for any number
+# of robots. Version 1 files (one fixed `budget: {cpus, memory_mib, parallelism}`) are
+# still accepted.
+schema_version: 2
+deployment_id: 514a97fa-6a8a-4e32-bc51-cb8b43f2583a
+profile: software-dev
+robots:
+  - robot_id: robot-1
+    display_name: Microduck 1
+    kind: microduck          # the only kind of this release; omitted means microduck
+  - robot_id: robot-2
+    display_name: Microduck 2
+budget:
+  shared: {cpus: 1.0, memory_mib: 1024}     # issuer 4 : collector 2 : ledger copy 1
+  per_robot: {cpus: 1.0, memory_mib: 768}   # agent 3 : adapter 3 : fake, seam, planner, observer, evidence 1 each
+  parallelism: 2

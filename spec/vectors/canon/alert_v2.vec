@@ -1,0 +1,50 @@
+# tests/golden/canon/alert_v2.vec — C4 alert canon v2 (LLD-OSS-A §3.4, FE-3)
+# canon: pail-alert:v2:<type>:<tenant>:<robot>:<count>:<ms>:<detail_hash_hex>
+# v1   : pail-alert:v1:<type>:<tenant>:<robot>:<count>:<ms>   (상세가 서명 밖)
+# detail_hash = SHA-256("pail-alert-detail:v1:" ‖ LP(detail))
+# type 값 공간: ANCHOR_GAP_ROLLUP | FORK | REWIND | WORM_VIOLATION
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 바이너리 canon 은 값에 소문자 hex 를 쓴다.
+# 생성: MKVEC-CANON.md 절차, 고정 시드 0x01×32 ed25519, 1회 산출.
+# 테스트는 서명·해시를 재생성하지 않는다 — 재생성 시도 자체가 동결 위반 탐지기다(§4.2).
+
+id	AL2-01
+desc	기준선 — detail 본문이 해시로 서명에 들어온다(F5). v1 에서는 상세가 서명 밖이었다(X8 축소판).
+type	ANCHOR_GAP_ROLLUP
+tenant	acme
+robot	robot-1
+count	3
+unix_ms	1700000000000
+detail	robot-1: 3 anchors missing between seq 11 and 14
+detail_hash_hex	622b69ee5c6727522975d293875523f7ad284d0b6f596517291cab9037e2b671
+canon	pail-alert:v2:ANCHOR_GAP_ROLLUP:acme:robot-1:3:1700000000000:622b69ee5c6727522975d293875523f7ad284d0b6f596517291cab9037e2b671
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	8755f2d41bc1852a4792094422d2f81ddb6a20b969a1106911d8273e9f68032ee7c1a77a399fe9e10b8662aa939009773af0c33c0f11930aaae783cff02ede06
+expect	accept
+
+id	AL2-02
+desc	detail 끝에 '.' 한 글자 추가 — detail_hash 가 달라지고 canon 이 달라진다. AL2-01 의 서명은 이 알림을 덮지 못한다.
+detail	robot-1: 3 anchors missing between seq 11 and 14.
+detail_hash_hex	aee9abceb01469a3a4f1590302fbd42776ceb17b2bc2fb8f0b162fc70f1d1db6
+canon	pail-alert:v2:ANCHOR_GAP_ROLLUP:acme:robot-1:3:1700000000000:aee9abceb01469a3a4f1590302fbd42776ceb17b2bc2fb8f0b162fc70f1d1db6
+expect	detail_hash_mismatch
+canon_of_AL2_01	pail-alert:v2:ANCHOR_GAP_ROLLUP:acme:robot-1:3:1700000000000:622b69ee5c6727522975d293875523f7ad284d0b6f596517291cab9037e2b671
+
+id	AL2-03
+desc	동결 집합 밖의 알림 타입 — 비적합(FE-3·F6). §4.3 목록에 없는 추가 벡터이며, F6 의 '모르는 값을 통과로 해석하지 않는다'를 기계 검증 가능하게 만들기 위해 넣었다.
+type	DISK_FULL
+expect	reject
+reject_reason	alert type "DISK_FULL" is not in the frozen set (FE-3/F6)
+
+id	AL1-90
+desc	구 v1 canon — 상세 본문이 서명 밖이다. 같은 서명으로 다른 상세를 붙일 수 있었다(X8 축소판). 현행 구현(alerts.go AlertCanon)이 아직 이 판을 내며, 프로파일 PAIL-CORE-2026.1 은 v2 를 요구한다 — 이 벡터는 그 간극의 기록이다.
+type	ANCHOR_GAP_ROLLUP
+tenant	acme
+robot	robot-1
+count	3
+unix_ms	1700000000000
+expect	parse_only
+canon	pail-alert:v1:ANCHOR_GAP_ROLLUP:acme:robot-1:3:1700000000000
+pubkey	8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
+sig	76cf29a8efba522651d41108974ef0614a97946dbac96de5cd59e8e5d79614746eb3543b36ff9990ecfa751a61625831585d2034c3b64e84163107cb6f13000d

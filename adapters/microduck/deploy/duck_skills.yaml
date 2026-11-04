@@ -1,0 +1,11 @@
+# Synthetic software-preview configuration.
+version: 1
+skills:
+  wave: NONE
+  sit_toggle: NONE
+  walk: MOVE
+  roulade: MOVE
+  kick_left: MOVE
+  kick_right: MOVE
+  ground_pick: MANIPULATE
+  pail_dash: MOVE

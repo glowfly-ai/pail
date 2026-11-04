@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+# Live demo overlay for compose.yaml — started by `python3 examples/microduck/demo.py up`.
+# Adds the demo actors, the safety-feed seam and a ledger mirror. Still no published ports,
+# devices, host network or Docker socket: the console and the dashboard are host processes
+# bound to 127.0.0.1 that read files under the state directory.
+services:
+  issuer:
+    volumes:
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro   # demo_probe.py (plan submit/cancel/unlock/verify)
+  state-seam:
+    cpus: 0.1
+    mem_limit: 128m
+    memswap_limit: 128m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "10001:10001"
+    networks: [preview]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes: [run:/run/duck]
+    command: [python, /opt/pail/pvs/runner/adapters/duck_state_seam.py, --listen, /run/duck/raw/state-seam.sock, --upstream, /run/duck/raw/robotd.sock, --ctl, /run/duck/state.ctl]
+  adapter:
+    # the adapter reads robotd through the seam so scene 8-S can make its safety feed go stale
+    command: [pail-duckd, --public, /run/duck/pail.sock, --public-gid, "10002", --raw, /run/duck/raw/state-seam.sock, --agent, "http://agent:50051", --robot-id, robot-1, --policy, /etc/pail/policy.yaml, --keyring, /etc/pail/keys/keyring.json, --skills, /etc/pail/duck_skills.yaml, --evidence, /run/duck/evidence.sock, --gate-log, /run/duck/gate.ndjson]
+  demo-prepare:
+    cpus: 0.2
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "0:0"
+    networks: [preview]
+    command: [python, /reference/demo_prepare.py]
+    volumes:
+      - ${PAIL_DUCK_STATE}:/state
+      - private:/state/private
+      - run:/run/duck                 # the access probe must see the raw socket directory to prove it is closed
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro
+  demo-planner:
+    cpus: 0.1
+    mem_limit: 128m
+    memswap_limit: 128m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "12345:10002"          # an ordinary requester: public socket group only, never the raw socket
+    networks: [preview]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: [python, /reference/demo_io.py, --role, planner]
+    volumes:
+      - run:/run/duck
+      - ${PAIL_DUCK_STATE}/demo-control:/control:ro
+      - ${PAIL_DUCK_STATE}/evidence/runtime:/evidence/runtime
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro
+  demo-observer:
+    cpus: 0.15
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "10001:10001"          # may read the raw socket; the file sends no command
+    networks: [preview]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: [python, /reference/demo_io.py, --role, observer]
+    environment:
+      PAIL_DEMO_RAW: /run/duck/raw/robotd.sock
+    volumes:
+      - run:/run/duck
+      - ${PAIL_DUCK_STATE}/demo-control:/control:ro
+      - ${PAIL_DUCK_STATE}/evidence/runtime:/evidence/runtime
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro
+  demo-evidence:
+    cpus: 0.1
+    mem_limit: 128m
+    memswap_limit: 128m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "10001:10001"
+    networks: [preview]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: [python, /reference/demo_io.py, --role, evidence]
+    volumes:
+      - run:/run/duck
+      - ${PAIL_DUCK_STATE}/demo-control:/control:ro
+      - ${PAIL_DUCK_STATE}/evidence/runtime:/evidence/runtime
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro
+  demo-ledger:
+    cpus: 0.1
+    mem_limit: 192m
+    memswap_limit: 192m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "0:0"                  # the journal lives in the 0700 private volume; the mirror is read-only there
+    networks: [preview]
+    security_opt: [no-new-privileges:true]
+    command: [python, /reference/demo_io.py, --role, ledger]
+    volumes:
+      - private:/state/private:ro
+      - ${PAIL_DUCK_STATE}/evidence:/evidence
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro

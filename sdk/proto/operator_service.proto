@@ -1,0 +1,147 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+
+syntax = "proto3";
+
+package pail.operator.v1;
+
+option go_package = "github.com/glowfly/pail/services/proto/operatorv1;operatorv1";
+
+// OperatorService (LLD-v2 §7.2, M9): operator recovery control plane.
+//
+// State machine: NORMAL -> SAFE_STOP (forgery detected) -> NORMAL (Unlock
+// verified). Any state -> LOCKDOWN only via a verified RevokeIssuerKey;
+// LOCKDOWN is permanent for the process lifetime.
+//
+// Signature canon (deterministic, no proto re-serialization ambiguity):
+//   Unlock:          sig = Ed25519_Sign(operator_key,
+//                      "pail-unlock:v1:" + robot_id + ":" + unix_ms_decimal
+//                      + ":" + base64_std(nonce))
+//   RevokeIssuerKey: sig = Ed25519_Sign(operator_key,
+//                      "pail-revoke-issuer:v1:" + issuer_key_id + ":"
+//                      + unix_ms_decimal + ":" + base64_std(nonce))
+// Replay protection: unix_ms must be within the server time window and the
+// nonce must not have been accepted before. Failed attempts are blackboxed.
+//
+// E-W4 : the nonce MUST be at least 16 bytes of unpredictable
+// data. Shorter nonces are rejected by the server before signature
+// verification. The floor is a contract, not advice: the replay window is only
+// as wide as the set of nonces a client can be pushed into reusing, and a
+// caller cannot know the server's window length or acceptance rate. See
+// operator.MinNonceBytes for the derivation of 16.
+service OperatorService {
+  rpc Unlock(UnlockRequest) returns (UnlockResponse);
+  rpc RevokeIssuerKey(RevokeKeyRequest) returns (RevokeKeyResponse);
+
+  // CG-E1 context-ingest: an ops-plane event mutates issuer-side world state
+  // (a human entering/leaving a zone, an object moving, a robot going into
+  // maintenance/cordon). Issuer-internal — robots and the gate never see it.
+  // Mutations are serialized with issuance (single writer) so every token is
+  // signed against a consistent world cut, and each mutation is blackboxed.
+  rpc IngestContextEvent(ContextEvent) returns (ContextEventAck);
+
+  // LOTO lock register (AS-3b). A lock is owned by the transport identity that
+  // applied it (mTLS certificate fingerprint). The first active lock on a robot
+  // puts its node into MAINTENANCE; the node leaves MAINTENANCE only when the
+  // last active lock is released. A lock is released by its applier, or by a
+  // configured supervisor with a stated reason. While locks are active a
+  // direct MAINTENANCE_OFF context event is refused. Unidentified callers are
+  // always refused here, whatever PAIL_CONTEXT_POLICY says.
+  rpc ApplyLock(ApplyLockRequest) returns (LockResponse);
+  rpc ReleaseLock(ReleaseLockRequest) returns (LockResponse);
+  rpc ListLocks(ListLocksRequest) returns (ListLocksResponse);
+}
+
+// The lock's target is deliberately NOT named robot_id: the identity-binding
+// interceptor (§2.5) judges every robot_id-scoped request against the
+// caller's own robot binding, which is right for a robot acting as itself and
+// wrong for a maintainer locking a robot. The lock's authority is the
+// maintainer's transport identity, journaled per lock, not a robot binding.
+message ApplyLockRequest {
+  string target_robot_id = 1;  // bare robot id ("robot-01"); the node is robot:<id>
+  string tag = 2;              // human-readable tag text (who/why), 1..256 bytes
+}
+message ReleaseLockRequest {
+  string lock_id = 1;
+  string reason = 2;    // required when a supervisor releases someone else's lock
+}
+message ListLocksRequest {
+  string robot_filter = 1;  // empty = all robots
+  bool include_released = 2;
+}
+message LockRecord {
+  string lock_id = 1; string robot_id = 2; string applier_kind = 3; string applier_id = 4;
+  string tag = 5; int64 applied_at_ms = 6; string state = 7; // ACTIVE | RELEASED
+  int64 released_at_ms = 8; string released_by_id = 9; string release_mode = 10; // SELF | SUPERVISOR
+  string release_reason = 11;
+}
+message LockResponse {
+  bool accepted = 1;
+  string detail = 2;
+  string lock_id = 3;
+  uint64 epoch = 4;          // graph epoch after any mutation this call caused
+  uint32 active_locks = 5;   // active locks on the robot after this call
+  bool node_maintenance = 6; // robot node state after this call
+}
+message ListLocksResponse {
+  repeated LockRecord locks = 1;
+}
+
+// ContextEventKind enumerates the world-state mutations the issuer accepts.
+enum ContextEventKind {
+  CONTEXT_EVENT_KIND_UNSPECIFIED = 0; // rejected (fail-closed)
+  HUMAN_ENTER = 1;   // node_id = zone id; arg = human local id
+  HUMAN_LEAVE = 2;   // node_id = zone id; arg = human local id
+  OBJECT_MOVE = 3;   // node_id = object id; arg = destination zone id
+  MAINTENANCE_ON = 4;  // node_id = robot id (LOTO)
+  MAINTENANCE_OFF = 5; // node_id = robot id
+  CORDON_ON = 6;       // node_id = robot id (isolation)
+  CORDON_OFF = 7;      // node_id = robot id
+  // AG-8: a customer-defined world event. custom_kind names it
+  // ("<namespace>.<name>", lowercase [a-z0-9_] on both sides) and the site
+  // model's `custom_events` maps that name to one of the built-in kinds
+  // above, whose node_id/arg conventions then apply. An undeclared name, an
+  // empty custom_kind, or custom_kind on a non-CUSTOM kind is rejected
+  // (fail-closed); nothing is mapped implicitly.
+  CUSTOM = 8;
+}
+
+message ContextEvent {
+  string node_id = 1;         // target node id, e.g. "zone:z7", "robot:robot-01"
+  ContextEventKind kind = 2;
+  string arg = 3;             // kind-specific: human id / destination zone
+  int64 unix_ms = 4;
+  string custom_kind = 5;     // AG-8: only with kind = CUSTOM; "<namespace>.<name>"
+}
+
+message ContextEventAck {
+  bool accepted = 1;
+  uint64 epoch = 2;   // graph epoch after applying the mutation
+  string detail = 3;  // reason when rejected
+}
+
+message UnlockRequest {
+  string robot_id = 1;
+  int64 unix_ms = 2;
+  bytes nonce = 3;  // >= 16 bytes, unpredictable (E-W4). Shorter = rejected.
+  bytes operator_sig = 4;
+  string operator_key_id = 5;
+}
+
+message UnlockResponse {
+  bool accepted = 1;
+  string detail = 2;
+}
+
+message RevokeKeyRequest {
+  string issuer_key_id = 1;
+  int64 unix_ms = 2;
+  bytes nonce = 3;  // >= 16 bytes, unpredictable (E-W4). Shorter = rejected.
+  bytes operator_sig = 4;
+  string operator_key_id = 5;
+}
+
+message RevokeKeyResponse {
+  bool accepted = 1;
+  string detail = 2;
+}

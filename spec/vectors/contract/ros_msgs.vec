@@ -1,0 +1,60 @@
+# ros_msgs.vec — pail_msgs ROS 메시지 계약 골든 (TB-3, LLD-D §4.2)
+#
+# ROS .msg 는 텍스트라 디스크립터가 없다 — 6종 파일의 (타입, 이름) 순서열을
+# 손으로 적고, Go 테스트(MG-01~03)가 pail_ws/src/pail_msgs/msg/*.msg 를
+# 직접 읽어 대조한다. 주석('#' 이후)과 빈 줄은 제거 후 비교한다(MG-03) —
+# 주석 변경이 FAIL 을 만들지 않도록.
+#
+# MG-01 의 리터럴 6 은 §1.6 실측이며 HLD 의 "6종" 기술과 일치한다.
+#
+# 형식(§2.1 변형, 평면 TSV):
+#   file<TAB><이름>.msg<TAB><필드 수>
+#   field<TAB><이름>.msg<TAB><순서(0부터)><TAB><타입><TAB><필드명>
+# 파일 정렬은 이름 사전순, 필드는 파일 내 등장 순서.
+#
+# 손으로 옮겨 적음 (2026-08-04). 자동 생성 금지: 생성하면 대조가 아니라 복사다.
+# 2026-08-13 (OB4 커밋18, D §7.6 F-CPP-7 / U-D1): BridgeState 에
+# deadman_window_ms 추가 — 브리지가 실제로 집행하는 침묵 창을 게이트가 관측해
+# seal v2 키 27 에 싣는 경로. 이 행 추가가 의도 선언이다(G-CTR 규율).
+# 2026-08-22 (LLD-SHADOW §5.2 D-S5): GateState 에 effective_mode 추가 —
+# 판정에 적용된 모드 스탬프(enforce|observe). 이 행 추가가 의도 선언이다.
+# 2026-10-18 (P19-M1, preview.19 evaluation): GateState gained detail, step_deadline_elapsed_ms,
+# step_clock_id and completed_token_id (D-S5 detail; GC-TIME-1 step deadline on the elapsed clock
+# and that clock's id; the token a completing PERMIT consumed). The message had carried them for
+# eight candidates while this golden stayed at seven fields, so the public tree's own test was red.
+# These rows are the declaration of intent; the change is recorded in spec/COMPATIBILITY.md.
+file	BridgeState.msg	3
+field	BridgeState.msg	0	builtin_interfaces/Time	stamp
+field	BridgeState.msg	1	string	state
+field	BridgeState.msg	2	int32	deadman_window_ms
+file	Evidence.msg	6
+field	Evidence.msg	0	builtin_interfaces/Time	stamp
+field	Evidence.msg	1	string	source
+field	Evidence.msg	2	string	object_id
+field	Evidence.msg	3	float32	confidence
+field	Evidence.msg	4	string	frame_id
+field	Evidence.msg	5	geometry_msgs/PoseStamped	pose
+file	GateState.msg	11
+field	GateState.msg	0	builtin_interfaces/Time	stamp
+field	GateState.msg	1	string	state
+field	GateState.msg	2	string	reason
+field	GateState.msg	3	string	active_chain_id
+field	GateState.msg	4	string	active_token_id
+field	GateState.msg	5	string	config_digest
+field	GateState.msg	6	string	effective_mode
+field	GateState.msg	7	string	detail
+field	GateState.msg	8	int64	step_deadline_elapsed_ms
+field	GateState.msg	9	string	step_clock_id
+field	GateState.msg	10	string	completed_token_id
+file	Permit.msg	3
+field	Permit.msg	0	builtin_interfaces/Time	stamp
+field	Permit.msg	1	string	active_token_id
+field	Permit.msg	2	uint32	permit_seq
+file	SafetyState.msg	4
+field	SafetyState.msg	0	builtin_interfaces/Time	stamp
+field	SafetyState.msg	1	string	level
+field	SafetyState.msg	2	string	source
+field	SafetyState.msg	3	string	detail
+file	StopRequest.msg	2
+field	StopRequest.msg	0	builtin_interfaces/Time	stamp
+field	StopRequest.msg	1	string	reason

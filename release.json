@@ -1,0 +1,11 @@
+{
+  "schema_version": 3,
+  "release_id": "0.2.0",
+  "root_directory": "pail-core",
+  "artifacts": {
+    "core": "PAIL-Core-0.2.0-src.zip",
+    "issuer": "PAIL-Issuer-Eval-0.2.0-linux-arm64-image.tar",
+    "evaluation": "PAIL-Evaluation-0.2.0.zip",
+    "offline": "PAIL-Evaluation-0.2.0-linux-arm64-offline.zip"
+  }
+}

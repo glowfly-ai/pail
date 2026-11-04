@@ -1,0 +1,25 @@
+version: 2.0
+name: unlock_nonce_replay_denied
+robot_id: robot-1
+profile: insecure
+# Replay defense on the Operator Unlock: each unlock nonce is single-use (burned
+# on success, and rejected as ErrNonceReplayed if seen again). An attacker who
+# captured a prior unlock and replays it must NOT clear SAFE_STOP. We assert the
+# guard stays frozen: after the replayed unlock, a legitimate plan still cannot
+# be issued (ERR_NO_TOKEN) and never drives.
+steps:
+  - {t: 0.0, north_cmd: submit_plan, token_variant: forge_signature, steps: [{step_id: s1,
+       type: TWIST, target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 2.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_TAMPERED}}   # SAFE_STOP entered
+  - {t: 2.0, operator_unlock: {key: op-key-1, reuse_nonce: true}} # replayed → rejected
+  # guard remains SAFE_STOP → issuance still frozen. The refusal is the observation, so it is
+  # declared: an ACCEPTED plan here would mean the replayed unlock cleared the guard.
+  - {t: 2.5, north_cmd: submit_plan, submit_status: REJECTED, submit_reason: "SAFE_STOP",
+     steps: [{step_id: s2, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 2.0}}]}
+  - {t: 2.8, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 3.0, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 2.0}}
+  - {t: 3.4, expect_gate: {state: BLOCK, reason: ERR_NO_TOKEN}}
+  - {t: 3.7, expect_drive_never: {linear_x: 0.2}}

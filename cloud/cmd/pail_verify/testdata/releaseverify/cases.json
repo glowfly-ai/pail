@@ -1,0 +1,184 @@
+{
+  "artifact": "PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+  "release_id": "0.2.0-test",
+  "test_key_fingerprint": "82e829e6ef61aba2a3c09903fdf7019972c7a4d2e49d2faa4ca201ef13e4d1bb",
+  "cases": [
+    {
+      "name": "good",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "member-tampered",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "member-tampered/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "member-tampered/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "member-added",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "member-added/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "member-added/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "mode-changed",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "mode-changed/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "mode-changed/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "member-crc",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "member-crc/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "member-crc/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "member-missing",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "member-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "member-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "duplicate-manifest-key",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "duplicate-manifest-key/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "duplicate-manifest-key/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "build-json-source-mismatch",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "build-json-source-mismatch/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "build-json-source-mismatch/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "sig-missing",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "sig-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "sig-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "sig-corrupted",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "sig-corrupted/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "sig-corrupted/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "sig-short",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "sig-short/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "sig-short/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "wrong-key",
+      "public_key": "TEST-WRONG-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "key-missing",
+      "public_key": "NO-SUCH-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "fingerprint-mismatch",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--expected-fingerprint",
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "fingerprint-match",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--expected-fingerprint",
+        "82E829E6EF61ABA2A3C09903FDF7019972C7A4D2E49D2FAA4CA201EF13E4D1BB"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "allow-unsigned",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--allow-unsigned"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "sig-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "sig-missing/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "identity-mismatch",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [],
+      "expected_release": "0.2.0-other",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "tree-match",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--tree-root",
+        "tree-match/tree"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "tree-match/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "tree-match/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "tree-modified",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--tree-root",
+        "tree-modified/tree"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "tree-modified/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "tree-modified/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
+      "name": "tree-dsstore-ignored",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--tree-root",
+        "tree-dsstore-ignored/tree"
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "tree-dsstore-ignored/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "tree-dsstore-ignored/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    }
+  ]
+}

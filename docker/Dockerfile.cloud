@@ -1,0 +1,101 @@
+# PAIL Core gateway/client utilities — public source build, no Issuer executable.
+#
+# Layout note: in this repository the Go module lives at cloud/ and the wire
+# contract at sdk/proto/. The Makefile's PROTO_DIR default points elsewhere,
+# so it is passed explicitly below.
+FROM golang:1.27.3 AS builder
+ENV GOMAXPROCS=2 GOFLAGS=-p=2
+
+WORKDIR /repo
+
+# Toolchain needed for proto codegen.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    protobuf-compiler \
+    git \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0 \
+ && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+
+ENV PATH="/go/bin:${PATH}"
+
+COPY sdk/proto ./sdk/proto
+
+# Copy module files first for better caching.
+COPY cloud/go.mod cloud/go.sum ./cloud/
+
+WORKDIR /repo/cloud
+RUN go mod download
+
+COPY cloud ./
+
+RUN make proto PROTO_DIR=../sdk/proto
+
+# NOTE: `go mod tidy` is intentionally not run here — it may try to resolve
+# locally generated proto packages as remote modules. The build uses -mod=mod.
+ENV CGO_ENABLED=0
+RUN test ! -d issuer && make build-core
+
+# e2e observation CLIs. `make build` covers the service binaries; these exist
+# so e2e/run_e2e.sh can read the chain and mint a root-signed keyring bundle
+# from INSIDE the image — the public tree makes no assumption that the host
+# has a Go toolchain.
+#
+# pail-keyring-sign is the offline root signer: it has no network code and is
+# meant to run on a machine that holds the root private key. Shipping it in
+# this image is a convenience of the demo, not a recommendation — `run_e2e.sh
+# --keyring bundle` keeps the root key outside the tree the services mount.
+RUN go build -mod=mod -tags pail_generated -o bin/get_active_token ./cmd/get_active_token \
+ && go build -mod=mod -tags pail_generated -o bin/blackbox_verify ./cmd/blackbox_verify \
+ && go build -mod=mod -o bin/pail-keyring-sign ./tools/pail-keyring-sign
+
+COPY examples/tb3/probe.go /repo/cloud/tools/tb3_probe.go
+RUN go build -mod=mod -o bin/tb3-probe /repo/cloud/tools/tb3_probe.go
+
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/pail
+COPY --from=builder /repo/cloud/bin/pail_robot_agent /usr/local/bin/pail_robot_agent
+COPY --from=builder /repo/cloud/bin/submit_plan /usr/local/bin/submit_plan
+COPY --from=builder /repo/cloud/bin/get_active_token /usr/local/bin/get_active_token
+COPY --from=builder /repo/cloud/bin/blackbox_verify /usr/local/bin/blackbox_verify
+COPY --from=builder /repo/cloud/bin/pail-keyring-sign /usr/local/bin/pail-keyring-sign
+COPY --from=builder /repo/cloud/bin/tb3-probe /usr/local/bin/tb3-probe
+COPY docker/pail_split_entrypoint.sh /usr/local/bin/pail_split_entrypoint.sh
+# Absolute mode, not `chmod +x`: COPY preserves the checkout's mode, and git
+# does not track the read bit. A 0600 checkout plus +x yields 0711 — the
+# non-root user below cannot READ the script, and shell scripts are read to be
+# interpreted, not executed. A fresh clone only works by accident.
+RUN chmod 0755 /usr/local/bin/pail_split_entrypoint.sh
+# Baked-in defaults so the image starts without a config mount; a mounted
+# /etc/pail (see docker-compose.e2e.yml) shadows these.
+COPY config/policy.yaml config/site_model.example.yaml /etc/pail/
+RUN chmod 0644 /etc/pail/policy.yaml /etc/pail/site_model.example.yaml
+
+# Unprivileged runtime. Ownership of writable paths must move with USER —
+# otherwise this is a container that cannot write its own journal.
+#
+# Must come BEFORE the VOLUME declaration: changes to a path after VOLUME are
+# not part of the image.
+#
+# Pre-existing named volumes do NOT receive this chown — docker copies image
+# content/ownership only into an EMPTY volume on first use. If you upgrade a
+# deployment that ran as root before, delete the volume or chown it to
+# 10001:10001 yourself.
+#
+# /var/lib/pail_keyring holds the keyring bundle's version + wall-clock floor
+# (KM2 rollback defence). It is a directory of its own because the bundle
+# itself is read from the read-only /etc/pail mount, and the loader's default
+# puts the state file NEXT TO the bundle — on a read-only mount that write
+# fails, and a floor that cannot be written leaves the rewind window open.
+RUN groupadd -g 10001 pail && useradd -u 10001 -g 10001 -M -s /usr/sbin/nologin pail \
+ && mkdir -p /var/log/pail_blackbox /var/run/pail /var/lib/pail_anchor /var/lib/pail_keyring \
+ && chown -R 10001:10001 /var/log/pail_blackbox /var/run/pail /var/lib/pail_anchor \
+      /var/lib/pail_keyring /opt/pail
+
+VOLUME ["/var/log/pail_blackbox"]
+ENV PAIL_NORTHBOUND_PORT=50051
+USER 10001:10001
+# Default runs the public robot gateway only. The Issuer is supplied in the
+# separate evaluation image and selected by the evaluation launcher.
+CMD ["pail_robot_agent"]

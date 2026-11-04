@@ -1,0 +1,5 @@
+EVALUATION_VERIFY: PASS files=7
+SIGNATURE: VERIFIED key=82e829e6ef61aba2a3c09903fdf7019972c7a4d2e49d2faa4ca201ef13e4d1bb with pail_verify
+VERIFIER: this is the bundled verifier (pail_verify)
+PUBLISHER_KEY: NOT_COMPARED — signature self-consistency only; obtain the fingerprint independently and pass --expected-fingerprint
+TREE: MODIFIED — 1 changed, 1 missing, 1 extra: pail-core/README.md(changed), pail-core/extra.txt(extra), run.sh(missing)

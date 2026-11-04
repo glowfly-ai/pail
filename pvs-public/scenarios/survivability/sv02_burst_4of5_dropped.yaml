@@ -1,0 +1,20 @@
+version: 2.0
+name: single_burst_retransmission_recovers_event
+robot_id: robot-1
+profile: insecure
+# The burst sender retransmits each event ~5x for loss tolerance. Drop 4 of 5
+# (keep only index 3) and the receiver must still reconstruct the one event.
+# pktdrop is a receiver-front filter on the retransmission list.
+# LIVE-PENDING: shaping real UDP loss needs a forwarding proxy in front of the
+# BurstListener (backend_live.fault raises NotImplementedError, honestly). The
+# k-of-n reassembly logic is proven host-side in test_mocks. Set PVS_UDP_PROXY=1
+# once the proxy exists to run this live.
+live_pending: udp_proxy
+steps:
+  - {t: 0.0, fault: {pktdrop: {keep: [3]}}}
+  - {t: 0.1, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 3.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "999999", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 3.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_TARGET_MISMATCH}}
+  - {t: 2.0, expect_burst: {event: BLOCK, reason: ERR_TARGET_MISMATCH, signature: valid}}

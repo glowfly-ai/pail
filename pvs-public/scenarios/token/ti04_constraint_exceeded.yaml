@@ -1,0 +1,17 @@
+version: 2.0
+name: constraint_exceeded_blocked
+robot_id: robot-1
+profile: insecure
+# Token grants max_linear_x=0.1 but the injected cmd_vel drives 0.5. The gate
+# checks the commanded twist against the token constraints and BLOCKs.
+# token_variant=tight_constraint mints a token capped at 0.1.
+steps:
+  - {t: 0.0, north_cmd: submit_plan, token_variant: tight_constraint, max_linear: 0.1,
+       steps: [{step_id: s1, type: TWIST, target_object_id: "880123",
+       twist: {linear_x: 0.1, duration_sec: 2.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.5, rate: 10, dur: 2.0}}   # exceeds the 0.1 cap
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_CONSTRAINT}}
+  - {t: 1.3, expect_drive_never: {linear_x: 0.5}}
+expectations_global:
+  - audit_chain: PASS

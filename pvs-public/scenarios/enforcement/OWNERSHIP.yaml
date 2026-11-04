@@ -1,0 +1,29 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+# tc-enf-03 은 DELEGATED.md 산문 위임을 기계 판독 필드로 이전한 것이다 (E-9-3).
+#
+# ★카탈로그 갭 (정직 기록): enf01/enf02 가 실증하는 명제 — "SROS2 보안 ON 이면
+# 비인가 참가자는 특권 토픽에 발행/구독할 수 없다" — 는 HLD §3 의 85건 카탈로그에
+# 대응 ID 가 없다. G-DEP-01(S0~S10, S1=보안 ON 강제)은 그 설정을 요구할 뿐이고,
+# 이 축은 그 설정이 실제로 경계를 무는지의 라이브 교차 확인이다. 전용 ID 신설은
+# 레지스트리 append 소관이라 여기서 지어내지 않는다 — §11 미결(E-Q5)로 상신.
+axis: enforcement
+scenarios:
+  - id: enf01_rogue_safe_cmd_vel
+    owns: []
+    also_touched_by: []
+    future_refs: [G-DEP-01]   # S1(보안 ON)이 지키려는 경계의 실증 — 위 갭 주석 참조
+    delegated_to: null
+    note: sros2 프로파일 전용 — insecure/uds 에서는 정직 SKIP (NEEDS_SROS2_KEYSTORE)
+  - id: enf02_rogue_subscribe
+    owns: []
+    also_touched_by: []
+    future_refs: [G-DEP-01]
+    delegated_to: null
+    note: sros2 프로파일 전용 — insecure/uds 에서는 정직 SKIP (NEEDS_SROS2_KEYSTORE)
+  - id: tc-enf-03_forged_grpc_report
+    owns: []
+    also_touched_by: []
+    future_refs: [G-KEY-05]   # mTLS 미제시 클라이언트 거부
+    delegated_to:
+      - services/pail_services_go/internal/grpcauth/grpcauth_test.go
+    delegation_note: pvs/scenarios/enforcement/DELEGATED.md

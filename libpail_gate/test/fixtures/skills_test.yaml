@@ -1,0 +1,32 @@
+# SK-3 test registry (test_gate_two_doors.cpp): one row per completion signal; SK-5 adds `inspect` (feeds on evidence_claim).
+version: 1
+robot_class: test_class
+skills:
+  - name: twist
+    classes: [MOVE]
+    evidence: {when: none}
+    envelope: []
+    feeds: []
+    complete: {signal: duration}
+    safe_state: stop_zero_twist
+  - name: pick
+    classes: [MANIPULATE]
+    evidence: {when: none}
+    envelope: []
+    feeds: []
+    complete: {signal: robot_report}
+    safe_state: stop_zero_twist
+  - name: place
+    classes: [MANIPULATE]
+    evidence: {when: at_complete, trust: identity_bearing}
+    envelope: []
+    feeds: []
+    complete: {signal: robot_report+evidence}
+    safe_state: stop_zero_twist
+  - name: inspect
+    classes: [NONE]
+    evidence: {when: none}
+    envelope: []
+    feeds: [safety_feed, evidence_claim]
+    complete: {signal: duration}
+    safe_state: stop_zero_twist

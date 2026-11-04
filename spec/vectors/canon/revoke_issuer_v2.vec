@@ -1,0 +1,82 @@
+# tests/golden/canon/revoke_issuer_v2.vec — 발급자 키 폐기 canon v2 (LLD-OSSB-A-2026-V1 §3.2, OB1)
+# canon: pail-revoke-issuer:v2:<issuer_key_id>:<unix_ms>:<b64std(nonce)>:<operator_key_id>
+# expect: accept(조립) | reject(R-A 조립 실패) | parse_only(구 판, 생성 종료·파싱 영구 유지)
+# 형식: key<TAB>value. 'id' 줄이 새 레코드를 연다. 레코드 안에서 key 유일.
+# 탭 없는 key 단독 줄 = 빈 값(트레일링 탭 금지 — 편집기가 지운다).
+# 조립 정본: Go internal/operator/operator.go RevokeCanon (v2) / RevokeCanonV1 (구 판).
+#
+# 이 파일은 unlock_v2.vec 의 형제다. 두 판을 함께 올리는 이유는 §2.3 에 있다 —
+# 같은 형태의 같은 결손이 두 자리에 따로 있고, 한쪽만 고치면 결함은 형제에 그대로
+# 남는다. 폐기 쪽이 더 무겁다: unlock 은 SAFE_STOP 을 푸는 되돌릴 수 있는 명령이지만
+# revoke 는 LOCKDOWN 으로 가는 영구 명령이고, 그 기록이 "누가 눌렀는지"를 말하지
+# 못한다면 되돌릴 수 없는 조치에 대해 책임 주체가 비어 있는 것이다.
+#
+# 생성 방식: MANUAL — 손으로 옮겨 적었다. 자동 생성 금지 (§4.1).
+#   전사 벡터에 생성기를 요구하면 그 벡터의 존재 이유가 뒤집힌다. 이 파일이 고정하는 것은
+#   "구현이 무엇을 내놓는가"가 아니라 "설계서 §3.2.2 가 무엇을 적었는가"이고, 구현에서
+#   뽑아낸 값은 설계와의 대조가 아니라 구현의 복창이 된다.
+#   base64(0x00..0x0f) = AAECAwQFBgcICQoLDA0ODw== 는 tests/golden/token/canon.vec 이
+#   2026-08-06 에 손으로 검증해 동결한 값을 그대로 쓴다 — 같은 상수를 두 번 계산하지
+#   않는다.
+#
+# 신설 필드는 **끝에** 붙는다(§3.2.2). ':' 연접 문자열에서 중간 삽입은 뒤 필드의
+# 인덱스를 전부 밀고, 구판 파서가 새 문자열을 부분적으로 성공 파싱할 여지를 만든다.
+
+id	RV2-01
+desc	기준선 — v1 이 서명 밖에 두었던 operator_key_id 가 서명 안으로 들어온다(C-B11). 영구 조치의 기록이 서명된 서명자를 갖는다.
+func	revoke
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+operator_key_id	op-key-1
+expect	accept
+canon	pail-revoke-issuer:v2:dev-key-1:1700000000000:AAECAwQFBgcICQoLDA0ODw==:op-key-1
+
+id	RV2-01b
+desc	서명자만 다른 짝 — RV2-01 과 operator_key_id 하나만 다르다. 두 canon 이 같으면 서명이 서명자를 덮지 않는 것이고, 그것이 v1 의 결손 그 자체다. 한 레코드로는 "필드가 있다"까지만 보이고 "값이 실제로 바이트를 가른다"는 보이지 않는다.
+func	revoke
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+operator_key_id	op-key-2
+expect	accept
+canon	pail-revoke-issuer:v2:dev-key-1:1700000000000:AAECAwQFBgcICQoLDA0ODw==:op-key-2
+
+id	RV2-02
+desc	operator_key_id 에 구분자 ':' — R-A 확대분(§3.2.2). 이스케이프하지 않고 조립을 거부한다. 허용하면 "op" 범위와 "op:key" 범위가 같은 바이트로 접힌다(X23).
+func	revoke
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+operator_key_id	op:key
+expect	reject
+reject_reason	separator ':' in identifier (R-A 확대, LLD-OSSB-A §3.2.2)
+
+id	RV2-03
+desc	빈 operator_key_id — 거부. 빈 문자열을 서명하면 "서명자를 모른다"와 "서명자가 빈 이름이다"가 같은 바이트가 되고, 그 뒤로는 둘을 갈라 볼 방법이 없다.
+func	revoke
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+operator_key_id
+expect	reject
+reject_reason	empty identifier (R-A 확대, LLD-OSSB-A §3.2.2)
+
+id	RV2-04
+desc	issuer_key_id 에 구분자 ':' — 구 R-A 는 판이 올라가도 그대로다. 확대분을 넣으면서 원래 있던 검사가 사라지는 것을 이 레코드가 막는다. 폐기 대상이 모호하면 의도한 키가 아닌 키가 죽는다.
+func	revoke
+arg_id	dev:key
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+operator_key_id	op-key-1
+expect	reject
+reject_reason	separator ':' in identifier (F3 R-A, X23)
+
+id	RV2-90
+desc	구 v1 canon 보존 — 생성은 OB1 에서 끝나지만 파싱·검증은 영원히 유지된다(F8). 이 벡터를 지우는 것은 이미 서명된 과거 폐기 기록을 검증 불가능하게 만드는 것이다. 다만 이 문자열의 검증 성공은 operator_key_id 에 대해 아무것도 말하지 않는다 — 봉투의 값을 서명된 것처럼 기록하면 안 된다(§3.2.3).
+func	revoke_v1
+arg_id	dev-key-1
+unix_ms	1700000000000
+nonce	000102030405060708090a0b0c0d0e0f
+expect	parse_only
+canon	pail-revoke-issuer:v1:dev-key-1:1700000000000:AAECAwQFBgcICQoLDA0ODw==

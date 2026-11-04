@@ -1,0 +1,38 @@
+# SD3 공용 진리표 (PAIL-검사내재화-상세설계서-v1 §4).
+# C++ 테스트(test_deploy_guard.cpp)와 Python 테스트(test_deploy_guard.py)가 이 파일을
+# 같이 읽는다. 어느 한쪽 구현이 갈라지면 그쪽 테스트가 깨진다.
+#
+# 기대값은 규칙에서 유도하지 않고 문자 그대로 적는다 — 구현과 같은 규칙으로 유도하면
+# 동어반복이 된다.
+#
+# 열: component  profile  enable  strategy  keystore  provisioned  enclave  expect_fail
+#   <empty> = 빈 문자열, provisioned = 0|1, expect_fail = '-' 또는 쉼표 목록(순서 포함)
+#
+# --- 정상 배치 ---------------------------------------------------------------
+pep_gate	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	-
+pep_gate	production	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	-
+pep_gate	dev	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	-
+motion_bridge	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/motion_bridge	-
+perception	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/perception	-
+# --- S0 프로파일 오타: 이후 검사는 생략된다 ----------------------------------
+pep_gate	develop	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	S0
+pep_gate	Production	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	S0
+pep_gate	prod	<empty>	<empty>	<empty>	0	/	S0
+# --- S1 보안 OFF: S2·S3 는 의미가 없으므로 생략된다 --------------------------
+pep_gate	<empty>	<empty>	<empty>	<empty>	0	/	S1
+pep_gate	<empty>	false	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	S1
+pep_gate	<empty>	TRUE	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	S1
+pep_gate	dev	<empty>	<empty>	<empty>	0	/	S1
+# --- S2 전략 -----------------------------------------------------------------
+pep_gate	<empty>	true	<empty>	/etc/pail/sros2_keystore	1	/pep_gate	S2
+pep_gate	<empty>	true	Permissive	/etc/pail/sros2_keystore	1	/pep_gate	S2
+# --- S3 keystore / enclave ---------------------------------------------------
+pep_gate	<empty>	true	Enforce	<empty>	0	/pep_gate	S3
+pep_gate	<empty>	true	Enforce	/etc/pail/sros2_keystore	0	/pep_gate	S3
+pep_gate	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/	S3
+pep_gate	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/motion_bridge	S3
+perception	<empty>	true	Enforce	/etc/pail/sros2_keystore	1	/pep_gate	S3
+# --- 복합 --------------------------------------------------------------------
+pep_gate	<empty>	true	Permissive	<empty>	0	/pep_gate	S2,S3
+pep_gate	<empty>	true	Permissive	<empty>	0	/	S2,S3,S3
+pep_gate	dev	true	Permissive	/etc/pail/sros2_keystore	0	/	S2,S3,S3

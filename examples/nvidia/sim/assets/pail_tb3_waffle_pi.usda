@@ -1,0 +1,30 @@
+#usda 1.0
+(
+    defaultPrim = "turtlebot3_waffle_pi"
+    metersPerUnit = 1
+    kilogramsPerUnit = 1
+    upAxis = "Z"
+)
+# Test-only drive settings, NOT measured hardware calibration.
+# Damping 1 Nm*s/rad -> pi/180 Nm*s/degree; torque cap 1 Nm.
+def Xform "turtlebot3_waffle_pi" (
+    prepend references = @turtlebot3_waffle_pi/turtlebot3_waffle_pi.usda@
+    variants = { string Physics = "physx" }
+) {
+    over "Physics" {
+        over "wheel_left_joint" {
+            float drive:angular:physics:damping = 0.01745329252
+            float drive:angular:physics:stiffness = 0
+            float drive:angular:physics:maxForce = 1
+            float drive:angular:physics:targetVelocity = 0
+            float drive:angular:physics:targetPosition = 0
+        }
+        over "wheel_right_joint" {
+            float drive:angular:physics:damping = 0.01745329252
+            float drive:angular:physics:stiffness = 0
+            float drive:angular:physics:maxForce = 1
+            float drive:angular:physics:targetVelocity = 0
+            float drive:angular:physics:targetPosition = 0
+        }
+    }
+}

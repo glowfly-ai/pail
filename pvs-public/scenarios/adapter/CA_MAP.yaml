@@ -1,0 +1,102 @@
+# pvs/scenarios/adapter/CA_MAP.yaml — adapter conformance cases (spec/ADAPTER_CONTRACT.md §4).
+#
+# One row per CA case. `scenario` is a PVS v2 scenario file (the same vocabulary the ROS gate
+# node is driven with), `tool` is a transport-specific executable check where the scenario
+# vocabulary cannot express the case (bit-identity, raw-ingress probe). Per backend:
+#   run                — executed by tests/adapter_conformance/run.py
+#   skip: <REASON>     — cannot be executed on this transport yet; REASON is a stable token
+#   run: <scenario>    — executed, with a transport-specific scenario file in place of the row's
+#                        (same case and expectation; e.g. which container "the agent" is)
+#   cite: <ref>        — evidence is an existing battery run on that transport; not re-run here
+# A row without an executable path on a backend is a SKIP in the report, never a PASS (H-B2).
+#
+# ros2_pep_gate runs on the PVS live rig (pvs/run_live_mac.sh, LiveBackend) in two passes that
+# differ only in the gate's token source: PAIL_TOKEN_SERVICE_ADDR=127.0.0.1:50051 (real issuer;
+# CA-01,05,06,07,08,09,10,12) and 127.0.0.1:50052 (rogue seam; CA-02,03,04). run.py --append
+# merges the second pass into the first pass's report.
+version: 1
+cases:
+  - id: CA-16
+    title: new API44 methods preserve query bytes and enforce no-token command refusal
+    tool: tools/ca16_new_methods.py
+    reset_before: true
+    structured_result: true
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: MICRODUCK_SOCKET_ONLY"}
+  - id: CA-01
+    title: no token → BLOCK, nothing forwarded
+    scenario: functional/fn03_no_token.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-02
+    title: forged signature → BLOCK
+    scenario: adapter/ca02_forged_signature.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-03
+    title: expired token → BLOCK
+    scenario: adapter/ca03_expired_token.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-04
+    title: action class not covered by the token → BLOCK
+    scenario: adapter/ca04_action_class_mismatch.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-05
+    title: target mismatch → BLOCK
+    scenario: adapter/ca05_target_mismatch.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-06
+    title: speed over the token limit → BLOCK (never clamp)
+    scenario: adapter/ca06_speed_over_limit.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-07
+    title: permitted command forwarded byte-identical
+    tool: tools/ca07_bytes.sh
+    backends: {microduck_uds: run, ros2_pep_gate: "run: functional/fn01_normal_match.yaml"}
+  - id: CA-08
+    title: gate death → forwarding stops within the deadman
+    scenario: deadman/dm01_pep_kill_bridge_hold.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-09
+    title: agent unreachable → fail-closed within the grace ladder
+    scenario: adapter/ca09_issuer_unreachable.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: "run: adapter/ca09_issuer_unreachable_ros.yaml"}
+  - id: CA-10
+    title: safety feed stale/absent → no new permit
+    scenario: safety/sf02_safety_stale_no_permit.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: run}
+  - id: CA-11
+    title: observe mode passes through and records would-BLOCK
+    scenario: adapter/ca11_observe_passthrough.yaml
+    # The rig runs a second adapter instance on an observe policy; this row drives that one.
+    env: {microduck_uds: {PAIL_DUCK_PUBLIC: /run/duck/pail_observe.sock, PAIL_DUCK_GATE_LOG: /run/duck/gate_observe.ndjson, PAIL_DUCK_ADAPTER_CTR: pail-duckd-observe}}
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: NEEDS_POLICY_VARIANT (one sealed policy per rig; observe on the ROS node is the Shadow track, G-DEP-14~18)"}
+  - id: CA-12
+    title: adapter attests its own build_info
+    scenario: adapter/ca12_attestation_in_chain.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: "run: adapter/ca12_attestation_in_chain_ros.yaml"}
+  - id: CA-13
+    title: skill envelope (the robot's own numbers for the skill) over the token limit → BLOCK
+    scenario: adapter/ca13_skill_envelope_over_limit.yaml
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: NO_SKILL_INGRESS (the ROS 2 gate judges /cmd_vel only; a skill call has no ingress there)"}
+  - id: CA-15
+    title: skill table names a skill the robot does not answer to → startup refused (S33)
+    tool: tools/ca15_s33_table_not_on_robot.sh
+    # The fake robotd answers robot.skills with built_in: [] (2026-09-09 rig), so a table name
+    # it lacks cannot be told from an unlisted built-in — S33 is three-valued and reads that
+    # answer as `unverifiable` (banner, no refusal). The tool is for a daemon that lists its
+    # built-ins; on this rig the row is a SKIP, not a PASS.
+    backends: {microduck_uds: "skip: NEEDS_UPSTREAM_BUILTIN_LIST (the fake's robot.skills lists no built-ins; S33 is unverifiable on it, so a refusal cannot be observed)", ros2_pep_gate: "skip: NO_SKILL_INGRESS (the ROS 2 gate's S33 is the registry-vs-measures check, exercised by the node battery)"}
+  - id: CB-1
+    title: requester cannot reach the raw ingress
+    tool: tools/cb1_raw_socket_probe.py
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: NEEDS_SROS2_KEYSTORE (enf01 needs the SROS2 keystore; the macOS rig runs the insecure profile — PVS Enforcement axis)"}
+  - id: CA-17
+    title: pickup blocks, clearing input cannot revive the old plan, new authorization restores operation
+    tool: tools/ca17_pickup.py
+    reset_before: true
+    structured_result: true
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: MICRODUCK_SOCKET_ONLY"}
+  - id: CA-18
+    title: upstream daemon and explicit adapter-v2 support boundary agree
+    tool: tools/ca18_upstream_boundary.py
+    reset_before: true
+    structured_result: true
+    backends: {microduck_uds: run, ros2_pep_gate: "skip: MICRODUCK_SOCKET_ONLY"}

@@ -1,0 +1,65 @@
+# Synthetic software-preview configuration.
+human_safety:
+  enabled: true
+  estop_on_human_detect: true
+evidence:
+  confidence_threshold: 0.9
+  min_trust_class: identity_bearing
+motion:
+  max_linear_speed_mps: 1.0
+  max_angular_speed_rps: 1.0
+guardrails:
+  common:
+    sls.linear_mps: 1.0
+    sls.angular_rps: 1.0
+    step.max_duration_s: 30
+  zones: {}
+preconditions:
+- id: safety_feed
+  class: must_check_live
+  freshness_ms: 1000
+  exempt_in_progress_step: true
+- id: evidence_claim
+  class: must_check_live
+  freshness_ms: 2000
+  exempt_in_progress_step: false
+revocation_classes:
+- id: world_state
+  mechanism: recheck_at_decision
+  max_effective_delay_ms: 0
+- id: operator_key
+  mechanism: recheck_at_use
+  max_effective_delay_ms: 0
+- id: issuer_key
+  mechanism: reload_scoped
+  max_effective_delay_ms: unbounded
+trust_classes:
+- id: identity_bearing
+  rank: 3
+  sources:
+  - RFID
+  - NFC
+  - BARCODE
+- id: inferential
+  rank: 2
+  sources:
+  - VISION
+- id: asserted
+  rank: 1
+  sources:
+  - MANUAL
+horizon:
+  token_ttl_ms: 3600000
+  max_steps: 5
+authz:
+  callers:
+  - caller_kind: uds
+    caller_id: uid=10001,gid=10001
+    allow:
+    - GetActiveToken
+    - ReportDecision
+    - Attest
+retention:
+  blackbox_years: 5
+  anchor_years: 7
+  lower_bound_years: 5

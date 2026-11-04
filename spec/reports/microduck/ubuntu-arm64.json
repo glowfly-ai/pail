@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "status": "PASS_WITH_LIMITATIONS",
+  "profile": "microduck-software-preview",
+  "hardware_tested": false,
+  "source_manifest_sha256": "438eaee5af501d349a178ed4845b66d573c3428cdd4a9033505908f0fd80506d",
+  "counts": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 1,
+    "not_run": 0
+  },
+  "limitations": [
+    "Physical hardware validation pending",
+    "Isolated dev control transport; not a production security deployment",
+    "CA-15: upstream fake does not provide built-in skill inventory"
+  ],
+  "access_contract": {
+    "status": "PASS",
+    "private_key_mode": "0600",
+    "service_uid": 10001,
+    "requester_uid": 12345,
+    "public_access": true,
+    "raw_access_denied": true,
+    "private_key_read_denied": true
+  },
+  "environment": {
+    "host": "Linux",
+    "machine": "aarch64",
+    "docker_os": "linux",
+    "container_arch": "arm64",
+    "umask": "0077"
+  },
+  "image_id": "sha256:df720acd5a4f0987a2f4926885bad5ed2ae6d5a4d11d43afb0ff16c5c6248c24",
+  "checks": [
+    {
+      "id": "CA-01",
+      "title": "no token \u2192 BLOCK, nothing forwarded",
+      "status": "PASS",
+      "seconds": 5.18
+    },
+    {
+      "id": "CA-02",
+      "title": "forged signature \u2192 BLOCK",
+      "status": "PASS",
+      "seconds": 4.13
+    },
+    {
+      "id": "CA-03",
+      "title": "expired token \u2192 BLOCK",
+      "status": "PASS",
+      "seconds": 4.18
+    },
+    {
+      "id": "CA-04",
+      "title": "action class not covered by the token \u2192 BLOCK",
+      "status": "PASS",
+      "seconds": 4.14
+    },
+    {
+      "id": "CA-05",
+      "title": "target mismatch \u2192 BLOCK",
+      "status": "PASS",
+      "seconds": 4.13
+    },
+    {
+      "id": "CA-06",
+      "title": "speed over the token limit \u2192 BLOCK (never clamp)",
+      "status": "PASS",
+      "seconds": 4.14
+    },
+    {
+      "id": "CA-07",
+      "title": "permitted command forwarded byte-identical",
+      "status": "PASS",
+      "seconds": 0.6
+    },
+    {
+      "id": "CA-08",
+      "title": "gate death \u2192 forwarding stops within the deadman",
+      "status": "PASS",
+      "seconds": 5.63
+    },
+    {
+      "id": "CA-09",
+      "title": "agent unreachable \u2192 fail-closed within the grace ladder",
+      "status": "PASS",
+      "seconds": 6.53
+    },
+    {
+      "id": "CA-10",
+      "title": "safety feed stale/absent \u2192 no new permit",
+      "status": "PASS",
+      "seconds": 5.73
+    },
+    {
+      "id": "CA-11",
+      "title": "observe mode passes through and records would-BLOCK",
+      "status": "PASS",
+      "seconds": 4.42
+    },
+    {
+      "id": "CA-12",
+      "title": "adapter attests its own build_info",
+      "status": "PASS",
+      "seconds": 2.34
+    },
+    {
+      "id": "CA-13",
+      "title": "skill envelope (the robot's own numbers for the skill) over the token limit \u2192 BLOCK",
+      "status": "PASS",
+      "seconds": 3.35
+    },
+    {
+      "id": "CA-15",
+      "title": "skill table names a skill the robot does not answer to \u2192 startup refused (S33)",
+      "status": "SKIP",
+      "reason": "NEEDS_UPSTREAM_BUILTIN_LIST (the fake's robot.skills lists no built-ins; S33 is unverifiable on it, so a refusal cannot be observed)"
+    },
+    {
+      "id": "CB-1",
+      "title": "requester cannot reach the raw ingress",
+      "status": "PASS",
+      "seconds": 0.01
+    }
+  ],
+  "date": "2026-09-14",
+  "upstream_commit": "bc41fb5c9a9b39894669c1e022e375cf83800382",
+  "core_version": "0.1.0-rc.20260913.7"
+}

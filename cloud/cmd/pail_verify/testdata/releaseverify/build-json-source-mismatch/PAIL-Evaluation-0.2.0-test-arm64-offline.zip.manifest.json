@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "release_id": "0.2.0-test",
+  "artifact": "PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+  "root_directory": "pail-evaluation",
+  "bytes": 1505,
+  "sha256": "391612a748469178f9d838f02126468e2bba4c2278db2a1268304134810ee1ed",
+  "file_count": 7,
+  "files_sha256": {
+    "images.lock.json": "2178330c633d9d570911e020cb77ac6b5e3619ea8173b33344e2c06d697f57a4",
+    "native/BUILD.json": "0042f7457c121093e596cc27e79c929cf3c77928b46b3b1e979698904366052f",
+    "pail-core/README.md": "b363b0e079eb0c4bdfcc1ea4f6ab49feae6d211020785bce720c8cae71cf8226",
+    "pail-core/cloud/go.sum": "dcc579ca64d69af81dbc42c10d73f8a554f9596b4f999637ff4bfdeb708d1d6c",
+    "pail-core/docs/\u00df\u0153.md": "d5dda00815886998d71ddd0f7adfc418922065efa79fdc85718be6bdb65518de",
+    "pail-core/docs/\ud83e\udd16.md": "45854e731f3e7160f88e84e7a98833a609d6874b8cde6c6675f298fc834a382a",
+    "run.sh": "de8d6472a2c8098511965c477f203393004f915397dd1cf7697a8a8497a31d63"
+  },
+  "file_modes": {
+    "images.lock.json": "0644",
+    "native/BUILD.json": "0755",
+    "pail-core/README.md": "0644",
+    "pail-core/cloud/go.sum": "0644",
+    "pail-core/docs/\u00df\u0153.md": "0644",
+    "pail-core/docs/\ud83e\udd16.md": "0644",
+    "run.sh": "0755"
+  },
+  "signature_status": "test fixture; see README.md"
+}

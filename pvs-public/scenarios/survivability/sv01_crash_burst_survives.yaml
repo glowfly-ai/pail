@@ -1,0 +1,16 @@
+version: 2.0
+name: signed_burst_survives_process_death
+robot_id: robot-1
+profile: insecure
+# A BLOCK decision emits a signed UDP burst just before the services process is
+# killed. Because the burst is fire-and-forget UDP, the mock cloud receiver must
+# still have it and its Ed25519 signature must verify AFTER the sender is dead.
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 3.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "999999", confidence: 0.95}}
+  - {t: 0.6, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 3.0}}
+  - {t: 1.0, expect_gate: {state: BLOCK, reason: ERR_TARGET_MISMATCH}}
+  - {t: 1.5, fault: {kill: services, signal: 9}}
+  # receiver must retain and cryptographically verify the pre-death burst
+  - {t: 2.0, expect_burst: {event: BLOCK, reason: ERR_TARGET_MISMATCH, signature: valid}}

@@ -1,0 +1,23 @@
+# OWNERSHIP.yaml — PVS 축 소유권 최초 부여 . owns 는 항상 [] (§3.2).
+# tc-sv-03 은 DELEGATED.md 산문 위임을 기계 판독 필드로 이전한 것이다 (E-9-3).
+axis: survivability
+scenarios:
+  - id: sv01_crash_burst_survives
+    owns: []
+    also_touched_by: [G-EVI-11, G-EVI-05]   # 소유자는 ev/run_ev1.sh (TB-10) — 여기는 라이브 교차 확인
+    future_refs: []
+    delegated_to: null
+  - id: sv02_burst_4of5_dropped
+    owns: []
+    also_touched_by: []
+    future_refs: [G-EVI-06]   # n중 k 재구성 — 호스트 test_mocks 가 실증, 라이브는 UDP 프록시 대기
+    delegated_to: null
+    note: live_pending=udp_proxy (NEEDS_UDP_PROXY) — backend_live.fault 는 정직 NotImplementedError
+  - id: tc-sv-03_forged_burst_rejected
+    owns: []
+    also_touched_by: [G-EVI-05]
+    future_refs: [G-EVI-06]
+    delegated_to:
+      - pvs/tests/test_mocks.py::test_burst_listener_rejects_forged
+      - pvs/tests/test_verifiers.py::test_burst_forged_key_rejected
+    delegation_note: pvs/scenarios/survivability/DELEGATED.md

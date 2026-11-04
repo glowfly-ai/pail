@@ -1,0 +1,267 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+
+syntax = "proto3";
+
+package pail.token.v1;
+
+option go_package = "github.com/glowfly/pail/services/proto/tokenv1;tokenv1";
+
+import "pail.proto";
+
+service TokenService {
+  rpc GetActiveToken(GetActiveTokenRequest) returns (GetActiveTokenResponse);
+  rpc ReportDecision(ReportDecisionRequest) returns (ReportDecisionResponse);
+  // AS-2 (HA/AT LLD §6): PEP self-measurement attestation. The gate streams
+  // sha256(/proc/self/exe) at startup and on a re-attest timer; the issuer
+  // verifies against a registry, records it (RecordAttestation=60), and — in
+  // PAIL_ATTESTATION=required mode — gates issuance/serving on a valid verdict.
+  rpc Attest(AttestRequest) returns (AttestResponse);
+  // AV3 (AV LLD §4.6): fleet census. The cloud cannot dial the robot, so the
+  // gateway DECLARES where it actually is and the issuer WITHHOLDS issuance
+  // until every known robot is accounted for. Deliberately NOT folded into
+  // GetActiveToken (D-13): mixing "asking for authority" with "declaring a
+  // position" in one call revives the very ambiguity D-5 had to interpret.
+  rpc ReportGatewayCensus(GatewayCensusRequest) returns (GatewayCensusResponse);
+  // SD4 (config-seal LLD §3): the gate declares the security configuration it is
+  // actually running under, normalized to one text; the issuer hashes that text
+  // and journals the digest (RecordConfigSealed=61). Like the census this is a
+  // DECLARATION, not a request for authority, so it is deliberately not folded
+  // into GetActiveToken (D-13) — and unlike Attest it is sent in every provider
+  // mode, because the run that verifies nothing is the one worth recording.
+  rpc SealConfig(SealConfigRequest) returns (SealConfigResponse);
+}
+
+// SealConfigRequest carries the canonical text, not the digest the gate
+// computed: the issuer hashing what it received is what keeps the digest and
+// the configuration from being able to disagree.
+message SealConfigRequest {
+  string robot_id           = 1;
+  string component          = 2;  // "pep_gate"
+  int32  seal_version       = 3;  // canonical form version (pail-config-seal:vN)
+  bytes  canonical          = 4;  // the normalized effective configuration
+  bool   verifies_authorization = 5;  // false = this gate checks no token at all
+  repeated string degraded  = 6;  // S1|S2|S3|S7|S8|S10 — the weakened axes
+  string build_info         = 7;  // free-form; evidence, not verdict input
+}
+
+message SealConfigResponse {
+  // OK | REJECTED | ERROR
+  string status = 1;
+  bytes  config_digest = 2;  // sha256 of canonical, as the issuer computed it
+}
+
+// GatewayCensusRequest is the gateway's declaration, not evidence (D-14). The
+// issuer only compares it against what its own journal can already explain.
+message GatewayCensusRequest {
+  string robot_id = 1;
+  string chain_id = 2;             // "" = the gateway holds nothing
+  int32 last_consumed_index = 3;   // highest index it actually consumed
+  int32 held_lease_max_index = 4;  // highest index it may still serve offline
+  uint64 seen_issuer_epoch = 5;    // the generation it last saw
+}
+
+message GatewayCensusResponse {
+  bool accepted = 1;
+  // OK | UNEXPLAINED | UNKNOWN_CHAIN | STALE_ISSUER | ERROR
+  string verdict = 2;
+  uint64 issuer_epoch = 3;  // fences a stale issuer on this path too
+}
+
+message AttestRequest {
+  string robot_id           = 1;
+  string component          = 2;  // "pep_gate"
+  bytes  measurement_sha256 = 3;  // 32B self-measurement
+  string build_info         = 4;  // free-form version/build stamp; evidence, not verdict input
+}
+
+message AttestResponse {
+  // OK | UNKNOWN_MEASUREMENT | ERROR
+  string status = 1;
+  // re-attest deadline the issuer wants the gate to honor (policy value)
+  uint64 ttl_s  = 2;
+  // TOA v1: an authenticated policy effect, not a token or lease extension.
+  uint32 effect_contract_version = 3;
+  string enforcement_mode = 4;
+  AttestAuthorityEffect authority_effect = 5;
+  string robot_id = 6;
+  uint64 issuer_epoch = 7;
+  string component = 8;
+  bytes measurement_sha256 = 9;
+}
+
+enum AttestAuthorityEffect {
+  ATTEST_EFFECT_UNSPECIFIED = 0;
+  ATTEST_EFFECT_PRESERVE = 1;
+  ATTEST_EFFECT_REFRESH_CACHE_ONLY = 2;
+  ATTEST_EFFECT_WITHHOLD = 3;
+}
+
+message GetActiveTokenRequest {
+  string robot_id = 1;
+}
+
+enum ActiveTokenStatus {
+  ACTIVE_TOKEN_STATUS_UNSPECIFIED = 0;
+  OK = 1;
+  NO_TOKEN = 2;
+  REVOKED = 3;
+  ERROR = 4;
+}
+
+message GetActiveTokenResponse {
+  ActiveTokenStatus status = 1;
+  string chain_id = 2;
+  int32 expected_sequence_index = 3;
+  pail.v1.SignedToken token = 4;
+
+  // [AG-2/CR3] Live re-derivation of the served step's authorization-subgraph
+  // snapshot hash in the CURRENT world (issuance epoch pinned). Empty when the
+  // issuer has no site model loaded (CG1 mode) or the chain predates step
+  // specs. The gate compares this against the token-embedded hash (field 61)
+  // and fail-closed BLOCKs on mismatch (ERR_WORLD_CHANGED).
+  bytes current_subgraph_hash = 5;
+  // Global graph mutation counter at serving time (diagnostic; not compared).
+  uint64 graph_epoch = 6;
+
+  // [AV2] Edge lease (AV LLD §2.1). The issuer pre-authorizes the robot-side
+  // gateway to serve up to lease_max_index without contacting the cloud. These
+  // are the same pre-signed bytes the cloud would otherwise serve one at a
+  // time; their not_after IS the lease expiry (AV LLD D-3). Absent/zero = no
+  // lease (pre-AV2 behaviour).
+  //
+  // These three fields never reach the gate: the gateway reconstructs the
+  // response it hands to the gate (§3.2), so the gate's C++ stub is not
+  // regenerated. The gate stays the single point of expiry judgement.
+  repeated pail.v1.SignedToken lease_tokens = 7;
+  int32 lease_max_index = 8;  // highest sequence_index the gateway may serve
+  uint64 issuer_epoch = 9;    // [AV3] promotion generation; monotonic
+}
+
+enum Decision {
+  DECISION_UNSPECIFIED = 0;
+  PERMIT = 1;
+  BLOCK = 2;
+  ESTOP = 3;
+}
+
+message EvidenceSummary {
+  string source = 1;
+  string object_id = 2;
+  float confidence = 3;
+  int64 unix_ms = 4;
+}
+
+message ReportDecisionRequest {
+  string robot_id = 1;
+  string chain_id = 2;
+  string token_id = 3;
+  Decision decision = 4;
+  string reason_code = 5;
+  EvidenceSummary evidence = 6;
+
+  // [v2/M3] PERMIT report that completes the step (advances the sequence).
+  // Mid-stream PERMITs during a twist step must leave this false.
+  bool step_complete = 7;
+  // [v2/M3] BLOCK/ESTOP report that revokes the whole chain.
+  // Ordinary per-command blocks must leave this false.
+  bool fatal = 8;
+
+  // [OSSB-D C-B12 O-3] Whether the evidence plane's sender authentication
+  // (SROS2 Enforce) was active for this decision: "enforced" | "unenforced".
+  // Empty (an old gate that does not say) journals as key-absent — an honest
+  // record, not a claim (H-B2). context_verified is always false in the
+  // current deployment, so it cannot carry this distinction.
+  string evidence_provenance = 9;
+
+  // [implementation contract D-S5] The mode this decision was made under:
+  // "enforce" | "observe". Defined per-decision (not per-gate) so a future
+  // rule-level override never changes this format. A shadow PERMIT and an
+  // enforce PERMIT must not be the same bytes (H-B2) — without this stamp,
+  // would-deny statistics built from observe journals are estimates, not
+  // evidence. Empty (an old gate that does not say) journals as key-absent,
+  // same honest-record rule as evidence_provenance above.
+  string effective_mode = 10;
+
+  // [SKL SK-3 §4] What the reason does not say. On a completing PERMIT it names
+  // the completion signal — "complete:timeout" (the step deadline), "complete:robot_report"
+  // (the adapter relayed the robot's own completion), "complete:robot_report+evidence"
+  // (the same, with the target's evidence read at completion). The issuer advances
+  // the chain only when the signal is one the skill's registry row accepts; any other
+  // completing report is journaled and NOT advanced. On a BLOCK it carries the gate
+  // core's detail (which name, which value, which bound). Empty = an old gate that
+  // does not say — journals as key-absent and, for completion, reads as the deadline
+  // (the only signal an old gate could send).
+  string detail = 11;
+
+  // [OI-01 2026-10-01] Delivery metadata the robot agent adds so a report that
+  // reaches the issuer late (link outage, agent restart) is journaled as the
+  // late fact it is, and never twice as two facts. Empty/0 = an old agent that
+  // does not say; the issuer journals the keys as absent (honest-record rule).
+  // decided_unix_ms: when the gate handed the report to the agent, on the
+  // agent's wall clock. agent_run_id: UUIDv4 minted at agent start. agent_seq:
+  // monotonic per run, from 1. delivery: "live" (reached the issuer on the first
+  // attempt, no outage in between) | "replayed" (sent after a failed attempt — its
+  // own or one it waited behind — or from the agent's disk queue after a restart).
+  int64 decided_unix_ms = 12;
+  uint64 agent_seq = 13;
+  string agent_run_id = 14;
+  string delivery = 15;
+  // core-comm-v1: immutable origin event; delivery metadata is not identity.
+  string report_id = 16;
+  bytes report_digest = 17;
+  uint32 receipt_contract_version = 18;
+  ReportAttribution attribution = 19;
+}
+
+message ReportDecisionResponse {
+  bool accepted = 1;
+  ReportReceipt receipt = 2;
+}
+message ReportAttribution {
+  string chain_id = 1;
+  string basis = 2;
+  string gateway_instance_id = 3;
+}
+enum StorageLevel {
+  STORAGE_UNSPECIFIED = 0;
+  STORAGE_NONE = 1;
+  LOCAL_BUFFERED = 2;
+  LOCAL_DURABLE = 3;
+  ISSUER_DURABLE = 4;
+}
+enum EffectStatus {
+  EFFECT_UNSPECIFIED = 0;
+  NOT_APPLICABLE = 1;
+  PENDING = 2;
+  APPLIED = 3;
+  REJECTED = 4;
+  UNKNOWN = 5;
+}
+enum ReceiptDisposition {
+  RECEIPT_UNSPECIFIED = 0;
+  NEW = 1;
+  DUPLICATE = 2;
+  RETRYABLE = 3;
+  CONFLICT = 4;
+  TERMINAL_REJECTED = 5;
+}
+enum EffectScope {
+  SCOPE_UNSPECIFIED = 0;
+  SCOPE_NONE = 1;
+  LOCAL_LEASE = 2;
+  ISSUER_CHAIN = 3;
+}
+message ReportReceipt {
+  uint32 contract_version = 1;
+  string report_id = 2;
+  bytes report_digest = 3;
+  string receiver_instance_id = 4;
+  string robot_id = 5;
+  StorageLevel storage = 6;
+  EffectStatus effect = 7;
+  ReceiptDisposition disposition = 8;
+  string journal_record_ref = 9;
+  string reason = 10;
+  EffectScope effect_scope = 11;
+}

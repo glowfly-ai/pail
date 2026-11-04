@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Glowfly Identity Systems Co.,Ltd
+syntax = "proto3";
+package pail.robotops.v1;
+option go_package = "github.com/glowfly/pail/services/proto/robotopsv1;robotopsv1";
+// Read-only probe services plus the local-only IssuerOpsAdmin surface (LLD §11).
+// IssuerOpsAdmin is never exposed over TCP: it is served on an owner-only Unix
+// socket, the kernel peer UID is checked, and every mutation carries the signed
+// management approval plus the canonical plan it was issued for.
+enum Presence { PRESENCE_UNSPECIFIED = 0; PRESENT = 1; ABSENT = 2; }
+enum Binding { BINDING_UNSPECIFIED = 0; BOUND = 1; DELEGATED = 2; UNBOUND = 3; UNCHECKED = 4; }
+message ProbeBindingRequest { string robot_id = 1; bytes nonce = 2; }
+message ProbeBindingResponse {
+ bytes nonce = 1; string deployment_id = 2; string robot_id = 3;
+ Binding binding = 4; string tls_client_fingerprint_sha256 = 5;
+ string loaded_generation = 6; Presence site_robot = 7; Presence requester = 8;
+ string robot_class = 9; string instance_id = 10; string boot_id = 11;
+ string registry_digest = 12; string site_digest = 13; string requester_digest = 14;
+ string policy_digest = 15; string build_id = 16;
+}
+message ProbeSelfRequest { bytes nonce = 1; }
+// RuntimeGuardSummary (LLD §11.6) is a read-only snapshot of the agent's
+// delegated authority taken under the mirror lock: it never drains, reconciles
+// or queries the issuer. authority_state: UNKNOWN | EMPTY | HELD.
+message RuntimeGuardSummary {
+ string authority_state = 1; string cached_chain_id = 2;
+ int32 lease_min_index = 3; int32 lease_max_index = 4; int32 serving_index = 5;
+ bool cached_answer_present = 6; bool stream_up = 7;
+ uint64 mirror_revision = 8; uint64 issuer_epoch_seen = 9;
+ string summary_mono_ns = 10; string snapshot_basis = 11;
+}
+message ProbeSelfResponse {
+ bytes nonce = 1; string agent_robot_id = 2; string agent_instance_id = 3;
+ string agent_loaded_generation = 4; string upstream_ref = 5;
+ ProbeBindingResponse upstream = 6; string unavailable_reason = 7;
+ string deployment_id = 8; string loaded_client_fingerprint_sha256 = 9;
+ string build_id = 10; RuntimeGuardSummary runtime_guard_summary = 11;
+ string report_storage_state = 12;
+ string core_comm_contract = 13;
+ string trust_snapshot_json = 14; // actual loaded metadata; not a file observation
+}
+service RobotBindingProbe { rpc ProbeBinding(ProbeBindingRequest) returns (ProbeBindingResponse); }
+service RobotAgentSelfProbe { rpc ProbeSelf(ProbeSelfRequest) returns (ProbeSelfResponse); }
+
+// ---- IssuerOpsAdmin (local Unix socket only) --------------------------------
+message HoldRecord {
+ string deployment_id = 1; string robot_id = 2; string owner_execution_id = 3;
+ string plan_digest = 4; uint64 fence_epoch = 5; uint64 hold_seq = 6;
+ string state = 7; string config_generation = 8; string approval_id = 9; string audit_state = 10;
+ int64 updated_at_ms = 11;
+}
+message GetCapabilitiesRequest { bytes nonce = 1; }
+message GetCapabilitiesResponse {
+ bytes nonce = 1; string deployment_id = 2; repeated string capabilities = 3;
+ string instance_id = 4; string boot_id = 5; string build_id = 6; uint64 store_revision = 7;
+ uint64 trust_epoch = 8;
+}
+message GetHoldStatusRequest { bytes nonce = 1; repeated string robot_ids = 2; }
+message GetHoldStatusResponse {
+ bytes nonce = 1; string deployment_id = 2; repeated HoldRecord holds = 3;
+ uint64 store_revision = 4; string instance_id = 5; string boot_id = 6;
+}
+// plan_document is the frozen ChangePlan JSON; the issuer recomputes its digest
+// in the plan domain and reads execution/robots from it. approval_document is
+// the Approval JSON bound to that digest. RPC arguments never override the plan.
+message BeginHoldRequest {
+ string request_id = 1; bytes plan_document = 2; bytes approval_document = 3; uint64 fence_epoch = 4;
+}
+message ReleaseHoldRequest {
+ string request_id = 1; string execution_id = 2; bytes approval_document = 3; string config_generation = 4;
+ uint64 fence_epoch = 5;
+}
+// ConfirmQuiesced records the executor's quiescence evidence digest against
+// the HELD rows of one execution (HELD -> QUIESCED). The issuer does not
+// re-observe the robots; it binds the digest, the robot set and the store
+// revision the evidence was collected under.
+message ConfirmQuiescedRequest {
+ string request_id = 1; string execution_id = 2; string evidence_digest = 3;
+ repeated string robot_ids = 4; uint64 hold_store_revision_seen = 5; uint64 fence_epoch = 6;
+}
+message ManagementResponse {
+ string request_id = 1; string execution_id = 2; string operation = 3; string step_state = 4;
+ string effect = 5; uint64 store_revision = 6; string loaded_generation = 7;
+ repeated string findings = 8; repeated HoldRecord holds = 9; string instance_id = 10; string boot_id = 11;
+}
+// GetLoadedStatus reports the digests of the bytes this issuer process actually
+// parsed (registry/site/requesters/policy), bound to a fresh nonce and the
+// process identity. It is a self-report, not an attestation.
+message GetLoadedStatusRequest { bytes nonce = 1; }
+message GetLoadedStatusResponse {
+ bytes nonce = 1; string deployment_id = 2; string instance_id = 3; string boot_id = 4; string build_id = 5;
+ string registry_digest = 6; string site_digest = 7; string requester_digest = 8; string policy_digest = 9;
+ string loaded_generation = 10; uint64 store_revision = 11; string state = 12;
+ string trust_snapshot_json = 13; // actual loaded metadata; not authorization
+}
+// AdoptHold transfers the hold rows of a stuck execution to a new recovery
+// execution WITHOUT releasing them (LLD §14.4). recovery_document is the
+// RecoveryPlan JSON (digest recomputed by the issuer); approval_document is a
+// recover-role Approval bound to that digest. Rows keep their state; owner,
+// plan digest and fence move; the original owner is recorded.
+message AdoptHoldRequest {
+ string request_id = 1; bytes recovery_document = 2; bytes approval_document = 3; uint64 fence_epoch = 4;
+}
+service IssuerOpsAdmin {
+ rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+ rpc GetLoadedStatus(GetLoadedStatusRequest) returns (GetLoadedStatusResponse);
+ rpc GetHoldStatus(GetHoldStatusRequest) returns (GetHoldStatusResponse);
+ rpc BeginHold(BeginHoldRequest) returns (ManagementResponse);
+ rpc ConfirmQuiesced(ConfirmQuiescedRequest) returns (ManagementResponse);
+ rpc ReleaseHold(ReleaseHoldRequest) returns (ManagementResponse);
+ rpc AdoptHold(AdoptHoldRequest) returns (ManagementResponse);
+}

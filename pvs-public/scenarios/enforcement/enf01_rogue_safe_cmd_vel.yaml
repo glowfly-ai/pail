@@ -1,0 +1,19 @@
+version: 2.0
+name: rogue_cannot_reach_driver
+robot_id: robot-1
+# Enforcement axis: only sros2 can prove a rogue publisher is denied the topic.
+# On insecure/uds the orchestrator SKIPs (honest — never a faked PASS).
+profile: sros2
+steps:
+  - {t: 0.0, north_cmd: submit_plan, steps: [{step_id: s1, type: TWIST,
+       target_object_id: "880123", twist: {linear_x: 0.2, duration_sec: 3.0}}]}
+  - {t: 0.3, inject_evidence: {source: BARCODE, object_id: "880123", confidence: 0.95}}
+  - {t: 0.5, inject_cmd_vel: {lin: 0.2, rate: 10, dur: 3.0}}
+  - {t: 0.7, expect_gate: {state: PERMIT, reason: OK}}
+  # positive control: a legitimate command must reach the driver
+  - {t: 0.9, expect_drive: {linear_x: 0.2, tol: 0.01}}
+  - {t: 1.0, rogue_publish: {topic: /safe_cmd_vel, payload: {linear_x: 9.9}, key: none}}
+  # the rogue value must never appear on /drive_cmd_vel (bridge output = 정본)
+  - {t: 1.3, expect_drive_never: {linear_x: 9.9}}
+expectations_global:
+  - audit_chain: PASS
