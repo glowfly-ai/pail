@@ -1,9 +1,9 @@
 # Public CI: the Core's own build and test suite, the spec checkers and the public link check — the commands a
 # recipient runs from README section 5, run on every push and pull request of the public repository.
 #
-# The two sibling workflows cover secrets (ci-secret-scan.yml) and release/spec drift (ci-spec-drift.yml); until
-# 0.2.0-preview.22 no public workflow ran `go test`, so a red README command could not be seen in CI (preview.20
-# evaluation, P19-M1 follow-up). Positive controls are not repeated here: `go test` and the checkers carry their own.
+# The two sibling workflows cover secrets (ci-secret-scan.yml) and release/spec drift (ci-spec-drift.yml); this one
+# runs the README's developer command so that a red `go test` is visible in CI. Positive controls are not repeated
+# here: `go test` and the checkers carry their own.
 name: core-tests
 
 on: [push, pull_request]

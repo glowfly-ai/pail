@@ -51,7 +51,7 @@ Two residues of where the code grew, both deliberate so the move is provably beh
   unconditionally — the library always has both — and without it the crypto paths compile
   to stubs answering `ERR_GRPC_DISABLED` (measured 2026-09-06: 5 of 11 batteries red).
 - The C++ namespace is still `pail_pep_gate` — the library grew inside the ROS 2 gate package
-and was moved out on 2026-09-06 (AD-5) with its sources unchanged so that the move is
+and was moved out with its sources unchanged so that the move is
 provably behaviour-free. Renaming the namespace is a separate, mechanical change.
 
 ## Step clocks (GC-TIME-1)

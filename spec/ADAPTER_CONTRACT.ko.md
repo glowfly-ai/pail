@@ -326,7 +326,7 @@ MODULE:CLASS --state DIR` 를 실행하면 그 사본으로 이미지를 빌드�
 | `conformant` | 실물 로봇 위에서 전 케이스 PASS |
 | `withdrawn` | 더는 유지되지 않음 |
 
-스킬 수준 인가를 위해 열 셋을 더했다(SK-0, 2026-09-09): `robot_class`(이 어댑터가 서빙하는 `SKILL_VOCAB.tsv` 의 로봇 종류), `measures`(어댑터가 실제로 재어 `decide()` 에 넘기는 `GUARDRAILS.tsv` 이름표, `;` 구분), `safe_state`(철회 시 실행할 수 있는 안전 상태). 스킬 등재부는 어댑터가 `measures` 에 선언한 것만 `envelope[]` 에 둘 수 있다 — 나머지는 유지보수자 쪽 등재부 검사(배포되지 않음)가 거부한다. SK-5: `safe_state` 는 어댑터가 기동 시 자기 자신과 대조하는 선언이고(Microduck `--safe-state`, 실행 불가면 거부; ROS 게이트는 `adapter_safe_state` 밖의 상태를 적은 등재부 행을 거부), 행의 `feeds` 는 게이트가 관측하는 피드(`safety_feed`·`evidence_claim`)여야 한다 — 아무도 안 보는 피드는 게이트와 이슈어 양쪽 기동에서 거부된다.
+스킬 수준 인가를 위해 열 셋을 더했다(SK-0): `robot_class`(이 어댑터가 서빙하는 `SKILL_VOCAB.tsv` 의 로봇 종류), `measures`(어댑터가 실제로 재어 `decide()` 에 넘기는 `GUARDRAILS.tsv` 이름표, `;` 구분), `safe_state`(철회 시 실행할 수 있는 안전 상태). 스킬 등재부는 어댑터가 `measures` 에 선언한 것만 `envelope[]` 에 둘 수 있다 — 나머지는 유지보수자 쪽 등재부 검사(배포되지 않음)가 거부한다. SK-5: `safe_state` 는 어댑터가 기동 시 자기 자신과 대조하는 선언이고(Microduck `--safe-state`, 실행 불가면 거부; ROS 게이트는 `adapter_safe_state` 밖의 상태를 적은 등재부 행을 거부), 행의 `feeds` 는 게이트가 관측하는 피드(`safety_feed`·`evidence_claim`)여야 한다 — 아무도 안 보는 피드는 게이트와 이슈어 양쪽 기동에서 거부된다.
 
 등재부에 없는 어댑터는 README 가 무어라 하든 PAIL 어댑터가 아니다.
 

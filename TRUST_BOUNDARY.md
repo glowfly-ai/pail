@@ -365,7 +365,7 @@ This value is **identical to the action lease expiry**. The token's `not_after` 
 lease expiry — **a deliberate design that avoids creating a second expiry clock to
 fight with the gate.**
 
-This value has **exactly one source: the policy file** (2026-08-23). The old
+This value has **exactly one source: the policy file**. The old
 environment variables `PAIL_LEASE_TTL_MS` and `PAIL_LEASE_MAX_STEPS` are **not merely
 unread — if set, startup is refused** (`S16j`, exit 78). The reason they are not
 silently ignored is not the direction of the misconfiguration but that **the

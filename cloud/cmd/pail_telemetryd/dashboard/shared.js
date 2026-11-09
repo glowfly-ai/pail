@@ -253,7 +253,7 @@ function esc(s) {
 // 사유 칸. CHECKPOINT 버스트의 reason 0 은 「허용」이 아니라 「판정이 아니다」 —
 // 사전의 0x00 은 판정면의 OK 인데 체크포인트는 판정을 싣지 않는다. 그대로 찍으면
 // 「OK — 허용 — 거부 아님」이 체인 체크포인트 행마다 서서, 아무 판정도 없던 창이
-// 「허용됐다」로 읽힌다(2026-09-04 Yang 실측: 1-1 무단 발행 뒤 「허용」이 떴다고 물었다).
+// 「허용됐다」로 읽힌다.
 function historyReasonCell(r) {
   if (r.event === "CHECKPOINT") {
     return pailT('<span class="unv">판정 아님 — 체인 체크포인트</span>') +
@@ -391,7 +391,7 @@ function filterToQuery(f) {
 
 // 시작·끝 입력칸에 보일 창. 프리셋이 켜져 있어도 칸은 비지 않는다 — 그 프리셋이
 // **지금** 뜻하는 창(now-N .. now)을 보인다. 빈 칸은 「창이 없다」로 읽혔다
-// (2026-09-04 Yang 실측: 「6시간」을 눌러도 시작·끝이 전혀 변하지 않는다).
+// (「6시간」을 눌러도 시작·끝이 변하지 않던 결함).
 function filterInputs(f, now) {
   if (f.preset) return { fromMs: now - FILTER_PRESETS[f.preset], toMs: now };
   return { fromMs: f.fromMs, toMs: f.toMs };
@@ -410,7 +410,7 @@ function resolveApply(f, filled, fromMs, toMs) {
 
 // 방송을 둘로 가른다: 게이트 판정(BLOCK·ESTOP·CHAIN_REVOKED)과 체인 봉인 알림(CHECKPOINT).
 // 「결정 이력」 표에는 판정만 싣고, 봉인 알림은 커버리지 줄에 건수로 적는다 —
-// 판정이 아닌 행이 판정 표에 앉으면 「판정 지점」으로 읽힌다(2026-09-04 Yang 질문).
+// 판정이 아닌 행이 판정 표에 앉으면 「판정 지점」으로 읽힌다.
 function splitBursts(rows) {
   const decisions = [], checkpoints = [];
   (rows || []).forEach(function (r) { (r.event === "CHECKPOINT" ? checkpoints : decisions).push(r); });

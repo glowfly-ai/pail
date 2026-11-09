@@ -37,8 +37,8 @@ jobs:
           import json, pathlib, re, shutil, subprocess, sys, tempfile
           NAME = 'Positive control - stale release document'
           # Every file release_identity.py reads under --root. A missing one is `RELEASE_IDENTITY: FAIL` rc 1 as
-          # well, and this control confirmed itself through exactly that from the moment CHANGELOG.md joined the
-          # checker until 2026-11-09 (tests/contract keeps this list equal to what the checker reads).
+          # well, and a control that omitted one would confirm itself through exactly that; a maintainer test keeps
+          # this list equal to what the checker reads.
           FILES = ['release.json', 'VERSION', 'RELEASE.md', 'CHANGELOG.md']
           with tempfile.TemporaryDirectory(prefix='pail-release-control-') as work:
               root = pathlib.Path(work)
@@ -46,8 +46,8 @@ jobs:
                   shutil.copy2(name, root / name)
               # The stale document is derived from release.json, not from a phrase of RELEASE.md: the generated
               # delivery block names an earlier candidate, the shape of a tree whose version was bumped without
-              # regenerating the document. An anchor taken from the prose aged with the prose (0 replacements
-              # from preview.42 on) and left the control measuring nothing.
+              # regenerating the document. An anchor taken from the prose ages with the prose and leaves the
+              # control measuring nothing.
               release = json.load(open('release.json', encoding='utf-8'))['release_id']
               p = root / 'RELEASE.md'
               doc = p.read_text(encoding='utf-8')
@@ -268,7 +268,7 @@ jobs:
           #
           # 관문 2(origin)는 여기서 못 잰다. origin 만 어긋나고 서명은 맞는 노트를
           # 만들려면 서명키가 필요한데, 그 키는 트리에 없다(있으면 그 자체가 결함).
-          # 그 칸은 tests/tools/deform_or6_spec.py 가 키를 만들어 낸 뒤 잰다.
+          # 그 칸은 서명키 있는 maintainer-side 검사가 잰다.
           python3 - <<'PY'
           import base64
           p = "/tmp/viprobe/spec/proof-vectors/checkpoint.note"

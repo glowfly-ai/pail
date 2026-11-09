@@ -80,8 +80,8 @@ def load_identity(root):
 
 
 def block(identity, kind):
-    # The schema-2 'one archive, both bundles' wording below is FROZEN: the immutable RC23 archive's RELEASE.md was
-    # generated from it and is still verified byte for byte (tests/contract/test_first_release_bundle_compatibility.py).
+    # The schema-2 'one archive, both bundles' wording below is FROZEN: an earlier immutable archive's RELEASE.md was
+    # generated from it and is still verified byte for byte by a maintainer test.
     # It describes that earlier delivery form, not the terms of a split Core delivery (see ISSUER_EVALUATION.md).
     release, folder = identity['release_id'], identity['root_directory']
     if identity['schema_version'] == 3:

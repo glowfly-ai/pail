@@ -38,5 +38,4 @@ contents; this source notice is not a substitute for those notices.
   - Base-image distribution packages, under their respective licenses
 
 The exact dependency versions are declared in cloud/go.mod, cloud/go.sum and
-package.xml files in the public tree. Internal source checkouts place the Go
-module under services/pail_services_go/ instead.
+package.xml files in the public tree.

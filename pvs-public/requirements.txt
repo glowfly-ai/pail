@@ -10,7 +10,7 @@ pyyaml>=6.0
 # The floors below are not taste: runner/live/*_pb2.py call
 # ValidateProtobufRuntimeVersion(PUBLIC, 7, 35, 1) and runner/live/*_pb2_grpc.py carry
 # GRPC_GENERATED_VERSION = '1.83.0', so a lower runtime is refused by the stubs themselves.
-# tests/contract/test_public_requirements_match_stubs.py keeps these in step with the stubs.
+# A maintainer test keeps these in step with the stubs.
 protobuf>=7.35.1
 grpcio>=1.83.0
 grpcio-tools>=1.83.0

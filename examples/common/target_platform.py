@@ -35,9 +35,9 @@ def native_targets(arch):
     return [('darwin', 'arm64'), ('linux', architecture(arch))]
 
 
-# Every native helper a bundle ships for each target of native_targets(): the host dashboard and, since
-# 0.2.0-preview.42, the standalone release verifier (so the mandatory signature verification needs no python
-# `cryptography` or OpenSSL 3 on the recipient host). Both are built from the candidate's own staged cloud/ tree.
+# Every native helper a bundle ships for each target of native_targets(): the host dashboard and the standalone
+# release verifier (so the mandatory signature verification needs no python `cryptography` or OpenSSL 3 on the
+# recipient host). Both are built from the release's own staged cloud/ tree.
 NATIVE_BINARIES = ('pail_telemetryd', 'pail_verify')
 
 

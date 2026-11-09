@@ -1,6 +1,6 @@
 # gitleaks 설정 — 1층 비밀 스캐너 
 #
-# 2층(`scripts/gen_known_dev_keys.py`, `tests/tools/keymat.py`)과 역할이 다르다.
+# 2층(`scripts/gen_known_dev_keys.py`)과 역할이 다르다.
 # 2층은 우리 지문 목록을 알고 base64 를 ed25519 seed 로 해석해 공개키를 파생한다 —
 # 결정적이고 오탐 0 이다. 1층은 우리가 모르는 형식의 자격증명을 휴리스틱으로 본다.
 #
@@ -33,14 +33,14 @@ regexes = ['''PRIVATE\+KEY\+<''', '''\+<b64>''', '''\+<seed[^>]*>''']
 [allowlist]
 description = "SGH-2 fixture journal: an issuer-written blackbox segment shipped with cmd/pail-recompute so its tests have a real ledger. Its token_id/token_hash_hex values are UUIDs and SHA-256 digests of test tokens, not credentials — the 2nd layer (keymat) still scans these bytes for key material."
 paths = ['''cmd/pail-recompute/testdata/fixture1/journal/pail_blackbox\.[0-9]+\.seg$''']
-# go.sum checksum lines. gitleaks' own default config allowlists go.sum by *path*; the P4
+# go.sum checksum lines. gitleaks' own default config allowlists go.sum by *path*; the
 # publication-history rehearsal scans `git log -p` text, where the path is gone and a line
-# such as `modernc.org/token v1.1.0 h1:Xl7…=` matched generic-api-key (rc21, 2026-09-23,
-# after `go mod tidy` under Go 1.21 added the module's test dependencies). An `h1:` value is
+# such as `modernc.org/token v1.1.0 h1:Xl7…=` matched generic-api-key (after `go mod tidy`
+# added the module's test dependencies). An `h1:` value is
 # a public SHA-256 module checksum, not a credential. The 2nd layer still scans these bytes.
 regexTarget = "line"
 regexes = ['''(?:^|\s)h1:[A-Za-z0-9+/]{43}=\s*$''',
-# cmd/pail_verify/testdata (0.2.0-preview.42): the verifier fixture's golden stdout and cases.json carry the SHA-256
+# cmd/pail_verify/testdata: the verifier fixture's golden stdout and cases.json carry the SHA-256
 # FINGERPRINT of a TEST-ONLY Ed25519 public key (`SIGNATURE: VERIFIED key=<64 hex>`, `"test_key_fingerprint"`), the
 # same value RELEASE.md prints for the real key — a public digest, not a credential. generic-api-key matched the
 # `key=<hex>` shape. The 2nd layer (keymat) still scans these bytes.

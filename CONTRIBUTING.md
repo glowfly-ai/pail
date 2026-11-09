@@ -112,4 +112,4 @@ fixtures and frozen bytes. Never translate identifiers, wire values or evidence 
 Screen dictionaries and screen files are bilingual by requirement (the dashboard under
 `cloud/cmd/pail_telemetryd/dashboard/` and the examples' `*_ui.html`); they are exempt from
 the maintainers' Korean-content ratchet that applies to every other public non-document
-file (owner decision 2026-10-01).
+file.

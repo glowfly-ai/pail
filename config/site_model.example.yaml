@@ -41,7 +41,7 @@ robots:
 constraints:
   - type: human_exclusion   # a human in the zone forbids issuance for robots there
     zone: "*"               # "*" = every declared zone
-  # speed_limit was removed on 2026-09-09 (SK-1, G-POL-11): the site model never
+  # speed_limit is not a site-model key (SK-1, G-POL-11): the site model never
   # enforced it. Per-zone bounds live in policy.yaml `guardrails.zones.<zone>` and
   # ride in the token envelope; a speed_limit constraint here is now refused.
   - type: exclusive         # CG4/P4 hook: marks the object; v1 issuance does not yet evaluate occupancy

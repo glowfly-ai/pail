@@ -214,7 +214,7 @@ compile rather than being dropped.
 | type | what it does |
 | --- | --- |
 | `human_exclusion` | Records the human-exclusion rule for a zone as a constraint node (§5.2). |
-| `speed_limit` | **Refused** since 2026-09-09 (§5.3) — per-zone bounds live in `policy.yaml` `guardrails.zones`. |
+| `speed_limit` | **Refused** (§5.3) — per-zone bounds live in `policy.yaml` `guardrails.zones`. |
 | `exclusive` | Marks an object as exclusively occupiable (§5.4). |
 
 `zone` and `object` fields accept `"*"`, which expands over every declared zone
@@ -251,8 +251,7 @@ which rules the site declared over the zone it was issued for.
 | `max_linear_speed_mps` | optional | Linear speed ceiling, metres per second. |
 | `max_angular_speed_rps` | optional | Angular speed ceiling, radians per second. |
 
-**This constraint is refused (compile error) since 2026-09-09.** Until then the
-compiler recorded it as a constraint node that nothing read: the gate compares
+**This constraint is refused (compile error).** An earlier compiler recorded it as a constraint node that nothing read: the gate compares
 the commanded speed against the *token's* limit, and that limit came from
 `policy.yaml` `motion:` alone — a site model that "set" a zone limit set nothing,
 while this page said the gate would enforce it. The honest fix was not to wire
@@ -336,7 +335,7 @@ schema: v3               # recorded only (boot log); no issuance path reads it
 constraints:
   - type: human_exclusion   # a human in the zone forbids issuance for robots there
     zone: "*"               # "*" = every declared zone
-  # speed_limit was removed on 2026-09-09 (SK-1, G-POL-11): the site model never
+  # speed_limit is not a site-model key (SK-1, G-POL-11): the site model never
   # enforced it. Per-zone bounds live in policy.yaml `guardrails.zones.<zone>` and
   # ride in the token envelope; a speed_limit constraint here is now refused.
   - type: exclusive         # CG4/P4 hook: marks the object; v1 issuance does not yet evaluate occupancy

@@ -3,9 +3,9 @@
 # Copyright 2026 Glowfly Identity Systems Co.,Ltd
 """Generate the PVS live runner's Python gRPC stubs from proto/*.proto with the pinned toolchain.
 
-The six generated modules are bundled in the public tree (preview.38, owner decision 2026-10-26). This script is the
+The six generated modules are bundled in the public tree. This script is the
 one way to produce them: it runs grpc_tools.protoc and prepends the license header every public file carries, so a
-fresh run into a temporary directory must be byte-identical to the bundled files (tests/contract/test_pvs_stubs_match_proto.py).
+fresh run into a temporary directory must be byte-identical to the bundled files (the release gate checks that).
 
     python3 pvs/runner/gen_grpc_stubs.py            # regenerate in place (pvs/runner/live)
     python3 pvs/runner/gen_grpc_stubs.py --out DIR  # generate elsewhere (the gate's fresh copy)

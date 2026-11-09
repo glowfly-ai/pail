@@ -109,7 +109,7 @@ nil error, and *no root* travels onward as *a root*.
 ### 2.4 The signature, byte by byte
 
 Everything above §2.3 describes the note's *shape*. Shape is not what gate 1
-checks. Up to 2026-08-30 this document named `note.Open` and stopped there,
+checks. An earlier edition of this document named `note.Open` and stopped there,
 which left the one operation it calls most important — *is this signed by a key
 we trust* — specified only by a Go library. A verifier written in any other
 language could reproduce every rule in §2.1 and still have no way to check a

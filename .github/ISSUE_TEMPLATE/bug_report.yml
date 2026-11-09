@@ -1,5 +1,5 @@
 name: Installation or behavior report
-description: Report reproducible non-sensitive behavior in the public candidate.
+description: Report reproducible non-sensitive behavior in this release.
 body:
   - type: markdown
     attributes:

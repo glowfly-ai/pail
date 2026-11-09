@@ -366,7 +366,7 @@ report is the maintainer's record and is not shipped in this tree: the registry
 states the reported result — the date, the executed and skipped counts, the skip
 tokens — so the claim is traceable, and the verdict is the re-run of the
 conformance rig, not the file. Three columns added for skill-level authorization
-(SK-0, 2026-09-09): `robot_class` (the `SKILL_VOCAB.tsv` class this adapter serves),
+(SK-0): `robot_class` (the `SKILL_VOCAB.tsv` class this adapter serves),
 `measures` (the `GUARDRAILS.tsv` names the adapter actually measures and hands to
 `decide()`, `;`-separated) and `safe_state` (the safe states it can execute on
 revocation). A skill registry may only put in `envelope[]` what its adapter declares

@@ -5,7 +5,7 @@
 # keeps every record; this table says, per record type, which kind of
 # intervention the record is evidence OF. It is read by the Go writer package
 # (go:embed, blackbox.ClassOf) and by the offline verifier's class summary;
-# tests/contract/test_intervention_classes.py checks it against records.go in
+# a maintainer test checks it against records.go in
 # both directions (a type without a row, or a row without a type, is red).
 #
 # class vocabulary (closed):
