@@ -90,6 +90,10 @@ retain its reason; SKIP is neither a failure nor evidence of a successful test.
 The [README](README.md) describes the public scope. The local authorization example does
 not depend on an Anchor server; its absence is not a missing dependency.
 
+**Tags in source comments.** Comments in the shipped sources carry tags such as `P36-M1` or
+`preview.35`. They identify pre-release evaluation rounds and the findings recorded in them and are
+kept as the provenance of a change; the records they point to are not part of this repository.
+
 ## 7. PR checklist
 
 - [ ] Every commit is signed off (DCO); the CLA is signed if §1 calls the change substantial.
