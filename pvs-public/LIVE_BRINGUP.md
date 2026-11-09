@@ -31,10 +31,9 @@ its service names and fault-injection seams. That topology is not the TB3 exampl
 Set `PVS_LIVE=1` only after those prerequisites exist. Missing setup must not be reported
 as successful live testing. Do not weaken production authentication to fit a test rig.
 
-The development-only `run_live_mac.sh` launcher is not distributed: it assumed an
-internal directory layout and managed fixed-name containers through the Docker socket.
-The public release examples replace it for first use; internal rig operation is not
-required to install or evaluate PAIL.
+There is no launcher for this live topology in the tree: a live rig is site-specific.
+The release examples are the first-use path; operating such a rig is not required to
+install or evaluate PAIL.
 
 Microduck and Viam adapter implementations are separate release targets. Their scenario
 helpers or registry rows do not mean their full implementations or real hardware support

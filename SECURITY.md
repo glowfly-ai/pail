@@ -172,8 +172,8 @@ statements.** This table is the list of the points where the two part.
 > **Durability model.** The PAIL issuer appends the authorization record to
 > the journal before the issuance response (issuer-first). What "append"
 > means depends on the deployment shape.
-> **(a) In an HA deployment** (replication is not part of this public
-> distribution; the public issuer refuses `PAIL_HA_*` settings), the response
+> **(a) In a replicated deployment** (the evaluation issuer is single-node and
+> refuses `PAIL_HA_*` settings at startup), the response
 > returns only after the standby node has fsynced those bytes and passed chain
 > verification.
 > **(b) In a single-node deployment** — the only shape this distribution
@@ -184,7 +184,7 @@ statements.** This table is the list of the points where the two part.
 > after the last checkpoint can be lost** — at the defaults above, up to
 > 1000 records or 60 seconds' worth. For the lost span, issuer-first does
 > not hold at the disk level.
-> A deployment that cannot accept this bound must use the HA shape or lower
+> A deployment that cannot accept this bound must use a replicated issuer or lower
 > `CheckpointEveryRecords`.
 
 **We state the verification range of this paragraph.** What we measured is

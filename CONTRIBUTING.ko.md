@@ -103,18 +103,18 @@
 
 ---
 
-## 6. 이 리포에 없는 것
+## 6. 이 저장소의 범위
 
-| 없는 것 | 어디 있는가 |
+| 항목 | 경계 |
 |---|---|
-| 앵커 SaaS 서버 구현 | 공개하지 않는다. 인터페이스와 정규문 형식만 `spec/`에 있다 |
-| 이슈어 복제·스탠바이(HA) | 공개하지 않는다. 공개 이슈어는 `PAIL_HA_*` 복제 설정을 기동 시 거부한다(`cloud/issuer/cmd/pail_cloud/ha_seam.go`) |
-| 내부 설계 문서 | 공개하지 않는다. 공개용 설계 근거는 `spec/`에 따로 쓴다 |
+| 앵커 SaaS 서버 | 호스팅 서비스로 제공한다. 그 서버가 말하는 공개 형식과 검증 입력은 `spec/`에 있다 |
+| 이슈어 복제·스탠바이 | 평가 이슈어는 단일 노드이며 `PAIL_HA_*` 복제 설정을 기동 시 거부한다 |
+| 설계 근거 | 공개에 필요한 설명은 `spec/`·README·`KNOWN_ISSUES.md`에 있다 |
 | 내부 전체 웹 데모 | 이 배포물에 없음. 공개 CLI 시험과 포함된 관측 도구는 [실행 안내](TRY_IT.md) 참조 |
 | 운영사가 책임지는 계층 | [`TRUST_BOUNDARY.md`](TRUST_BOUNDARY.md) §3의 위임 항목 |
 
-"앵커가 왜 여기 없는가"는 결함 보고 대상이 아니다. 무엇을 공개하고 무엇을 공개하지
-않는지는 [`README.md`](README.md)가 먼저 밝힌다.
+로컬 인가 예제는 앵커 서버에 의존하지 않는다. 그것이 없는 것은 결함이 아니다.
+공개 범위는 [`README.md`](README.md)가 먼저 밝힌다.
 
 ---
 
@@ -129,9 +129,9 @@
 
 ---
 
-기여분은 [`LICENSE`](LICENSE)(Apache License 2.0)로 배포된다. PAIL-Issuer 소스
-(`cloud/issuer/`)는 이 릴리스에 들어 있지 않으므로 여기에는 기여할 Issuer 파일이 없다:
-Issuer 는 별도의 `EVALUATION-LICENSE.txt` 조건 아래 단일 노드 평가 실행본으로 제공된다.
+기여분은 [`LICENSE`](LICENSE)(Apache License 2.0)로 배포된다. Issuer 는 별도의
+`EVALUATION-LICENSE.txt` 조건 아래 단일 노드 평가 실행본으로 제공되므로 여기에는 기여할
+Issuer 소스 파일이 없다.
 
 ## 공개 언어 방침
 

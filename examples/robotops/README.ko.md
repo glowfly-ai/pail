@@ -29,7 +29,7 @@
 cd cloud
 go build -o /tmp/pail-ro/fixture ./cmd/pail_robotops_fixture
 go build -o /tmp/pail-ro/check   ./cmd/pail_robotops_check
-# Issuer source is not distributed. Select the pinned evaluation executable:
+# Select the pinned Issuer evaluation executable:
 ISSUER_IMAGE="$(python3 ../examples/common/evaluation_runtime.py --root .. --role issuer)"
 ```
 

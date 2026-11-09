@@ -10,7 +10,7 @@
 서명된 해시 체인 기록이 응답을 읽기도 전에 존재한다.**
 
 > **PAIL 은 브레이크나 안전 펜스가 아니다.** AI 가 내린 물리 명령의 권한을 확인하는
-> 출입국 관리소이고, 사고가 났을 때 무슨 일이 있었는지 증명하는 블랙박스다.
+> 출입국 관리소이고, 사고가 났을 때 무슨 일이 있었는지 기록하는 블랙박스다.
 
 AI 가 로봇에게 시키는 모든 물리적 행동에 대한 권한의 증명 — 움직이기 전에 서명되고,
 응답이 돌아가기 전에 기록되며, 누구든 나중에 검증할 수 있다. 로봇이 "앞으로 가라"는
@@ -31,7 +31,8 @@ Jetson Orin Nano Super(네이티브 CPU), L40S 위의 Isaac Sim(amd64)에서 측
 
 Docker 가 있는 노트북에서 명령 세 줄이다. 이슈어·게이트·모션 브리지는 실제 구성 요소이고,
 시뮬레이션인 것은 TurtleBot3 베이스와 태그 리더, 안전 피드뿐이다. 호스트 ROS 도, 계정도,
-하드웨어도 필요 없다.
+하드웨어도 필요 없다. 평가 꾸러미는 [0.2.0 release 페이지](https://github.com/glowfly-ai/pail/releases/tag/0.2.0)에서
+아키텍처에 맞는 것을 받아 그 디렉터리에서 아래를 실행한다.
 
 ```sh
 python3 evaluation.py load                               # 제공된 이미지 아카이브
@@ -49,7 +50,7 @@ python3 evaluation.py stop-tb3 --state /tmp/pail-tb3-live
 아닌 것은 [안내](examples/tb3/DEMO.ko.md)에, 모든 장면의 자동 판정은
 `python3 examples/tb3/demo_scenes.py` 에 있다. 화면은 영어 기본·한국어 선택이다.
 
-`evaluation.py` 와 이미지 아카이브는 평가 꾸러미로 온다([TRY_IT.ko.md](TRY_IT.ko.md)).
+`evaluation.py` 와 이미지 아카이브는 release 페이지의 평가 꾸러미 안에 있다([TRY_IT.ko.md](TRY_IT.ko.md)에 호스트 전제).
 Core 소스만으로는 이슈어가 없다 — 이슈어는 별도 조건의 평가 실행본으로 제공되기
 때문이다([라이선스](#라이선스)). 아카이브를 불러두고 데모 이미지가 이미 빌드된 Apple Silicon
 Mac 에서 `tb3` 는 기동 7 s 뒤에 콘솔과 모든 역할이 준비됐다. 맨 처음 실행은 데모
@@ -71,11 +72,12 @@ PAIL 은 결정과 액추에이터 사이에 서명되고 범위가 정해진 **
 
 달라지는 것:
 
-- **인가되지 않은 명령은 액추에이터에 닿지 않는다.** 게이트가 로봇 위에서 서명 바이트를
+- **인가되지 않은 명령은 게이트가 지키는 명령 경로를 통과하지 않는다.** 게이트가 로봇 위에서 서명 바이트를
   검증한다. 만료·소비·범위 밖·위조 토큰은 이유가 적힌 거부이지, 깎아서 통과시킨 명령이 아니다.
+  게이트를 우회하는 경로를 막는 것은 통합자의 몫이다(`G-DEL-L05`).
 - **모든 결정이 내가 쓰지 않은 기록으로 남는다.** 발급·거부·허가·대체가 각각 저널에 들어가고,
-  저널의 머리는 내 손이 닿지 않는 곳에 고정되므로 과거를 조용히 고칠 수 없다.
-- **우리를 믿지 않고도 전부 확인할 수 있다.** 고정된 테스트 벡터, 생산자와 코드를 공유하지
+  해시 체인 저널의 머리를 외부 앵커에 고정할 수 있으므로 과거를 들키지 않고 고칠 수 없다.
+- **서명·저널·벡터는 우리를 믿지 않고도 확인할 수 있다.** 고정된 테스트 벡터, 생산자와 코드를 공유하지
   않는 오프라인 검증기, 측정 행렬이 안에 들어 있는 평가 꾸러미.
 
 ### SROS2 와 같은 층이 아니다
@@ -136,7 +138,7 @@ v5 스킬 등재부를 명시적으로 선택하고, 원본 관측과 기계 판
 | **Microduck 라이브 데모 + 대시보드** | `python3 evaluation.py microduck --state /tmp/pail-duck-live` 뒤 출력된 `CONSOLE=`·`DASHBOARD=` URL 을 연다 — [따라 하기](examples/microduck/DEMO.ko.md) | 없음. 공식 `robotd --fake`, ROS 불필요 |
 | Microduck 장애·권한 검사 | `python3 evaluation.py test-conformance --state /tmp/pail-duck-suite` | 없음. 알려진 SKIP는 별도 표시 |
 
-소스 밖의 새 state 경로를 사용합니다. [설치·후보 범위](TRY_IT.ko.md)를 먼저 확인하세요.
+소스 밖의 새 state 경로를 사용합니다. [설치·이 릴리스의 범위](TRY_IT.ko.md)를 먼저 확인하세요.
 
 ## 무엇을 측정했는가
 
@@ -146,15 +148,13 @@ v5 스킬 등재부를 명시적으로 선택하고, 원본 관측과 기계 판
 | 플랫폼 | 범위 | 최근 측정 결과 | 보고서 |
 |---|---|---|---|
 | 소프트웨어 꾸러미(Docker, Linux arm64·amd64) | Microduck 프리뷰, 시뮬레이션 TurtleBot3 베이스, fleet, 어댑터 적합성, 수명주기, 계획 대체 | Microduck 15/15 · TurtleBot3 13/13 · fleet 27/27(dev·mTLS) · 게이트 CTest 37/37 · 수명주기 21/21 · 대체 8/8 | 각 평가 꾸러미 안에 든 측정 검증 보고서(VALIDATION); [TRY_IT.ko.md](TRY_IT.ko.md) |
-<!-- hw-measurements:begin hardware_row -->
-| TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 새 후보의 실물 수락으로 승격하지 않음 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |
-<!-- hw-measurements:end hardware_row -->
+|<!-- hw-measurements:begin hardware_row --> TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 <!-- hw-measurements:end hardware_row -->|
 | Jetson Orin Nano Super(네이티브 arm64, CPU) | 실제 게이트·브리지를 쓰는 역할 격리 합성 참조 | 7/7 시나리오; 8시간 분할 반복: exercise/cancel 752회, 결함 주입 22회, 정리 전부 PASS | [examples/nvidia/README.ko.md](examples/nvidia/README.ko.md) |
-| L40S VM 1대 위의 Isaac Sim 6.0.1(Linux amd64) | 같은 게이트 뒤의 실제 SDK endpoint; BS-01~12·BP-01~12 우회·수명주기 행렬 | 14 케이스 전부 독립 반복 2회 PASS(BP-11 양성 대조는 DETECTED); 정지는 physics step 당 위치 변화로 판정하고 SDK 보고 velocity 는 증거로 보존 | [examples/nvidia/ISAAC.ko.md](examples/nvidia/ISAAC.ko.md) |
+| L40S VM 1대 위의 Isaac Sim 6.0.1(Linux amd64) | 같은 게이트 뒤의 실제 SDK endpoint; BS-01~12·BP-01~12 우회·수명주기 행렬 | 14 케이스 전부 릴리스 실행의 새 상태 반복 2회 PASS, 28/28 완료(BP-11 양성 대조는 DETECTED); 같은 이미지의 이전 실행 1회는 INCONCLUSIVE 1건을 기록했고 release 페이지와 ISAAC.ko.md 에 공개했다; 정지는 physics step 당 위치 변화로 판정하고 SDK 보고 velocity 는 증거로 보존 | [examples/nvidia/ISAAC.ko.md](examples/nvidia/ISAAC.ko.md) |
 
 전달된 아카이브의 수령자 경로는 발행자의 작업 트리를 공유하지 않는 평가 실행이 재현했다:
-이 분할 꾸러미 계열의 모든 후보를 Apple Silicon Mac 에서, 변경이 amd64 경로에 닿은 후보를
-그 L40S VM 에서, 첫 후보를 Linux ARM64 VM 에서. 현재 후보가 세 경로 중 어느 재현을
+이 분할 꾸러미 계열의 모든 빌드를 Apple Silicon Mac 에서, 변경이 amd64 경로에 닿은 빌드를
+그 L40S VM 에서, 첫 빌드를 Linux ARM64 VM 에서. 이 릴리스가 세 경로 중 어느 재현을
 가지는지, 그리고 amd64 이미지를 어떤 호스트에서 빌드했는지는 그 VALIDATION 과 함께
 전달되는 검증 보고서가 적는다. 측정하지 않은
 것: 다른 로봇, 다른 GPU·SDK 버전, 바닥 주행, 기능안전 인증. 배치 전에
@@ -164,19 +164,15 @@ v5 스킬 등재부를 명시적으로 선택하고, 원본 관측과 기계 판
 
 | 양 | 어디서 | 측정값 | 출처 |
 |---|---|---|---|
-<!-- hw-measurements:begin deadline_row -->
-| 정상 이동 중 게이트의 스텝 기한 초과 거부 | Raspberry Pi 3 위 TurtleBot3, 바퀴 띄움 | 모든 판정기에서 0건: 0.2.0-preview.22 꾸러미의 독립 3회와 0.2.0-preview.19 빌드의 발행자 3회 | [HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |
-<!-- hw-measurements:end deadline_row -->
-<!-- hw-measurements:begin restart_row -->
-| 게이트 재시작 입출력 준비 | TurtleBot3 실물 | DDS 인증 정체 미해결; 독립 집단 29회 중 1회 및 별도 117회 중 1회. 고정 실패율 아님, 수동 복구만 지원 | [KNOWN_ISSUES.ko.md](KNOWN_ISSUES.ko.md) |
-<!-- hw-measurements:end restart_row -->
+|<!-- hw-measurements:begin deadline_row --> 정상 이동 중 게이트의 스텝 기한 초과 거부 | Raspberry Pi 3 위 TurtleBot3, 바퀴 띄움 | 모든 판정기에서 0건: 0.2.0-preview.22 꾸러미의 독립 3회와 0.2.0-preview.19 빌드의 발행자 3회 | [HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 <!-- hw-measurements:end deadline_row -->|
+|<!-- hw-measurements:begin restart_row --> 게이트 재시작 입출력 준비 | TurtleBot3 실물 | DDS 인증 정체 미해결; 독립 집단 29회 중 1회 및 별도 117회 중 1회. 고정 실패율 아님, 수동 복구만 지원 | [KNOWN_ISSUES.ko.md](KNOWN_ISSUES.ko.md) <!-- hw-measurements:end restart_row -->|
 | Isaac Sim endpoint 가 `READY_LOCKED` 에 이르기까지 | L40S VM, 새 상태 vs 시드된 셰이더 캐시 | 약 9–10분 vs 40–60 s | [ISAAC.ko.md](examples/nvidia/ISAAC.ko.md) |
 | `/cmd_vel` 입력부터 `/drive_cmd_vel` 출력까지, 직접 구독자 대비 추가되는 명령 지연 | Jetson Orin Nano Super, 25 W, 참조 리그, 10 / 20 / 50 Hz | p50 3.8–4.3 ms, p99 5.4–7.0 ms, 971건 중 손실 0, 출력 간격 지터 p99 ≤ 3.6 ms | [tools/latency](examples/tb3/tools/latency/README.md) |
 | 같은 값, 실물 TurtleBot3 | Raspberry Pi 3B+, 벤더 드라이버 구동, 바퀴 띄움, 10 / 20 Hz | p50 14.3–14.7 ms, p99 21.9–23.4 ms, 181건 중 손실 0, 지터 p99 ≤ 12.8 ms — 상한: Python 프로브가 Pi 의 CPU 를 나눠 썼다 | 같음 |
 
 지연 행은 2026-10-16 에 같은 게이트·브리지의 이전 빌드, SROS2 `Enforce` 켜짐, 보드당 1 세션,
 첫 허가 명령 뒤 정상 상태에서 쟀다. 그 뒤의 게이트 변경(세션 치명 래치, 치명 보고
-워커 스레드, 이 후보의 래치 대체 경로) 뒤에는 다시 재지 않았다 — 그 변경은 명령 경로를
+워커 스레드, 그 뒤의 래치 대체 경로) 뒤에는 다시 재지 않았다 — 그 변경은 명령 경로를
 건드리지 않았지만 그것은 코드 읽기이지 측정이 아니다. 이 값은 속도 명령 **토픽**이 드라이버 노드에 도착할
 때까지의 시간이다. 그 아래의 드라이버·펌웨어·모터 제어 루프(TurtleBot3 의 OpenCR 20 ms
 모터 루프, ros2_control 의 `update_rate` 루프)는 포함하지 않으며 PAIL 은 그 층에 손대지
@@ -391,8 +387,8 @@ Microduck 경로에도 라이브 데모가 있습니다: `python3 evaluation.py 
 트리에는 한 이슈어 아래 여러 로봇을 운영하기 위한 **계약**도 실린다 — 소유된
 인가 보류(hold), 정비 잠금 대장, 역할이 분리된 서명 승인, 읽기 전용 결속 프로브, 정제된 운영
 projection. 해당 설정을 주지 않으면 전부 비활성이며, pre-1.0 계약이지 플릿 매니저가 아니다.
-이것을 구동하는 계획·승인·적용·복구 오케스트레이터는 비공개 상용 도구로 **이 배포물에
-없다.** 실리는 것은 와이어 계약(`sdk/proto/robot_ops_service.proto`), 검증 라이브러리,
+이것을 구동하는 계획·승인·적용·복구 오케스트레이터는 Glowfly 가 별도로 제공한다([오픈 코어 너머](#오픈-코어-너머)).
+여기 실리는 것은 와이어 계약(`sdk/proto/robot_ops_service.proto`), 검증 라이브러리,
 이슈어·로봇 종단, 오프라인 검사기 둘, 실행 가능한 예제다.
 [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.ko.md) 를 먼저 읽고
 [`examples/robotops/`](examples/robotops/README.ko.md) 를 돌려 본다. hold 나 확인된
@@ -535,7 +531,7 @@ CLI 는 `keyring-sign`(`cloud/cmd/pail_keyring_sign`) 이다. `gen-root` 가 루
 ### 부록: 네이티브 통합의 범위
 
 이 판의 이슈어는 컨테이너 이미지로 제공하며 네이티브 설치 경로를 별도로 검증하지 않았습니다.
-아래는 통합 전제의 설명이지 비공개 소스를 빌드하는 빠른 시작이 아닙니다. Core는 소스로 빌드합니다.
+아래는 통합 전제의 설명이지 소스 빌드 빠른 시작이 아닙니다. Core는 소스로 빌드합니다.
 
 이 경로는 OS 공통 빠른 시작이 아니다. Linux + ROS 2 Humble/SROS2 환경,
 protobuf 생성, 쓰기 가능한 원장 경로와 명시적 키링·레지스트리·gRPC 보안 설정이 필요하다.
@@ -553,22 +549,24 @@ status=ACCEPTED chain_id=248561ae-… rejected= tokens=1
 
 ## 오픈 코어 너머
 
-로봇 한 대로 시작해 함대로 키운다. Core 는 Apache-2.0 이고 앞으로도 그렇다. 별도인 것은
-숨기지 않고 여기 적는다:
+로봇 한 대로 시작해 함대로 키운다. Core 는 Apache-2.0 이고 앞으로도 그렇다. Glowfly 는
+이 저장소와 별도로 다음을 제공한다:
 
-- **평가용 이슈어** — 내부 연구·개발·CI 를 위한 평가 조건의 실행본. 생산 운용은 별도 계약이
-  필요하다([ISSUER_EVALUATION.md](ISSUER_EVALUATION.md)).
-- **Anchor SaaS** — 저널 머리를 위한 호스팅 외부 증인. 로컬 파일 앵커는 평가에는 충분하지만
-  독립 증인은 아니다.
-- **함대 운영** — 로봇 운영 오케스트레이터(계획·승인·적용·복구)는 꾸러미에 없다. 꾸러미에는
-  그 계약과 27/27 로 측정된 fleet 프리뷰가 있다([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md)).
-- **HA·멀티테넌트 운영·엔터프라이즈 콘솔** — 이 배포물에 없다.
+- **생산용 이슈어** — 꾸러미의 평가 실행본은 내부 연구·개발·CI 를 위한 것이고, 생산 운용은
+  별도 라이선스다([ISSUER_EVALUATION.md](ISSUER_EVALUATION.md)).
+- **Anchor SaaS** — 저널 머리를 위한 호스팅 외부 증인. 앵커가 운영자의 손 밖에 놓인다. 평가의
+  로컬 파일 앵커는 같은 경로를 돌려 보는 것이지 독립 증인이 아니다.
+- **함대 운영** — [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) 에 실린 계약을 구동하는
+  로봇 운영 오케스트레이터(계획·승인·적용·복구). 여기의 fleet 프리뷰는 27/27 로 측정됐다.
+- **복제 이슈어와 다중 사이트 운영** — [`SECURITY.md`](SECURITY.md) §4.2 의 단일 노드 내구성
+  구간을 받아들일 수 없는 배치를 위한 것.
 
 사고 뒤 저널은 조사관·보험사·규제 기관이 가장 먼저 묻는 것 — 누가 이 움직임을 인가했고,
-어떤 한계 안에서, 게이트는 무엇을 했고, 어떤 순서였는가 — 에 운영자가 고칠 수 없는
+어떤 한계 안에서, 게이트는 무엇을 했고, 어떤 순서였는가 — 에 운영자가 들키지 않고 고칠 수 없는
 바이트로 답한다. PAIL 은 어떤 규정이나 기능안전 표준에 대한 적합성도 주장하지 않는다. 그런
-심사가 소비하는 증거를 만들 뿐이다. 별도 구성 요소의 평가는 이 후보를 받은 경로로
-문의한다([SUPPORT.md](SUPPORT.md)).
+심사가 소비하는 증거를 만들 뿐이다. 위 항목의 평가는 [www.glowfly.ai](https://www.glowfly.ai)
+로 문의한다. 이 저장소에 대한 질문은 GitHub Issues 로, 취약점 의심은 공개 이슈가 아니라
+[SECURITY.md](SECURITY.md) 의 주소로 보낸다([SUPPORT.md](SUPPORT.md)).
 
 ## 라이선스
 
@@ -585,21 +583,18 @@ status=ACCEPTED chain_id=248561ae-… rejected= tokens=1
 두 아키텍처의 파일 이름·검증 절차는 [`RELEASE.md`](RELEASE.md)에 있습니다. 제3자 구성요소에는 각각의
 라이선스가 적용됩니다. 이 평가는 소프트웨어 시험이며 실물 검증이나 기능 안전 인증을 대신하지 않습니다.
 
-### 어느 묶음에도 없는 것
+### 평가 이슈어의 범위
 
-이슈어의 복제·스탠바이(HA), Anchor 서비스 백엔드, 다중 테넌트 운영, 기업 콘솔은 이
-배포물에 없습니다. 평가 이슈어는 `PAIL_HA_*` 복제 설정이 있으면 단일 노드로 조용히
-도는 대신 기동을 거부합니다. 상용 로봇 운영 오케스트레이터 — 계획·자격 준비·승인
-흐름·적용·복구·재개 — 도 어느 묶음에도 없습니다. 묶음이 나르는 것은 그것이 대화하는
-계약과 종단입니다([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.ko.md) §1).
-구성 등재부와 `TRUST_BOUNDARY.md`·`KNOWN_ISSUES.md` 뒤의 생성기는 유지보수자 도구이며,
-그 산출물과 수령자 쪽 검사기만 실립니다.
+평가 이슈어는 단일 노드입니다. `PAIL_HA_*` 복제 설정이 있으면 단일 노드로 조용히 도는
+대신 기동을 거부하며, 단일 노드의 내구성 구간은 [`SECURITY.md`](SECURITY.md) §4.2 에
+있습니다. 로봇 운영 계약은 이슈어·로봇 종단, 오프라인 검사기 둘, 실행 가능한 예제와 함께
+실립니다([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.ko.md) §1). 그것을 구동하는
+오케스트레이터는 별도로 제공합니다([오픈 코어 너머](#오픈-코어-너머)).
 
 ### Anchor SaaS와 이 배포물의 범위
 
-**비공개 상용 Anchor SaaS 서버 구현은 이 오픈소스 배포물에 포함되지 않습니다.**
-이 배포를 통해 그 서버 소스 코드를 Apache-2.0으로 제공하는 것은 아닙니다.
-호스팅된 Anchor SaaS 서비스 이용 또는 서버 소프트웨어의 별도 라이선스에는
+**Anchor SaaS 서버는 이 배포물의 일부가 아니며 이 배포를 통해 Apache-2.0 으로 제공하지
+않습니다.** 호스팅된 Anchor SaaS 서비스 이용 또는 서버 소프트웨어의 별도 라이선스에는
 해당 별도 계약이 적용됩니다.
 
 이 배포물에 포함된 Anchor 클라이언트·인터페이스 규격·테스트 벡터·검증 도구에는

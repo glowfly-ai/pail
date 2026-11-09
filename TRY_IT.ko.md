@@ -1,7 +1,7 @@
 # 설치·실행·시험 결과 확인
 
-정본은 [TRY_IT.md](TRY_IT.md)입니다. 이 후보는 공통 PAIL 코어·ROS 2/TB3 참조·Microduck 소프트웨어 프리뷰를 제공합니다.
-Core는 Apache-2.0 소스 배포물이며 비공개 이슈어 소스 없이 빌드·시험합니다.
+정본은 [TRY_IT.md](TRY_IT.md)입니다. 이 릴리스는 공통 PAIL 코어·ROS 2/TB3 참조·Microduck 소프트웨어 프리뷰를 제공합니다.
+Core는 Apache-2.0 소스 배포물이며 이슈어 없이 빌드·시험합니다.
 동적 발급과 로봇 데모는 별도 이슈어 실행본을 함께 제공하는 **PAIL Evaluation**을 사용합니다.
 [`RELEASE.md`](RELEASE.md)의 버전·체크섬을 확인한 뒤 평가 디렉터리에서 실행합니다.
 
@@ -257,7 +257,7 @@ cloud 빌더 일부가 아니라 전체 공개 트리를 시험 입력으로 사
 필수 입력이므로 누락·읽기 실패는 SKIP이 아닌 실패입니다. 기본 공개 실행에서 의도적으로 남는 SKIP은 다음입니다.
 
 - `TestEmitRealRecord`: 출력·키 입력을 별도로 지정하는 선택적 레코드 산출.
-- `TestCommittedKeyMaterialIsListed`: 비공개 역사 소스의 키 파일 감사.
+- `TestCommittedKeyMaterialIsListed`: 이전 소스 이력의 키 파일 감사.
 - `TestRenamedKeyStillRejected`: 역사 소스 파일 이름 변경 감사.
 
 공개 실행에서도 TSV/컴파일 지문·제거 표식·등재된 잔존 인증서 부재·새 키 허용·알려진 지문의 이름 변경 거부를 검사합니다.

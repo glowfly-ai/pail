@@ -500,9 +500,9 @@ fifth surface in the sense of §1: none of them is needed to integrate a fleet
 manager, a reader or a safety adapter, and all of them are disabled unless the
 settings in [`ROBOT_OPERATIONS.md`](ROBOT_OPERATIONS.md) §3 are set. They exist
 for operating several robots under one issuer, and the tool that drives them —
-the planning, approval, apply and recovery orchestrator — is a private
-commercial product that is not in this distribution. What ships is the
-contract, the verification library and the endpoints.
+the planning, approval, apply and recovery orchestrator — is offered
+separately by Glowfly. What ships here is the contract, the verification
+library and the endpoints.
 
 **Stability.** This is an experimental, pre-1.0 contract. Publishing the
 `.proto` under Apache-2.0 is a license, not a compatibility promise: an

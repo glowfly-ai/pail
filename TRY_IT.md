@@ -318,7 +318,7 @@ shared robot fingerprint TSV and site-model example are required inputs; missing
 unreadable copies are failures, not SKIP. The normal public run explicitly skips:
 
 - `TestEmitRealRecord`: opt-in record export; needs the documented output/key inputs.
-- `TestCommittedKeyMaterialIsListed`: historical private-source key-file audit.
+- `TestCommittedKeyMaterialIsListed`: audit of key files in earlier source history.
 - `TestRenamedKeyStillRejected`: historical source-file relabeling audit.
 
 The public run still checks TSV/compiled fingerprints, removed annotations, absence

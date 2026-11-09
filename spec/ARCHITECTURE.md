@@ -50,7 +50,7 @@ key custody and bypass prevention still require deployment integration; see
 [../TRUST_BOUNDARY.md](../TRUST_BOUNDARY.md).
 
 The local test's file anchor is not an independently operated external witness.
-Anchor server source is not distributed. Read [VERIFICATION_INPUTS.md](VERIFICATION_INPUTS.md)
+The anchor server is a separately offered service. Read [VERIFICATION_INPUTS.md](VERIFICATION_INPUTS.md)
 and [TRUST_ROOT.md](TRUST_ROOT.md) for independent verification, not internal server paths.
 
 ## Correlation hashes are not authorization identities

@@ -329,12 +329,12 @@ In issuer-first (§2.2), what "append" means depends on the shape.
 
 | Deployment | The level at which issuer-first is true | On power loss |
 |---|---|---|
-| **HA** (standby-node shipping configured — not part of this public distribution; the public issuer refuses `PAIL_HA_*`) | Responds only after fsync **on another machine's disk** plus chain verification | Even if the primary dies, the standby node holds the record |
+| **Replicated issuer** (standby-node shipping configured; the evaluation issuer is single-node and refuses `PAIL_HA_*`) | Responds only after fsync **on another machine's disk** plus chain verification | Even if the primary dies, the standby node holds the record |
 | **Single node** | Handed to the OS + **fsync at checkpoint time** (default: 1000 records or 60 s) | **The window since the last checkpoint can be lost** |
 
 On a single node, if power is lost abruptly, issuer-first does not hold at the disk
-level for that lost window. A deployment that cannot accept this limit uses the HA
-shape or lowers the checkpoint interval. The full wording is in the durability-model
+level for that lost window. A deployment that cannot accept this limit uses a replicated
+issuer or lowers the checkpoint interval. The full wording is in the durability-model
 section of [`SECURITY.md`](SECURITY.md).
 
 > **Honesty notice** — the evidence we can present today is **syscall-level** (fsync is

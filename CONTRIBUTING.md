@@ -78,18 +78,18 @@ Run the build and relevant tests for the layer changed and include the output:
 [KNOWN_ISSUES.md](KNOWN_ISSUES.md) §4 lists excluded internal tracks. A skipped test must
 retain its reason; SKIP is neither a failure nor evidence of a successful test.
 
-## 6. What this distribution does not contain
+## 6. Scope of this repository
 
 | Item | Boundary |
 |---|---|
-| Anchor SaaS server | Closed implementation; public formats and verification inputs remain in `spec/` |
-| Issuer replication and standby (HA) | Not distributed; the public issuer refuses `PAIL_HA_*` replication settings at startup (`cloud/issuer/cmd/pail_cloud/ha_seam.go`) |
-| Internal design documents and field evidence | Not distributed; public explanations live separately |
+| Anchor SaaS server | Offered as a hosted service; the public formats and verification inputs it speaks are in `spec/` |
+| Issuer replication and standby | The evaluation issuer is single-node and refuses `PAIL_HA_*` replication settings at startup |
+| Design rationale and field evidence | What the public needs is in `spec/`, the README and `KNOWN_ISSUES.md` |
 | Complete internal web demo | Not included; [TRY_IT.md](TRY_IT.md) distinguishes CLI examples and the optional observation UI |
 | Operator-owned deployment layers | See [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) §3 |
 
-The [README](README.md) describes the public scope. Absence of the proprietary Anchor
-server is intentional, not a missing dependency in the local authorization example.
+The [README](README.md) describes the public scope. The local authorization example does
+not depend on an Anchor server; its absence is not a missing dependency.
 
 ## 7. PR checklist
 
@@ -100,10 +100,9 @@ server is intentional, not a missing dependency in the local authorization examp
 - [ ] Relevant build/test results attached.
 - [ ] This is not a privately reportable vulnerability.
 
-Contributions are distributed under [Apache License 2.0](LICENSE). The PAIL-Issuer
-source (`cloud/issuer/`) is not included in this release, so there is no Issuer
-file here to contribute to: the Issuer is supplied as a single-node evaluation
-executable under the separate terms of `EVALUATION-LICENSE.txt`.
+Contributions are distributed under [Apache License 2.0](LICENSE). The Issuer is supplied
+as a single-node evaluation executable under the separate terms of `EVALUATION-LICENSE.txt`,
+so there is no Issuer source file here to contribute to.
 
 ## Public language policy
 

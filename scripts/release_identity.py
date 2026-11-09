@@ -93,8 +93,8 @@ def block(identity, kind):
                        else f"Current local candidate: **`{release}`**.")
             body = (f"{opening} Four separate artifacts per architecture; the Linux ARM64 set:\n\n"
                     f"- `{names['core']}` — Apache-2.0 Core source, including the complete robot gateway (one source ZIP for both architectures).\n"
-                    f"- `{names['issuer']}` — private-source Issuer evaluation image (Linux ARM64).\n"
-                    f"- `{names['evaluation']}` — evaluation bootstrap; runtime images supplied separately.\n"
+                    f"- `{names['issuer']}` — Issuer evaluation image, executable only (Linux ARM64).\n"
+                    f"- `{names['evaluation']}` — evaluation bootstrap; the runtime images are the separate TAR downloads of the same release.\n"
                     f"- `{names['offline']}` — same evaluation with pinned runtime images included.\n\n"
                     "The Linux amd64 delivery uses the same names with `linux-amd64` in place of `linux-arm64`:\n"
                     "the evaluation bootstrap `…-linux-amd64.zip`, the offline bundle `…-linux-amd64-offline.zip`,\n"
@@ -102,9 +102,9 @@ def block(identity, kind):
                     "its `images.lock.json` says `amd64` and its VALIDATION names its own image identities.\n"
                     "Each ZIP and TAR travels with a `.sha256` and a `.manifest.json`. Which set to use is decided by the\n"
                     "Docker daemon's CPU architecture, not by preference (the launcher refuses the other one).\n\n"
-                    "No Issuer source overlay is distributed. Core builds without it. Evaluation uses\n"
-                    "the real single-node Issuer executable under separate evaluation terms.\n"
-                    "Online bootstrap does not imply a public registry has been published.\n"
+                    "Core builds and tests without the Issuer; the gate runs fail-closed until an issuer is present.\n"
+                    "Evaluation uses the real single-node Issuer executable under separate evaluation terms.\n"
+                    "The bootstrap bundle pulls nothing from a registry: load the image archives.\n"
                     "Offline means runtime, not rebuilding all source without dependencies.\n\n"
                     f"```sh\nshasum -a 256 -c {names['core']}.sha256\n```")
         elif kind == 'verify':

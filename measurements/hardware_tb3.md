@@ -209,8 +209,8 @@ regions says "this candidate" only when a source build equals the tree's VERSION
     }
   ],
   "readme": {
-    "hardware_row_en": "| TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build, not a new-candidate hardware acceptance claim | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 |",
-    "hardware_row_ko": "| TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 새 후보의 실물 수락으로 승격하지 않음 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
+    "hardware_row_en": "| TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build and is not a hardware acceptance claim for this release | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 |",
+    "hardware_row_ko": "| TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
     "deadline_row_en": "| Step-deadline refusals at the gate during normal motion | TurtleBot3 on a Raspberry Pi 3, wheels raised | 0 in every judge: 3 independent runs {independent_of} and 3 publisher runs {publisher_of} | [HARDWARE.md](examples/tb3/HARDWARE.md) §8 |",
     "deadline_row_ko": "| 정상 이동 중 게이트의 스텝 기한 초과 거부 | Raspberry Pi 3 위 TurtleBot3, 바퀴 띄움 | 모든 판정기에서 0건: {independent_of_ko} 독립 3회와 {publisher_of_ko} 발행자 3회 | [HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
     "restart_row_en": "| Gate restart IO readiness | TurtleBot3 hardware | Unresolved DDS authentication stall; independent cohorts: 1/29 and separately 1/117, not a guaranteed rate. Manual recovery only | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) |",

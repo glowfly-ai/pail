@@ -12,6 +12,12 @@ Rules the generator enforces:
     never written by hand inside the generated regions;
   * a row with no cells, a cell whose source is not declared, or a source without a build is a generation error.
 
+Region markers (2026-11-09): a region that lives INSIDE a Markdown table uses inline markers within its first and
+last cell — `|<!-- hw-measurements:begin X --> … <!-- hw-measurements:end X -->|` — because GitHub-Flavored
+Markdown ends a table at an HTML-block line; the earlier marker LINES between rows rendered every following row as
+plain text on GitHub (README: five rows, HARDWARE.md §8: the whole table). `--write` migrates legacy line markers of
+table regions; `--check` reports them. List regions (`defs`) keep line markers.
+
 usage:
   python3 gen_hardware_measurements.py --write     # rewrite the generated regions
   python3 gen_hardware_measurements.py --check     # rc 0 when every region equals the generator's output, rc 1 otherwise, rc 2 misuse
@@ -123,8 +129,32 @@ def regions(r):
     ]
 
 
-def region_re(name):
+# regions whose content is table rows: their markers sit inside the first and last cell (GFM keeps the table)
+TABLE_REGIONS = {'table', 'hardware_row', 'deadline_row', 'restart_row'}
+
+
+def line_region_re(name):
+    """Marker lines around the content (list regions; the legacy form of table regions)."""
     return re.compile(r'(<!-- hw-measurements:begin ' + re.escape(name) + r' -->\n)(.*?)(\n<!-- hw-measurements:end ' + re.escape(name) + r' -->)', re.S)
+
+
+def inline_region_re(name):
+    """Markers inside the first and last table cell: `|<!-- begin X --> … <!-- end X -->|`."""
+    return re.compile(r'(\|<!-- hw-measurements:begin ' + re.escape(name) + r' -->)(.*?)(<!-- hw-measurements:end ' + re.escape(name) + r' -->\|)', re.S)
+
+
+def region_re(name):
+    return inline_region_re(name) if name in TABLE_REGIONS else line_region_re(name)
+
+
+def region_content(name, rendered_rows):
+    """What sits between the markers: full lines for list regions; for table regions the rows without the outer
+    pipes of the first and last row (the markers take their place)."""
+    if name not in TABLE_REGIONS:
+        return rendered_rows
+    if not (rendered_rows.startswith('|') and rendered_rows.endswith('|')):
+        raise ValueError('table region %s must render as pipe-delimited rows' % name)
+    return rendered_rows[1:-1]
 
 
 def apply(r, rendered, write):
@@ -133,12 +163,23 @@ def apply(r, rendered, write):
         if not path.is_file():
             problems.append('missing ' + str(path)); continue
         text = path.read_text(encoding='utf-8')
+        want = region_content(name, rendered[key])
         m = region_re(name).search(text)
+        if not m and name in TABLE_REGIONS:
+            legacy = line_region_re(name).search(text)
+            if legacy:
+                if write:
+                    text = (text[:legacy.start()] + '|<!-- hw-measurements:begin %s -->' % name + want
+                            + '<!-- hw-measurements:end %s -->|' % name + text[legacy.end():])
+                    path.write_text(text, encoding='utf-8')
+                else:
+                    problems.append('%s: region %r uses legacy marker lines inside a table (GFM drops the rows); run --write' % (path.name, name))
+                continue
         if not m:
             problems.append('%s: no generated region %r' % (path.name, name)); continue
-        if m.group(2) != rendered[key]:
+        if m.group(2) != want:
             if write:
-                text = text[:m.start(2)] + rendered[key] + text[m.end(2):]
+                text = text[:m.start(2)] + want + text[m.end(2):]
                 path.write_text(text, encoding='utf-8')
             else:
                 problems.append('%s: region %r differs from the measurement file' % (path.name, name))
@@ -164,6 +205,8 @@ def apply(r, rendered, write):
         text = path.read_text(encoding='utf-8')
         stripped = re.sub(r'<!-- hw-measurements:begin .*?<!-- hw-measurements:end [a-z_]+ -->', '', text, flags=re.S)
         for i, l in enumerate(stripped.splitlines(), 1):
+            if path in region_docs and l.strip() == '||':
+                continue  # the pipes left around a stripped inline-marker region
             if path in region_docs and l.startswith('|') and ('this candidate' in l or VOCAB['this_candidate'] in l):
                 problems.append('%s: a hand-written table row says "this candidate" (write the build name, or generate the row): %s' % (path.name, l[:80]))
             elif hardware_claim(l):

@@ -10,7 +10,7 @@
 
 - Apache-2.0: Core 오프라인 검사기 `cloud/cmd/pail_robotops_check`, 검사기용 선언 세트 생성기 `cloud/cmd/pail_robotops_fixture`(개인키를 쓰지 않음), `cloud/pkg/robotops`, [운영 proto](../sdk/proto/robot_ops_service.proto), 로봇/수집기 관측 종단.
 - Separate evaluation binary license: 이슈어 검사기 `pail_issuer_robotops_check` (evaluation image), 이슈어 hold·정비 잠금 집행.
-- **미포함:** 자격 준비·계획·승인 흐름·적용·복구·재개를 조율하는 비공개 상용 오케스트레이터.
+- **별도 제공:** 자격 준비·계획·승인 흐름·적용·복구·재개를 조율하는 오케스트레이터는 Glowfly 가 따로 제공한다.
 
 [실행 가능한 오프라인 예제](../examples/robotops/README.ko.md)부터 시작하세요.
 PASS는 표시한 검사 범위만 통과했다는 뜻입니다. 오프라인에서는 `ready_for_apply=false`,

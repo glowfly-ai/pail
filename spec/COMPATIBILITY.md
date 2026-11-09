@@ -63,7 +63,7 @@ Changed external contracts in this line (additive, declared in `spec/vectors/con
   unaffected; a subscriber that froze the message by field count must take eleven.
 - Reason registry: `ERR_BUNDLE_CLOCK`, `ERR_BUNDLE_LIFETIME` and `ERR_BUNDLE_POLICY` (start-up
   refusals of the keyring-bundle loader, local plane, never on the wire) are registered with
-  values 0x8B–0x8D; before this candidate the gate issued them without an entry.
+  values 0x8B–0x8D; before this release the gate issued them without an entry.
 
 ## Stateful issuer entry point
 

@@ -5,8 +5,8 @@
 Public release: **`0.2.0`**. Four separate artifacts per architecture; the Linux ARM64 set:
 
 - `PAIL-Core-0.2.0-src.zip` — Apache-2.0 Core source, including the complete robot gateway (one source ZIP for both architectures).
-- `PAIL-Issuer-Eval-0.2.0-linux-arm64-image.tar` — private-source Issuer evaluation image (Linux ARM64).
-- `PAIL-Evaluation-0.2.0.zip` — evaluation bootstrap; runtime images supplied separately.
+- `PAIL-Issuer-Eval-0.2.0-linux-arm64-image.tar` — Issuer evaluation image, executable only (Linux ARM64).
+- `PAIL-Evaluation-0.2.0.zip` — evaluation bootstrap; the runtime images are the separate TAR downloads of the same release.
 - `PAIL-Evaluation-0.2.0-linux-arm64-offline.zip` — same evaluation with pinned runtime images included.
 
 The Linux amd64 delivery uses the same names with `linux-amd64` in place of `linux-arm64`:
@@ -16,9 +16,9 @@ its `images.lock.json` says `amd64` and its VALIDATION names its own image ident
 Each ZIP and TAR travels with a `.sha256` and a `.manifest.json`. Which set to use is decided by the
 Docker daemon's CPU architecture, not by preference (the launcher refuses the other one).
 
-No Issuer source overlay is distributed. Core builds without it. Evaluation uses
-the real single-node Issuer executable under separate evaluation terms.
-Online bootstrap does not imply a public registry has been published.
+Core builds and tests without the Issuer; the gate runs fail-closed until an issuer is present.
+Evaluation uses the real single-node Issuer executable under separate evaluation terms.
+The bootstrap bundle pulls nothing from a registry: load the image archives.
 Offline means runtime, not rebuilding all source without dependencies.
 
 ```sh
@@ -146,4 +146,4 @@ VERSION and the marked command blocks above are generated from it. Run
 `python3 scripts/release_identity.py` from the extracted root to check their agreement.
 The verifier also binds manifest identity to these files; `--expected-release` specifies
 the intended release independently. A checksum success for an older file is not a
-verification of this candidate. This identity check is not publisher authentication.
+verification of this release. This identity check is not publisher authentication.

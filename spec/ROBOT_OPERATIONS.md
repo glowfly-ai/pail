@@ -18,7 +18,7 @@ incompatible changes require migration rather than silent acceptance.
 
 The shipped dashboard can display robot operations projections. Display is not
 an authority to issue or resume motion, and the projection producer/orchestrator
-is not included. No physical stopping, independent safety attestation, fleet-scale
+is offered separately. No physical stopping, independent safety attestation, fleet-scale
 rolling update or remote apply capability is established by this guide.
 
 Start with the [runnable offline example](../examples/robotops/README.md).

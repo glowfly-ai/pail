@@ -19,9 +19,9 @@ is not a production-security assertion.
 | `S23` | Refuse service when a site-model snapshot cannot be stored under `PAIL_SNAPSHOT_DIR`; do not issue against an unretained model. |
 | `S39` | In production, require skill registries in `PAIL_SKILLS_DIR` for the site's robot classes. Malformed registries are refused in every profile. |
 
-HA synchronous replication, standby/promotion and multi-tenant orchestration are
-not supplied by this evaluation image. HA configuration is rejected, not ignored.
-Anchor SaaS is not required for local evaluation or local evidence verification.
+This evaluation image is a single node: replication, standby/promotion and
+multi-tenant settings are rejected at startup, not ignored. A hosted anchor is not
+required for local evaluation or local evidence verification.
 A local file anchor does not constitute an independent external witness.
 
 ## Delivery and rights

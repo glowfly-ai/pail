@@ -73,18 +73,18 @@ this repository.
 
 ## 4. Tests that do not run in this repository
 
-These tests **do not run** in this repository. That closed-layer
-tests do not run in a public repository is the natural consequence —
+These tests **do not run** in this repository. That tests of components
+outside this repository do not run here is the natural consequence —
 but staying silent about it makes readers assume **everything ran.**
 The table below transcribes exactly what the public test profile of
 the release harness excludes.
 
 | Block | Excluded scope | Reason |
 |---|---|---|
-| `TB-8` | entire block | Anchor SaaS — closed track (gate B); Anchor SaaS acceptance tests — closed track |
-| `TB-10` | steps 1/6 | Anchor SaaS — closed track (gate B) |
-| `TB-12` | entire block | Anchor SaaS — closed track (gate B) |
-| `TB-13` | steps 1/10 | Anchor SaaS — closed track (gate B) |
-| `TB-14` | entire block | Anchor SaaS — closed track (gate B); Anchor SaaS acceptance tests — closed track |
+| `TB-8` | entire block | hosted anchor service tests — outside this repository; hosted anchor acceptance tests — outside this repository |
+| `TB-10` | steps 1/6 | hosted anchor service tests — outside this repository |
+| `TB-12` | entire block | hosted anchor service tests — outside this repository |
+| `TB-13` | steps 1/10 | hosted anchor service tests — outside this repository |
+| `TB-14` | entire block | hosted anchor service tests — outside this repository; hosted anchor acceptance tests — outside this repository |
 
 Of 20 blocks, 5 are affected. The rest run in this repository as-is.

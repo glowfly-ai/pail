@@ -1,7 +1,7 @@
 # Microduck software-only preview
 
 > **0.2 evaluation delivery:** first run `python3 evaluation.py load` in the evaluation directory.
-> Issuer source is not included. The lower-level commands below run from `pail-core/` after that setup.
+> The Issuer runs from the evaluation image. The lower-level commands below run from `pail-core/` after that setup.
 > Prefer the `evaluation.py` launcher for a first run.
 
 

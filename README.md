@@ -9,7 +9,7 @@ exists before anyone reads the answer.**
 
 > **PAIL is not a brake and not a safety fence.** It is the border post that
 > checks whether the physical command an AI issued is authorized, and the
-> flight recorder that proves what happened when something goes wrong.
+> flight recorder that records what happened when something goes wrong.
 
 Proof of authority for every physical action an AI asks a robot to take: signed
 before it moves, recorded before the answer is returned, verifiable by anyone
@@ -37,7 +37,10 @@ numbers and their limits are in [What has been measured](#what-has-been-measured
 
 Three commands on a laptop with Docker. The issuer, the gate and the motion bridge
 are the real components; only the TurtleBot3 base, its tag reader and its safety
-feed are simulated. No ROS on the host, no account, no hardware.
+feed are simulated. No ROS on the host, no account, no hardware. Download the
+evaluation bundle for your architecture from the
+[0.2.0 release page](https://github.com/glowfly-ai/pail/releases/tag/0.2.0) and run
+these from its directory:
 
 ```sh
 python3 evaluation.py load                               # the supplied image archives
@@ -56,9 +59,10 @@ the signed chain that recorded all of it. [The walkthrough](examples/tb3/DEMO.md
 explains each scene and what the demo is not; `python3 examples/tb3/demo_scenes.py`
 judges every scene automatically.
 
-`evaluation.py` and the image archives arrive in the evaluation bundle
-([TRY_IT.md](TRY_IT.md)); the Core source alone has no issuer, because the issuer is
-supplied as an evaluation executable under separate terms ([License](#license)).
+`evaluation.py` and the image archives are inside the evaluation bundle on the release
+page ([TRY_IT.md](TRY_IT.md) lists the host prerequisites); the Core source alone has no
+issuer, because the issuer is supplied as an evaluation executable under separate terms
+([License](#license)).
 With the archives loaded and the demo image already built, `tb3` had the console up
 and every role ready 7 s after launch on an Apple Silicon Mac; the very first
 run also builds the demo image, which takes minutes.
@@ -80,13 +84,14 @@ hash-chained journal before the issuance is even acknowledged.
 
 What changes for you:
 
-- **Unauthorized commands never reach the actuators.** The gate verifies the
-  signed bytes on the robot; an expired, consumed, out-of-scope or forged token
-  is a refusal with a named reason, not a trimmed command.
+- **Unauthorized commands never pass the gate on the command path it guards.** The
+  gate verifies the signed bytes on the robot; an expired, consumed, out-of-scope or
+  forged token is a refusal with a named reason, not a trimmed command. Paths that
+  bypass the gate are the integrator's to close (`G-DEL-L05`).
 - **Every decision is a record you did not write yourself.** Issued, refused,
-  permitted, superseded: each lands in a journal whose head is pinned outside
-  your own reach, so the past cannot be edited quietly.
-- **You can check all of it without trusting us.** Frozen test vectors, an
+  permitted, superseded: each lands in a hash-chained journal whose head can be
+  pinned to an external anchor, so the past cannot be edited without detection.
+- **You can check the signatures, the journal and the vectors without trusting us.** Frozen test vectors, an
   offline verifier that shares no code with the producer, and evaluation
   bundles whose measured matrix ships inside the archive.
 
@@ -150,7 +155,7 @@ For dynamic issuance, first load the matching evaluation bundle as explained in
 | Microduck fault/permission checks | `python3 evaluation.py test-conformance --state /tmp/pail-duck-suite` | No; known limitations are reported, not counted as passes |
 
 Use new state paths outside the checkout. Read [TRY_IT.md](TRY_IT.md) for prerequisites,
-test order and candidate boundaries. Both paths use the same public Core and the separately supplied Issuer executable.
+test order and the boundaries of this release. Both paths use the same public Core and the Issuer evaluation executable.
 
 ## What has been measured
 
@@ -161,17 +166,15 @@ certification; a hardware judge with raised wheels is not floor driving.
 | Platform | Scope | Latest measured result | Report |
 |---|---|---|---|
 | Software bundles (Docker, Linux arm64 and amd64) | Microduck preview, simulated TurtleBot3 base, fleet, adapter conformance, lifecycle, plan supersede | Microduck 15/15 · TurtleBot3 13/13 · fleet 27/27 (dev and mTLS) · gate CTest 37/37 · lifecycle 21/21 · supersede 8/8 | the measured validation report (VALIDATION) shipped inside each evaluation bundle; [TRY_IT.md](TRY_IT.md) |
-<!-- hw-measurements:begin hardware_row -->
-| TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build, not a new-candidate hardware acceptance claim | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 |
-<!-- hw-measurements:end hardware_row -->
+|<!-- hw-measurements:begin hardware_row --> TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build and is not a hardware acceptance claim for this release | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 <!-- hw-measurements:end hardware_row -->|
 | Jetson Orin Nano Super (native arm64, CPU only) | role-isolated synthetic reference with the real gate and bridge | 7/7 scenarios; 8-hour segmented soak: 752 exercise/cancel cycles, 22 injected faults, every cleanup PASS | [examples/nvidia/README.md](examples/nvidia/README.md) |
-| Isaac Sim 6.0.1 on one L40S VM (Linux amd64) | the actual SDK endpoint behind the same gate; BS-01..12 / BP-01..12 bypass and lifecycle matrix | 14 of 14 cases PASS in two independent repeats (the BP-11 positive control is DETECTED); rest is judged on position change per physics step, with the SDK-reported velocities kept as evidence | [examples/nvidia/ISAAC.md](examples/nvidia/ISAAC.md) |
+| Isaac Sim 6.0.1 on one L40S VM (Linux amd64) | the actual SDK endpoint behind the same gate; BS-01..12 / BP-01..12 bypass and lifecycle matrix | 14 of 14 cases PASS in two fresh-state repeats of the release run, 28 of 28 runs complete (the BP-11 positive control is DETECTED); one earlier run of the same images recorded one INCONCLUSIVE, disclosed on the release page and in ISAAC.md; rest is judged on position change per physics step, with the SDK-reported velocities kept as evidence | [examples/nvidia/ISAAC.md](examples/nvidia/ISAAC.md) |
 
 The recipient path of the delivered archives has been reproduced by an evaluation
 run that did not share the publisher's working tree: on an Apple Silicon Mac for every
-candidate of this split-bundle line, on the L40S VM for the candidates whose change
+build of this split-bundle line, on the L40S VM for the builds whose change
 touched the amd64 path, and on a Linux ARM64 VM for the first of them. Which of the
-three replays the current candidate carries, and on what host its amd64 images were
+three replays this release carries, and on what host its amd64 images were
 built, is stated in its VALIDATION and the delivery report that accompanies the
 archives. Not measured:
 other robots, other GPUs or SDK versions, floor driving, functional-safety
@@ -181,12 +184,8 @@ certification. Read [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) before deploying.
 
 | Quantity | Where | Measured | Source |
 |---|---|---|---|
-<!-- hw-measurements:begin deadline_row -->
-| Step-deadline refusals at the gate during normal motion | TurtleBot3 on a Raspberry Pi 3, wheels raised | 0 in every judge: 3 independent runs of the 0.2.0-preview.22 bundle and 3 publisher runs of the 0.2.0-preview.19 build | [HARDWARE.md](examples/tb3/HARDWARE.md) §8 |
-<!-- hw-measurements:end deadline_row -->
-<!-- hw-measurements:begin restart_row -->
-| Gate restart IO readiness | TurtleBot3 hardware | Unresolved DDS authentication stall; independent cohorts: 1/29 and separately 1/117, not a guaranteed rate. Manual recovery only | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) |
-<!-- hw-measurements:end restart_row -->
+|<!-- hw-measurements:begin deadline_row --> Step-deadline refusals at the gate during normal motion | TurtleBot3 on a Raspberry Pi 3, wheels raised | 0 in every judge: 3 independent runs of the 0.2.0-preview.22 bundle and 3 publisher runs of the 0.2.0-preview.19 build | [HARDWARE.md](examples/tb3/HARDWARE.md) §8 <!-- hw-measurements:end deadline_row -->|
+|<!-- hw-measurements:begin restart_row --> Gate restart IO readiness | TurtleBot3 hardware | Unresolved DDS authentication stall; independent cohorts: 1/29 and separately 1/117, not a guaranteed rate. Manual recovery only | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) <!-- hw-measurements:end restart_row -->|
 | Isaac Sim endpoint to `READY_LOCKED` | L40S VM, fresh state vs seeded shader cache | about 9–10 min vs 40–60 s | [ISAAC.md](examples/nvidia/ISAAC.md) |
 | Added command latency, `/cmd_vel` in to `/drive_cmd_vel` out, versus a direct subscriber | Jetson Orin Nano Super, 25 W, reference rig, 10 / 20 / 50 Hz | p50 3.8–4.3 ms, p99 5.4–7.0 ms, 0 of 971 commands lost, drive-side period jitter p99 ≤ 3.6 ms | [tools/latency](examples/tb3/tools/latency/README.md) |
 | Same, on a real TurtleBot3 | Raspberry Pi 3B+, vendor driver running, wheels raised, 10 / 20 Hz | p50 14.3–14.7 ms, p99 21.9–23.4 ms, 0 of 181 lost, jitter p99 ≤ 12.8 ms — an upper bound: the Python probe shared the Pi's CPU | same |
@@ -194,8 +193,8 @@ certification. Read [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) before deploying.
 The latency rows were measured on 2026-10-16 with an earlier build of the same gate
 and bridge, SROS2 `Enforce` on, one session per board, steady state after the first
 permitted command. They have not been re-measured since the gate changed (the
-session fatal latch, the fatal-report worker thread and this candidate's latch
-fallback); those changes left the command path itself untouched, but that is a code
+session fatal latch, the fatal-report worker thread and the latch fallback that
+followed); those changes left the command path itself untouched, but that is a code
 reading, not a measurement. They are the time for the velocity command **topic** to reach the driver
 node. They do not include, and PAIL does not touch, the driver, firmware or motor
 control loop below it (on a TurtleBot3 the OpenCR 20 ms motor loop; under
@@ -284,7 +283,7 @@ and are measured by the [conformance harness](pvs-public/conformance/).
 Start with [the adapter contract](spec/ADAPTER_CONTRACT.md), then
 [the skill registry](spec/SKILLS.md) and [adapter status table](spec/ADAPTERS.tsv).
 The [conformance harness](pvs-public/conformance/) measures a configured adapter;
-fake conformance is not physical-hardware certification. This candidate includes
+fake conformance is not physical-hardware certification. This release includes
 the ROS2/TB3 reference and the optional Microduck software preview; Viam is not bundled.
 
 ### ROS 2, hardware and simulation
@@ -424,8 +423,8 @@ robot under one issuer: owned admission holds, a maintenance lockout register,
 role-separated signed approvals, read-only binding probes and a sanitized
 operations projection. They are disabled unless their settings are set, and
 they are a pre-1.0 contract, not a fleet manager. The planning, approval, apply
-and recovery orchestrator that drives them is a private commercial tool and is
-**not in this distribution**; what ships is the wire contract
+and recovery orchestrator that drives them is offered separately by Glowfly
+([Beyond the open core](#beyond-the-open-core)); what ships here is the wire contract
 (`sdk/proto/robot_ops_service.proto`), the verification library, the issuer and
 robot endpoints, two offline checkers and a runnable example. Read
 [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) first, then run
@@ -589,7 +588,7 @@ forgery it builds needs a second root rather than a flipped byte.
 
 ### Appendix: native integration boundary
 
-This preview supplies the Issuer as a container image, not native source or a
+This release supplies the Issuer as a container image, not native source or a
 separately validated native installation. The following describes integration
 prerequisites, not an alternative source-build quickstart. Core remains source-buildable.
 
@@ -614,24 +613,29 @@ status=ACCEPTED chain_id=248561ae-… rejected= tokens=1
 ## Beyond the open core
 
 Start with one robot, grow into a fleet: the Core is Apache-2.0 and stays that way.
-What is separate is listed here, not hidden:
+Glowfly offers, separately from this repository:
 
-- **Evaluation Issuer** — supplied as an executable under evaluation terms for
-  internal research, development and CI; production use needs a separate agreement
+- **Issuer for production** — the evaluation executable in the bundle covers internal
+  research, development and CI; production operation is licensed separately
   ([ISSUER_EVALUATION.md](ISSUER_EVALUATION.md)).
-- **Anchor SaaS** — the hosted external witness for journal heads. A local file
-  anchor works for evaluation and is not an independent witness.
-- **Fleet operations** — the robot-operations orchestrator (planning, approval,
-  apply, recovery) is not in the bundle; the bundle carries its contracts and a
-  fleet preview measured 27/27 ([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md)).
-- **HA, multi-tenant operation, enterprise consoles** — not in this distribution.
+- **Anchor SaaS** — a hosted external witness for journal heads, so the anchor is out
+  of the operator's reach. The local file anchor in the evaluation exercises the same
+  path and is not an independent witness.
+- **Fleet operations** — the robot-operations orchestrator (planning, approval, apply,
+  recovery) that drives the contracts shipped in
+  [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md); the fleet preview here is
+  measured 27/27.
+- **Replicated issuer and multi-site operation** — for deployments that cannot accept
+  the single-node durability window stated in [`SECURITY.md`](SECURITY.md) §4.2.
 
 After an incident the journal answers the questions an investigator, an insurer or
 a regulator asks first — who authorized this motion, within what bounds, what did the
-gate do, in what order — from bytes the operator could not rewrite. PAIL does not
-claim conformity with any regulation or functional safety standard; it produces the
-evidence such a review consumes. To evaluate any separate component, use the channel
-through which you received this candidate ([SUPPORT.md](SUPPORT.md)).
+gate do, in what order — from bytes the operator could not rewrite without detection.
+PAIL does not claim conformity with any regulation or functional safety standard; it
+produces the evidence such a review consumes. To evaluate any of these, contact Glowfly
+through [www.glowfly.ai](https://www.glowfly.ai). Questions about this repository go to
+its GitHub Issues; suspected vulnerabilities go to the address in
+[SECURITY.md](SECURITY.md), never to a public issue ([SUPPORT.md](SUPPORT.md)).
 
 ## License
 
@@ -650,28 +654,24 @@ separate agreement. Core's Apache rights are not restricted by those terms.
 Earlier distribution licenses are not retroactively changed.
 
 The artifact names for both architectures and the verification commands are in [`RELEASE.md`](RELEASE.md).
-Third-party runtime components retain their own licenses. The evaluation is a
-software-only preview, not hardware certification or a safety-system replacement.
+Third-party runtime components retain their own licenses. The evaluation bundle is
+software-only: not hardware certification and not a safety-system replacement.
 
-### What is in neither bundle
+### Scope of the evaluation issuer
 
-Replication and standby for the issuer (HA), the Anchor service backend,
-multi-tenant operation and enterprise consoles are not in this distribution.
-The evaluation issuer refuses to start under any `PAIL_HA_*` replication setting
-rather than run as a single node under a configuration that asked for a fence.
-The commercial robot-operations orchestrator — planning, credential
-preparation, approval workflow, apply, recovery and resume — is also not in
-either bundle; the bundles carry the contracts and endpoints it talks to
-([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) §1). The configuration
-registry and the generators behind `TRUST_BOUNDARY.md` and `KNOWN_ISSUES.md`
-are maintainer tools; only their outputs and the recipient-side checkers ship.
+The evaluation issuer is a single node. It refuses to start under any `PAIL_HA_*`
+replication setting rather than run as a single node under a configuration that
+asked for a fence; the single-node durability window is stated in
+[`SECURITY.md`](SECURITY.md) §4.2. The robot-operations contracts ship with their
+issuer and robot endpoints, two offline checkers and a runnable example
+([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) §1); the orchestrator that
+drives them is offered separately ([Beyond the open core](#beyond-the-open-core)).
 
 ### Anchor SaaS and this distribution
 
-**The proprietary Anchor SaaS server implementation is not included in this
-open-source distribution.** Its source code is not offered under Apache-2.0
-by this distribution. Access to the hosted Anchor SaaS service, or a separate
-license to its server software, is governed by the applicable separate agreement.
+**The Anchor SaaS server is not part of this distribution and is not offered under
+Apache-2.0 by it.** Access to the hosted Anchor SaaS service, or a separate license
+to its server software, is governed by the applicable separate agreement.
 
 Any Anchor clients, interface specifications, test vectors and verification
 tools included in this distribution remain licensed as indicated in those files.
@@ -691,5 +691,5 @@ what a compatibility claim must name is in
 [`spec/CONFORMANCE.md`](spec/CONFORMANCE.md). This paragraph is explanatory and
 does not modify [`LICENSE`](LICENSE).
 
-Release candidate identity: [VERSION](VERSION). Changes: [CHANGELOG.md](CHANGELOG.md).
+Release identity: [VERSION](VERSION). Changes: [CHANGELOG.md](CHANGELOG.md).
 Artifact verification: [RELEASE.md](RELEASE.md). Support: [SUPPORT.md](SUPPORT.md).
