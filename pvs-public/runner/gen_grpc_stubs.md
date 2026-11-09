@@ -1,10 +1,9 @@
 # Generate the Python gRPC stubs for the PVS live runner
 
 The six generated modules under `pvs/runner/live/` (`pail_pb2*.py`, `token_service_pb2*.py`,
-`operator_service_pb2*.py`) are **bundled with the public tree** (preview.38, owner decision
-2026-10-26) so a recipient can run the live runner without a protobuf toolchain. They are
+`operator_service_pb2*.py`) are **bundled with the public tree** so a recipient can run the live runner without a protobuf toolchain. They are
 regenerated from `proto/*.proto` with a pinned toolchain whenever a proto changes, and the
-release gate (`tests/contract/test_pvs_stubs_match_proto.py`) proves that the bundled files
+release gate proves that the bundled files
 are byte-identical to a fresh generation, import, serve one RPC, and carry the same descriptor
 (every message, field number, type, label, enum value, service and method) as the `.proto`
 sources.

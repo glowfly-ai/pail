@@ -464,7 +464,7 @@ nonce 는 그 창 안에서만 유일하면 된다 — 그리고 운영자 명�
 
 <!-- source: sdk/proto/robot_ops_service.proto -->
 
-rc20 부터 트리에는 `sdk/proto/robot_ops_service.proto`(패키지 `pail.robotops.v1`,
+트리에는 `sdk/proto/robot_ops_service.proto`(패키지 `pail.robotops.v1`,
 Apache-2.0)와 gRPC 서비스 셋이 더 실린다. 이것은 §1 의 의미에서 다섯째 표면이 아니다 —
 플릿 매니저·리더·안전 어댑터를 붙이는 데 어느 것도 필요하지 않고, 전부
 [`ROBOT_OPERATIONS.md`](ROBOT_OPERATIONS.ko.md) §3 의 설정을 주지 않으면 비활성이다. 한

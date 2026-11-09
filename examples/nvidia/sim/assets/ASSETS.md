@@ -9,7 +9,7 @@ inputs with your own Isaac Sim derivative image (`../sdk/`):
 | Expanded URDF | `expand_urdf.py` output for the pinned commit: sha256 `44cdd79bcb2c8833b69d3fe7c69e4e4f77628df002dcb87d3c7b86998235fe45` (10 joints, 11 links; the script prints `expanded_urdf_sha256` and records it in `ASSET_TREE.json`). Joints `wheel_left_joint` / `wheel_right_joint` must exist after expansion, or the script stops before the import |
 | Importer | `standalone_examples/api/isaacsim.asset.importer.urdf/urdf_import.py` of Isaac Sim 6.0.1, headless, options as in `import_waffle_pi.sh` (force drives, velocity targets, stiffness 0, no fixed base, no mesh merging, PhysX + multi-physics conversion) |
 | Overlay | `pail_tb3_waffle_pi.usda` (this directory): references the converted `turtlebot3_waffle_pi/turtlebot3_waffle_pi.usda`, selects the PhysX variant and sets **test-only** wheel drives: stiffness 0, damping 1 N·m·s/rad (`0.01745329252` in USD degree units), max force 1 N·m, targets 0 |
-| Expected result (6.0.1, measured twice 2026-10-17 on one L40S host from the expanded URDF above) | 10 files; `assets_sha256_normalized = 3d46465df837ab948e67d5cb123fb68f003d08785d3a13e5d07269e24baed799`; `semantics_sha256 = 87249d4e3d050c7d7e39d226d6923446eebdae39ed9621c4d21481f1ad5bf754`; entry file `pail_tb3_waffle_pi.usda`; composed stage 49 prims; joints `camera_joint`, `caster_back_left_joint`, `caster_back_right_joint`, `scan_joint`, `wheel_left_joint`, `wheel_right_joint` (the converted tree, overlay excluded, defines the two wheel joints under their plain names); 4 meshes (`waffle_pi_base` 76,915 points / 157,576 faces, `lds` 7,231 / 14,566, `left_tire` and `right_tire` 10,812 / 21,672 each); link masses `base_link` 1.372909546 kg, `base_scan` 0.114, `wheel_*_link` 0.02849894, `caster_back_*_link` 0.005; radius 0.033 m, separation 0.288 m (profile: 33000 µm / 288000 µm). The same values came out of two independent imports made by the preview.16 evaluator from the same inputs on 2026-10-17 (their trees differed under the preview.16 normalization) |
+| Expected result (6.0.1, measured twice 2026-10-17 on one L40S host from the expanded URDF above) | 10 files; `assets_sha256_normalized = 3d46465df837ab948e67d5cb123fb68f003d08785d3a13e5d07269e24baed799`; `semantics_sha256 = 87249d4e3d050c7d7e39d226d6923446eebdae39ed9621c4d21481f1ad5bf754`; entry file `pail_tb3_waffle_pi.usda`; composed stage 49 prims; joints `camera_joint`, `caster_back_left_joint`, `caster_back_right_joint`, `scan_joint`, `wheel_left_joint`, `wheel_right_joint` (the converted tree, overlay excluded, defines the two wheel joints under their plain names); 4 meshes (`waffle_pi_base` 76,915 points / 157,576 faces, `lds` 7,231 / 14,566, `left_tire` and `right_tire` 10,812 / 21,672 each); link masses `base_link` 1.372909546 kg, `base_scan` 0.114, `wheel_*_link` 0.02849894, `caster_back_*_link` 0.005; radius 0.033 m, separation 0.288 m (profile: 33000 µm / 288000 µm). The same values came out of two independent imports made from the same inputs on 2026-10-17 (their trees differed under the preview.16 normalization) |
 
 Run (absolute or relative paths; the output directory must not exist):
 
@@ -34,10 +34,9 @@ hashes and a semantic summary:
   file by raw bytes. This is the value to compare with the expected result
   above and across your own runs; it was measured twice here and agreed. A
   different importer version may still produce different content; record your
-  values with your evidence instead of editing the expected ones. (The
-  preview.15/16 recipe normalized only the first scratch path and hashed the
-  crate bytes, so its value `c7c07021…` was not reproducible — preview.16
-  evaluation finding P16-M1.)
+  values with your evidence instead of editing the expected ones. (An
+  earlier recipe normalized only the first scratch path and hashed the
+  crate bytes, so its value `c7c07021…` was not reproducible.)
 - `semantics` / `semantics_sha256` — what the gate's test depends on, read from
   the composed stage (instance proxies included): joint prim names, prim count,
   mesh point/face counts, link masses.
@@ -64,7 +63,7 @@ against the URDF (max error 2.4e-9 kg·m²).
 - `make_isaac_profile.py` and `session.py doctor` refuse a tree in which the
   profile's wheel joints are not defined under their plain names (overlay
   excluded) — a tree imported from the unexpanded xacro file fails here instead
-  of at the endpoint (`KeyError: 'wheel_left_joint'`, preview.15 P15-M1/L2).
+  of at the endpoint (`KeyError: 'wheel_left_joint'`).
   Refusals are one line on stderr (`refused: …`), rc 1.
 - The endpoint rejects embedded OmniGraph nodes and nonzero initial drive
   targets; the importer output has none, the overlay keeps targets at 0.

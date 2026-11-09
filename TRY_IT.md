@@ -223,10 +223,8 @@ reviewed logs/verdicts/journal and public verification material, never an entire
   offline declaration checkers and a fixture writer, runs them outside the tree, and
   makes them fail on purpose — [walkthrough](examples/robotops/README.md). Nothing in
   it talks to a robot, and a PASS is not an authority to apply anything.
-- **Original internal web demo:** not included; this release does not promise a separate
-  available demo repository or the separate internal demo UI.
 - **Optional observation UI:** `cloud/cmd/pail_telemetryd` source is included in this
-  candidate. It defaults to English; select 한국어 in the header for Korean. It is not the original complete demo and not
+  release. It defaults to English; select 한국어 in the header for Korean. It is an observation view, not
   an authorization control plane. This inclusion does not settle future commercial UI scope.
 
 Use CLI evidence first. You do not need a browser or a locally installed Go compiler

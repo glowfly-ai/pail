@@ -1,6 +1,6 @@
 # Verify this preview distribution
 
-[VERSION](VERSION) identifies the candidate. [CHANGELOG.md](CHANGELOG.md) describes changes.
+[VERSION](VERSION) identifies the release. [CHANGELOG.md](CHANGELOG.md) describes changes.
 <!-- release-identity:delivery:start -->
 Public release: **`0.2.0`**. Four separate artifacts per architecture; the Linux ARM64 set:
 
@@ -79,7 +79,7 @@ publisher's key signed these bytes; SBOM completeness and byte-reproducible buil
 separate properties, and this document does not claim they are complete.
 
 The publisher uses a new clean public history, not a copy of private development Git
-objects. No `.git` directory is required inside a source ZIP. Retain the candidate
+objects. No `.git` directory is required inside a source ZIP. Retain the release
 ID, ZIP digest, commands, image IDs and reviewed evidence when reporting results.
 
 The executable-specific boundary is in [ISSUER_EVALUATION.md](ISSUER_EVALUATION.md).
@@ -135,13 +135,13 @@ mode rule. Validate the final ZIP with Linux `unzip`, not only a source checkout
 
 Runtime permission checks cover both producer and consumer UIDs, including ancestor
 directory traversal, not just archive file modes. Run the TB3 test with both umask
-022 and 077 on a real Linux filesystem before treating a candidate's access checks
+022 and 077 on a real Linux filesystem before treating a release's access checks
 as complete. A clock prerequisite failure is not a successful functional test.
 
 
 ## Release identity contract
 
-`release.json` is the single source for the candidate ID, archive basename and top folder.
+`release.json` is the single source for the release ID, archive basename and top folder.
 VERSION and the marked command blocks above are generated from it. Run
 `python3 scripts/release_identity.py` from the extracted root to check their agreement.
 The verifier also binds manifest identity to these files; `--expected-release` specifies

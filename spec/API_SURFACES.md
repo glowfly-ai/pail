@@ -494,7 +494,7 @@ conforming nonces.
 
 <!-- source: sdk/proto/robot_ops_service.proto -->
 
-Since rc20 the tree also ships `sdk/proto/robot_ops_service.proto` (package
+The tree also ships `sdk/proto/robot_ops_service.proto` (package
 `pail.robotops.v1`, Apache-2.0) with three more gRPC services. They are not a
 fifth surface in the sense of §1: none of them is needed to integrate a fleet
 manager, a reader or a safety adapter, and all of them are disabled unless the

@@ -125,7 +125,7 @@ open the public socket makes the run `BLOCKED` at the adapter readiness deadline
 Three steps that turn this into evidence. Every block from here on is a subshell that
 starts from `$EVAL` (§1), stops at its first error and leaves your shell where it was, so
 the blocks can be pasted **in this order into one shell**; that is exactly how the
-maintainers run them — as one script, before a candidate is packaged. Each step has its
+maintainers run them — as one script, before a release is packaged. Each step has its
 own working directory and refuses to reuse one that already exists. The blocks are not
 indented, so a copy from the raw `README.md` runs as well as one from a rendered page.
 
@@ -181,7 +181,7 @@ and rebuilds, so the working copy ends healthy and `/tmp/defective-pail-duckd` i
 defective file. Expected: `RESULT=FAIL` (the block's exit status is 1 for that reason)
 with **exactly these eight** cases red — CA-01..06, 09, 10, the ones where a BLOCK on a MOVE
 must keep bytes from the robot. CA-13 stays green: it is a skill call (`robot.do`), and the
-defect ignores BLOCK on the MOVE arm only (earlier candidates listed it among the red cases
+defect ignores BLOCK on the MOVE arm only (an earlier build listed it among the red cases
 because the previous case's unspent lease leaked into it; each case is now isolated). CA-08
 (deadman timing) can additionally come out red or `INCONCLUSIVE` on a loaded host for a
 reason unrelated to the defect; it passes with the healthy binary. Keep both run.json files; their `custom_adapter.sha256` differ.

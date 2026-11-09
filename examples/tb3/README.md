@@ -185,7 +185,7 @@ braking performance.
 One runtime ERR_CLOCK_DRIFT was observed on 2026-09-14 during RPi clock adjustment and
 has not reproduced since. Do not disable clock checks, extend authorization bounds or
 reset an issuer journal to turn such a refusal into a pass. Record the exact error and
-clocks; the candidate feedback should distinguish prerequisites from functional verdicts.
+clocks; evaluation feedback should distinguish prerequisites from functional verdicts.
 
 ## Image retention
 

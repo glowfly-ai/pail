@@ -123,9 +123,8 @@ access control is not a bypass barrier.
 ## More ways to run it
 
 Read [TRY_IT.md](TRY_IT.md) for host prerequisites, Windows/WSL limitations,
-CLI versus web-demo scope, per-run evidence, and the optional local observation UI.
+CLI versus observation-UI scope, per-run evidence, and the optional local observation UI.
 No TB3 or Anchor SaaS account is needed for the software tests. The included observation UI defaults to English with a Korean language option.
-The TurtleBot3 live demo below is included; the original internal web demo is not.
 
 ### TurtleBot3 base reference
 

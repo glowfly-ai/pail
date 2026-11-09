@@ -52,7 +52,7 @@ python3 session.py export  --state /persistent/isaac-run1 --dest /persistent/isa
 ```
 
 - **Cold start:** a fresh state compiles shaders; expect **about 9–10 minutes** to `READY_LOCKED` on the L40S. With a seeded compiled cache it took about 40–60 s. The matrix driver copies a cache with `--cache-seed <…/kit/cache>` (a cache from the same image/driver only; never settings, logs, identities or control state). For a single session, seed `<state>/sim-cache/kit/cache` the same way before `serve`.
-- **One exercise per state.** After the cancel the controller status is `EXERCISE_COMPLETE` (preview.14 reported `FAULT_LOCKED` here, which looked like a failure in scripts). `stop` now waits for the durable summary, so `export` can follow immediately; `status` shows `STOPPED` when the controller has exited.
+- **One exercise per state.** After the cancel the controller status is `EXERCISE_COMPLETE` (an earlier build reported `FAULT_LOCKED` here, which looked like a failure in scripts). `stop` now waits for the durable summary, so `export` can follow immediately; `status` shows `STOPPED` when the controller has exited.
 - **Image IDs** differ between Docker storage drivers (containerd store vs overlay2); compare through `load`/the lock, not by eye.
 
 ## Full matrix
@@ -85,4 +85,4 @@ is still billed while stopped.
 
 ## Post-stop observation limitation
 
-The classifier label `body_reading_jitter` is a legacy observation category, **not a demonstrated cause**. The preview.46 raw trajectory shows a persistent pose micro-step with correlated SDK angular velocity and wheel-angle changes; contact/friction/solver cause is unverified. The original INCONCLUSIVE is retained. Another threshold exceedance at 2.817 s was outside the fixed two-second verdict window. That window is not a claim about the entire post-lock interval. Three later PASS trials do not erase the original event. Numerical criteria and authorization checks are unchanged.
+The classifier label `body_reading_jitter` is a legacy observation category, **not a demonstrated cause**. The raw trajectory of the INCONCLUSIVE run shows a persistent pose micro-step with correlated SDK angular velocity and wheel-angle changes; contact/friction/solver cause is unverified. The original INCONCLUSIVE is retained. Another threshold exceedance at 2.817 s was outside the fixed two-second verdict window. That window is not a claim about the entire post-lock interval. Three later PASS trials do not erase the original event. Numerical criteria and authorization checks are unchanged.

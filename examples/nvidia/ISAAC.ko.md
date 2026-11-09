@@ -57,10 +57,10 @@ normal/cancel 검사는 실제 수평 pose 변화·속도와 관절/차체 정�
 - 보안 namespace를 유지하기 위해 public streaming을 열지 않는다. 화면 viewer가 필요한 경우 별도 네트워크 설계/검증을 한다. root/privileged로 자동 전환하지 않는다.
 - SDK endpoint만8CPU/24GiB/단일 GPU 요청/cache mount를 추가한다. 다른 역할의 키·namespace·mount 경계는 유지한다.
 
-운영 참고(preview.14 2단계 평가 반영): ① 새 상태의 콜드 스타트는 셰이더 컴파일 때문에 L40S 에서 **약 9~10분**이 걸리고, 같은 이미지·드라이버에서 컴파일한 캐시를 `--cache-seed <…/kit/cache>`(행렬) 또는 `<state>/sim-cache/kit/cache` 에 미리 복사하면 40~60 s 다. ② 정상 취소 뒤 컨트롤러 상태는 `EXERCISE_COMPLETE` 이고 `stop` 은 요약 파일이 기록된 뒤 돌아오므로 바로 `export` 해도 된다. ③ SDK 이미지는 [`sim/sdk/SDK_IMAGE.md`](sim/sdk/SDK_IMAGE.md)(고정 digest·NGC 로그인 포함), 자산은 [`sim/assets/ASSETS.md`](sim/assets/ASSETS.md)(importer 실행 스크립트·시험용 구동 덧씌우기·기대 해시) 로 재현한다. ④ 이미지 ID 는 저장소 방식(containerd vs overlay2)에 따라 다르게 보이므로 눈으로 비교하지 말고 `load`/lock 검사로 비교한다. 영문판: [ISAAC.md](ISAAC.md).
+운영 참고: ① 새 상태의 콜드 스타트는 셰이더 컴파일 때문에 L40S 에서 **약 9~10분**이 걸리고, 같은 이미지·드라이버에서 컴파일한 캐시를 `--cache-seed <…/kit/cache>`(행렬) 또는 `<state>/sim-cache/kit/cache` 에 미리 복사하면 40~60 s 다. ② 정상 취소 뒤 컨트롤러 상태는 `EXERCISE_COMPLETE` 이고 `stop` 은 요약 파일이 기록된 뒤 돌아오므로 바로 `export` 해도 된다. ③ SDK 이미지는 [`sim/sdk/SDK_IMAGE.md`](sim/sdk/SDK_IMAGE.md)(고정 digest·NGC 로그인 포함), 자산은 [`sim/assets/ASSETS.md`](sim/assets/ASSETS.md)(importer 실행 스크립트·시험용 구동 덧씌우기·기대 해시) 로 재현한다. ④ 이미지 ID 는 저장소 방식(containerd vs overlay2)에 따라 다르게 보이므로 눈으로 비교하지 말고 `load`/lock 검사로 비교한다. 영문판: [ISAAC.md](ISAAC.md).
 
 위 측정 조합 밖의 GPU/asset/ROS/SROS2 compatibility 는 **NOT_RUN** 이다. 준비/실행 오류를 `hardware_verified=true` 로 바꾸거나 root·Permissive fallback 으로 우회하지 않는다. 결과를 회수한 뒤 Brev VM Stop 도 별도로 수행해야 비용이 끝난다. 전체 행렬은 `check_isaac_matrix.py --with-fixture` 로 돌리고 `suite.json` 의 verdict 를 읽는다. fixture 실행(`prepare --fixture`)은 Sim 전용 대조군이며 지원 주장에 합산하지 않는다.
 
 ## 정지 후 관측 한계
 
-`body_reading_jitter`는 기존 판정기의 관측 분류명이며 **입증된 원인이 아닙니다**. preview.46 원시 기록에는 SDK 각속도·바퀴각 변화와 함께 지속되는 자세의 미세 계단이 있습니다. 접촉·마찰·솔버 원인은 미확정이며 원래 INCONCLUSIVE를 유지합니다. 잠금 뒤 2.817초의 추가 기준 초과는 고정 2초 판정 창 밖에 있습니다. 이 창은 잠금 이후 전체 구간에 대한 보장이 아닙니다. 이후 3회 PASS로 최초 사건을 지우지 않습니다. 수치 기준과 인가 검사는 변경하지 않았습니다.
+`body_reading_jitter`는 기존 판정기의 관측 분류명이며 **입증된 원인이 아닙니다**. INCONCLUSIVE 실행의 원시 기록에는 SDK 각속도·바퀴각 변화와 함께 지속되는 자세의 미세 계단이 있습니다. 접촉·마찰·솔버 원인은 미확정이며 원래 INCONCLUSIVE를 유지합니다. 잠금 뒤 2.817초의 추가 기준 초과는 고정 2초 판정 창 밖에 있습니다. 이 창은 잠금 이후 전체 구간에 대한 보장이 아닙니다. 이후 3회 PASS로 최초 사건을 지우지 않습니다. 수치 기준과 인가 검사는 변경하지 않았습니다.

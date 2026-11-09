@@ -15,7 +15,7 @@ GPU VM을 생성하거나 과금하는 도구가 아니다. 기존 mock/Jetson �
 python3 brev_preflight.py --state-parent /home/ubuntu/workspace --output /home/ubuntu/workspace/preflight.json
 ```
 
-`preflight=PASS`라도 `support_status=UNVERIFIED`다. L40S 후보1개, Linux amd64, 최소8vCPU/32GiB RAM/200GiB free를 확인하며 권장은16vCPU/64GiB/500GiB다. 실제 제공되는 RAM/SSD의 단위 및 OS 오버헤드를 확인한다. 다른 GPU를 임의로 지원된 것으로 바꾸지 않는다.
+`preflight=PASS`라도 `support_status=UNVERIFIED`다. L40S 인스턴스 1개, Linux amd64, 최소8vCPU/32GiB RAM/200GiB free를 확인하며 권장은16vCPU/64GiB/500GiB다. 실제 제공되는 RAM/SSD의 단위 및 OS 오버헤드를 확인한다. 다른 GPU를 임의로 지원된 것으로 바꾸지 않는다.
 
 ## 실제 SDK smoke 후보
 
@@ -27,7 +27,7 @@ docker run --rm --gpus all --network none -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=N 
   pail/isaac-sim:6.0.1-security-candidate /pail/sim/isaac_smoke.py --output /out/sdk-smoke.json
 ```
 
-smoke 는 결과를 Kit 종료 **전에** 기록하고 로컬 바닥 평면을 쓰므로 네트워크가 필요 없다(preview.14 평가에서 원격 바닥 자산 때문에 결과 없이 rc 0 으로 끝난 문제를 고쳤다). 영문판: [BREV.md](BREV.md).
+smoke 는 결과를 Kit 종료 **전에** 기록하고 로컬 바닥 평면을 쓰므로 네트워크가 필요 없다(원격 바닥 자산 때문에 결과 없이 rc 0 으로 끝나던 문제를 고친 것이다). 영문판: [BREV.md](BREV.md).
 
 6.0.1 upstream의 legacy core API 경로를 근거로 작성했으며 GPU에서 아직 미검증이다. PASS의 범위는 실제 pose 변화 및 렌더 step 요청뿐이다. 화면 픽셀, 스트리밍, PAIL 인가, ROS, SROS2, 물리 정지를 증명하지 않는다. smoke 실행은 실제 PAIL 통합 구현을 대신하지 않는다.
 

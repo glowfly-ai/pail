@@ -187,7 +187,6 @@ PAIL_E2E_STATE=/tmp/my-pail-e2e-first bash e2e/run_e2e.sh
 - **오프라인 로봇 운영 예제:** `examples/robotops/`, 포함. 오프라인 선언 검사기 둘과 fixture 생성기를
   빌드해 트리 밖에서 돌리고 일부러 붉혀 본다 — [따라 하기](examples/robotops/README.ko.md).
   로봇에 닿는 것은 없고, PASS 는 무엇을 적용할 권한이 아니다.
-- **기존 내부 전체 웹 데모:** 미포함. 별도 공개 데모 저장소가 이미 있다는 뜻도 아님.
 - **선택적 관측 UI:** `cloud/cmd/pail_telemetryd`. 영어 기본·한국어 선택. 인가 제어면이 아니며 상용 UI 범위를 확정하지 않음.
 
 Docker 시험 두 경로에는 호스트 Go 컴파일러나 브라우저가 필요하지 않습니다.

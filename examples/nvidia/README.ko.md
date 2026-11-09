@@ -3,7 +3,7 @@
 
 > 이 한국어판은 영문판보다 절·표·코드 블록이 적은 요약본이다. 영문판이 정본이며, 두 판이 다르면 영문판이 우선한다.
 
-**NVIDIA/Jetson/Isaac Sim 일반 지원 주장이 아니며** NVIDIA 인증·보증을 뜻하지 않습니다. 0.2.0-preview.14 기준 측정 범위는 두 가지입니다. ① Jetson Orin Nano Super 네이티브 CPU 참조(v3, 7/7 시나리오·8시간 분할 반복, GPU 없음), ② **Brev L40S VM 1대**(Ubuntu 24.04, 드라이버 580.173, Isaac Sim 6.0.1 파생 이미지, TurtleBot3 Waffle Pi USD)에서의 v4 실제 Isaac Sim endpoint. 지원 행렬과 미해결 사항은 [Isaac Sim 안내](ISAAC.ko.md)를 보십시오. Isaac Sim 이미지는 배포하지 않으며 [`sim/sdk/`](sim/sdk/SDK_IMAGE.md)의 레시피로 직접 파생합니다.
+**NVIDIA/Jetson/Isaac Sim 일반 지원 주장이 아니며** NVIDIA 인증·보증을 뜻하지 않습니다. 측정 범위는 두 가지입니다. ① Jetson Orin Nano Super 네이티브 CPU 참조(v3, 7/7 시나리오·8시간 분할 반복, GPU 없음), ② **Brev L40S VM 1대**(Ubuntu 24.04, 드라이버 580.173, Isaac Sim 6.0.1 파생 이미지, TurtleBot3 Waffle Pi USD)에서의 v4 실제 Isaac Sim endpoint. 지원 행렬과 미해결 사항은 [Isaac Sim 안내](ISAAC.ko.md)를 보십시오. Isaac Sim 이미지는 배포하지 않으며 [`sim/sdk/`](sim/sdk/SDK_IMAGE.md)의 레시피로 직접 파생합니다.
 
 ### Jetson 반복시험의 컨테이너 CPU·메모리
 

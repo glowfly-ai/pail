@@ -85,7 +85,6 @@ retain its reason; SKIP is neither a failure nor evidence of a successful test.
 | Anchor SaaS server | Offered as a hosted service; the public formats and verification inputs it speaks are in `spec/` |
 | Issuer replication and standby | The evaluation issuer is single-node and refuses `PAIL_HA_*` replication settings at startup |
 | Design rationale and field evidence | What the public needs is in `spec/`, the README and `KNOWN_ISSUES.md` |
-| Complete internal web demo | Not included; [TRY_IT.md](TRY_IT.md) distinguishes CLI examples and the optional observation UI |
 | Operator-owned deployment layers | See [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) §3 |
 
 The [README](README.md) describes the public scope. The local authorization example does

@@ -1,8 +1,8 @@
 # NVIDIA platform preparation (experimental)
 
-This is **not a general claim of NVIDIA/Jetson/Isaac Sim compatibility** and no official NVIDIA certification or endorsement is implied. Measured scope as of 0.2.0-preview.14: the v3 role-isolated CPU reference on a Jetson Orin Nano Super (native, 7/7 scenarios and an 8-hour segmented soak, no GPU) and the v4 actual Isaac Sim endpoint on **one Brev L40S VM** (Ubuntu 24.04, driver 580.173, Isaac Sim 6.0.1 derivative image, TurtleBot3 Waffle Pi USD). See [the Isaac Sim guide](ISAAC.md) (Korean: [ISAAC.ko.md](ISAAC.ko.md)) for the support matrix and open findings.
+This is **not a general claim of NVIDIA/Jetson/Isaac Sim compatibility** and no official NVIDIA certification or endorsement is implied. Measured scope: the v3 role-isolated CPU reference on a Jetson Orin Nano Super (native, 7/7 scenarios and an 8-hour segmented soak, no GPU) and the v4 actual Isaac Sim endpoint on **one Brev L40S VM** (Ubuntu 24.04, driver 580.173, Isaac Sim 6.0.1 derivative image, TurtleBot3 Waffle Pi USD). See [the Isaac Sim guide](ISAAC.md) (Korean: [ISAAC.ko.md](ISAAC.ko.md)) for the support matrix and open findings.
 
-## Support matrix (0.2.0-preview.14)
+## Support matrix
 
 | Profile | Architecture | What was measured | Not claimed |
 |---|---|---|---|

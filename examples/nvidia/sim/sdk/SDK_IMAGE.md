@@ -36,11 +36,11 @@ docker build --build-arg PAIL_GATE_IMAGE=pail/core-tb3-gate:<release>-amd64 --bu
 docker image inspect pail/isaac-sim:6.0.1-security-candidate --format '{{.Id}} {{json .Config.Labels}}'
 ```
 
-Record both image IDs with your evidence. The images measured for the
-0.2.0-preview.14 matrix (`8217a328…` readable, `0825f6ee…` security-candidate)
+Record both image IDs with your evidence. The images measured for an
+earlier pre-release matrix (`8217a328…` readable, `0825f6ee…` security-candidate)
 were built before the provenance labels existed, so IDs built from these files
 differ from them by the label layer only; the overlaid bytes are identical (an
-independent rebuild against the preview.14 gate reproduced `0825f6ee…`).
+independent rebuild against that pre-release gate reproduced `0825f6ee…`).
 
 ## Terms and limits
 

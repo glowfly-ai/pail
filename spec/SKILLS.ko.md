@@ -51,7 +51,7 @@
 
 공개 루트에서 `python3 spec/tools/spec_skills_check.py`를 실행한다.
 이 문서의 필드, Go/C++ 파서, 동봉 예제를 대조한다. 종료코드는 통과 0, 불일치 1,
-전제조건을 확인하지 못함 2다. 내부 검사기나 비공개 문서는 필요 없다.
+전제조건을 확인하지 못함 2다. 다른 검사기나 문서는 필요 없다.
 
 동봉 예제는 `config/skills.diff_drive_amr.yaml`이다. Microduck/Viam 예제는 별도
 어댑터 배포 대상이며 TB3 참조의 필수 입력이 아니다.

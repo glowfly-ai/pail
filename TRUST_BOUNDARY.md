@@ -271,7 +271,7 @@ What the evidence layer gives is "this value came from this signer at this time 
 
 **Delegated to**  Adopter (operating organization: retention period, capacity rule, archive location, free-space monitoring)  ·  **Layer** `evidence` / `cloud`
 
-Segments are hash-chained with signed checkpoints; moving whole older segments to an archive leaves the verifier reporting a missing older segment as a NOTE while verifying the rest. Measured growth: about 1.5 MB per TurtleBot3 judge run, about 45 MB per hour of continuous judging (preview.39 evaluation P39-N1).
+Segments are hash-chained with signed checkpoints; moving whole older segments to an archive leaves the verifier reporting a missing older segment as a NOTE while verifying the rest. Measured growth: about 1.5 MB per TurtleBot3 judge run, about 45 MB per hour of continuous judging.
 
 > **If the delegation fails** a full disk stops issuance — the ledger's integrity does not break.
 
@@ -281,7 +281,7 @@ Segments are hash-chained with signed checkpoints; moving whole older segments t
 
 **Delegated to**  Adopter (base-image rebase and rebuild cadence, own vulnerability policy)  ·  **Layer** `runtime` / `cross`
 
-The bundled scan_vulnerabilities.py lets a recipient rescan against a newer database. The publisher refreshes the base digest per candidate to remove fixable advisories (preview.41: perl-base 5.36.0-7+deb12u4).
+The bundled scan_vulnerabilities.py lets a recipient rescan against a newer database. The publisher refreshes the base digest per release to remove fixable advisories (for example perl-base 5.36.0-7+deb12u4).
 
 > **If the delegation fails** advisories of libraries the PAIL processes do not use remain in the image scan counts — PAIL's behaviour and evidence are unaffected.
 

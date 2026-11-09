@@ -78,7 +78,7 @@ GATE_DECISION, CHAIN_REVOKED, CHECKPOINT, RECOVERY_TRUNCATE, SAFE_STOP, OPERATOR
 GRAPH_MUTATION, CONTEXT_PROVENANCE, ATTESTATION, CONFIG_SEALED, LEASE_GRANTED,
 LEASE_RECONCILED, FLEET_CENSUS, LEASE_RETRACTED, HA_MEMBERSHIP, IDENTITY_REFUSED,
 CORE_OPERATION and CORE_REPORT (the C1 basic-communication receipts, kinds 100 and 101,
-named from preview.38; rows an older mirror indexed as TYPE_100 or TYPE_101 take these
+rows an older mirror indexed as TYPE_100 or TYPE_101 take these
 names on re-index). Unknown types are retained, not discarded.
 
 Requester identity comes from the transport identity mapped by the requester registry,

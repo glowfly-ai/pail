@@ -32,17 +32,37 @@ jobs:
 
       - name: Positive control - stale release document
         run: |
+          set -euo pipefail
           python3 - <<'PY'
-          import pathlib, shutil, subprocess, sys, tempfile
+          import json, pathlib, re, shutil, subprocess, sys, tempfile
+          NAME = 'Positive control - stale release document'
+          # Every file release_identity.py reads under --root. A missing one is `RELEASE_IDENTITY: FAIL` rc 1 as
+          # well, and this control confirmed itself through exactly that from the moment CHANGELOG.md joined the
+          # checker until 2026-11-09 (tests/contract keeps this list equal to what the checker reads).
+          FILES = ['release.json', 'VERSION', 'RELEASE.md', 'CHANGELOG.md']
           with tempfile.TemporaryDirectory(prefix='pail-release-control-') as work:
               root = pathlib.Path(work)
-              for name in ['release.json', 'VERSION', 'RELEASE.md']:
+              for name in FILES:
                   shutil.copy2(name, root / name)
+              # The stale document is derived from release.json, not from a phrase of RELEASE.md: the generated
+              # delivery block names an earlier candidate, the shape of a tree whose version was bumped without
+              # regenerating the document. An anchor taken from the prose aged with the prose (0 replacements
+              # from preview.42 on) and left the control measuring nothing.
+              release = json.load(open('release.json', encoding='utf-8'))['release_id']
               p = root / 'RELEASE.md'
-              p.write_text(p.read_text().replace('public-candidate-', 'previous-candidate-'))
-              result = subprocess.run([sys.executable, 'scripts/release_identity.py', '--root', str(root)])
-              if result.returncode != 1:
-                  raise SystemExit('Stale release document was not rejected')
+              doc = p.read_text(encoding='utf-8')
+              m = re.search(r'<!-- release-identity:delivery:start -->.*?<!-- release-identity:delivery:end -->', doc, re.S)
+              if not m or release not in m.group(0):
+                  raise SystemExit('Cannot construct/validate CI control - ' + NAME)
+              p.write_text(doc[:m.start()] + m.group(0).replace(release, '0.0.0-preview.0') + doc[m.end():], encoding='utf-8')
+              r = subprocess.run([sys.executable, 'scripts/release_identity.py', '--root', str(root)],
+                                 capture_output=True, text=True)
+              out = r.stdout + r.stderr
+              sys.stdout.write(out)
+              # rc 1 alone is not a detection: the finding has to be the one this control provokes.
+              if r.returncode != 1 or 'RELEASE.md delivery commands disagree with release.json' not in out:
+                  raise SystemExit('Unexpected result (rc=%d, want 1 with the stale-document finding) - %s. Inspect the preceding command output.' % (r.returncode, NAME))
+              print('Positive control confirmed - ' + NAME)
           PY
 
       - name: Positive control - stale vector set hash

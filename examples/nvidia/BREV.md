@@ -11,7 +11,7 @@ python3 brev_preflight.py --state-parent /home/ubuntu/workspace --output /home/u
 ```
 
 `preflight=PASS` still means `support_status=UNVERIFIED`. It checks one L40S
-candidate, native Linux amd64 (the Docker daemon architecture, the same check
+instance, native Linux amd64 (the Docker daemon architecture, the same check
 the evaluation CLI applies as `ARCH_MISMATCH`), at least 8 vCPU / 32 GiB RAM /
 200 GiB free (recommended 16 vCPU / 64 GiB / 500 GiB), Compose and GPU
 visibility. It requires a new output file and does not judge cost, port access,

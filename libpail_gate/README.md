@@ -82,7 +82,7 @@ Tests: `step_clock` reproduces wall shifts using the session seam; Linux-only
 C++ session and C ABI. It does not change host time. `gate_two_doors` also runs with the real
 OS clock. A fresh session has no active permit; this is not a new persistent replay store.
 
-## Signed-keyring remaining lifetime (preview.12)
+## Signed-keyring remaining lifetime
 
 The C++ loader checks `expires_at - now` at load against
 `PAIL_KEYRING_MAX_LIFETIME_SEC` (default 86400 seconds when unset). Explicit
