@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/glowfly/pail/services/internal/blackbox"
+
+	"github.com/glowfly/pail/services/internal/telemetry"
 )
 
 // CheckReport is the outcome of CheckOrigins.
@@ -132,7 +134,22 @@ func diffRow(a, b Row) string {
 // Rebuild uses a side-by-side index; only a complete, checked SQLite file is
 // published. The previous index and its WAL files remain as rollback evidence.
 // Callers must close their existing index handles before explicit rebuilding.
+//
+// Rebuild keeps every row (the configuration of an unconfigured handle);
+// the collector rebuilds with RebuildWithStorage.
 func Rebuild(path, blackboxDir, telemetryDir string, now time.Time) (*DB, ChainStatus, TelemetryStatus, error) {
+	return rebuild(path, blackboxDir, telemetryDir, now, nil)
+}
+
+// RebuildWithStorage rebuilds under a storage configuration (OBS-RET): lines
+// older than its retention window are not indexed, so rebuilding over a long
+// history of raw files costs what the window holds, not what the files hold.
+// The returned handle carries the same configuration.
+func RebuildWithStorage(path, blackboxDir, telemetryDir string, now time.Time, c telemetry.StorageConfig) (*DB, ChainStatus, TelemetryStatus, error) {
+	return rebuild(path, blackboxDir, telemetryDir, now, &c)
+}
+
+func rebuild(path, blackboxDir, telemetryDir string, now time.Time, c *telemetry.StorageConfig) (*DB, ChainStatus, TelemetryStatus, error) {
 	building := path + ".building"
 	if _, err := os.Stat(building); !os.IsNotExist(err) {
 		return nil, ChainStatus{}, TelemetryStatus{}, fmt.Errorf("INDEX_BUILDING_EXISTS: inspect previous build")
@@ -140,6 +157,12 @@ func Rebuild(path, blackboxDir, telemetryDir string, now time.Time) (*DB, ChainS
 	d, err := Open(building)
 	if err != nil {
 		return nil, ChainStatus{}, TelemetryStatus{}, err
+	}
+	if c != nil {
+		if err = d.ConfigureStorage(*c); err != nil {
+			d.Close()
+			return nil, ChainStatus{}, TelemetryStatus{}, err
+		}
 	}
 	cs, ts, err := d.Ingest(blackboxDir, telemetryDir, now)
 	if err == nil {
@@ -165,6 +188,9 @@ func Rebuild(path, blackboxDir, telemetryDir string, now time.Time) (*DB, ChainS
 	d, err = Open(path)
 	if err == nil {
 		d.observationReady.Store(true)
+		if c != nil {
+			err = d.ConfigureStorage(*c)
+		}
 	}
 	return d, cs, ts, err
 }

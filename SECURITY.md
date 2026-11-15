@@ -39,7 +39,7 @@ Reports are handled in the order received. The reporting deadlines of §1a are
 set by law and do not depend on this table.
 
 **Without reproduction information we cannot reproduce.** Send at least the
-deployment shape (SROS2 or not, HA or not, the `PAIL_PROFILE` value) and the
+deployment shape (SROS2 or not, the `PAIL_PROFILE` value) and the
 observed log lines.
 
 ### 1a. CRA clock (from 2026-09-11)
@@ -170,21 +170,15 @@ statements.** This table is the list of the points where the two part.
 ### 4.2 Durability model — what is on disk, when
 
 > **Durability model.** The PAIL issuer appends the authorization record to
-> the journal before the issuance response (issuer-first). What "append"
-> means depends on the deployment shape.
-> **(a) In a replicated deployment** (the evaluation issuer is single-node and
-> refuses `PAIL_HA_*` settings at startup), the response
-> returns only after the standby node has fsynced those bytes and passed chain
-> verification.
-> **(b) In a single-node deployment** — the only shape this distribution
-> builds — the bytes are handed to the operating
-> system and are **fsynced at checkpoint time (default: every 1000 records
-> or every 60 seconds).**
-> Therefore, on sudden power loss in a single-node deployment, **records
+> the journal before the issuance response (issuer-first). The issuer of
+> this distribution runs as a single node: the bytes are handed to the
+> operating system and are **fsynced at checkpoint time (default: every
+> 1000 records or every 60 seconds).**
+> Therefore, on sudden power loss, **records
 > after the last checkpoint can be lost** — at the defaults above, up to
 > 1000 records or 60 seconds' worth. For the lost span, issuer-first does
 > not hold at the disk level.
-> A deployment that cannot accept this bound must use a replicated issuer or lower
+> A deployment that cannot accept this bound must lower
 > `CheckpointEveryRecords`.
 
 **We state the verification range of this paragraph.** What we measured is
@@ -207,8 +201,8 @@ a pass.
   authorization record as `evidence_provenance: "unenforced"` — so that the
   verdict cannot later be read as "rendered on verified evidence."
 - **Transport protection outside the control plane.** In the production
-  profile PAIL refuses plaintext TCP on the control-plane gRPC (`S4`; a unix
-  socket protected by file permissions is the exception). It does **not**
+  profile PAIL refuses plaintext TCP on the control-plane gRPC (`S4`, with or
+  without a unix socket configured beside it). It does **not**
   inspect the Vault or Anchor URLs — `S12` exists in the design only. Nor
   does it enforce certificate-verification policy, internal-CA trust stores,
   or certificate lifetimes on any leg. All of that is the deploying
@@ -251,7 +245,7 @@ one row per delegation. Each row's verdict is exactly one of four:
 | # | Delegation | O-2 method | Measured | Verdict |
 |---|---|---|---|---|
 | L1 | Legitimacy of whoever holds a signing key | Present a token signed with a key not in the trust list | The gate refuses. `test_gate_failclosed` 5 cases / 0 failed, `internal/token` ok. In addition, the startup banner names committed dev keys **by name and sha256** (`S8`) | **observed** |
-| L2 | Key distribution, revocation, and rotation | Present a token signed with a revoked `key_id` | `keyring.json` and the keyring bundle have **no** revocation or expiry fields. Gate verification looks only at the existence of the `key_id`. The operations-side `RevokeIssuerV1` puts the issuer into LOCKDOWN but is **not an input that reaches the gate** | **quiet** |
+| L2 | Key distribution, revocation, and rotation | Present a token signed with a revoked `key_id` | The keyring and the bundle carry `revoked_keys`; a gate that has loaded a bundle listing the key refuses its tokens with `ERR_REVOKED_KEY_ID`, distinct from an unknown key (`test_key_revocation`). The operator command `RevokeIssuerKey` puts the issuer into LOCKDOWN but is **not an input that reaches a running gate**: the gate learns of it only when restarted with the new bundle (§4.5) | **observed** after the gate loads the bundle; **quiet** until then |
 | L3 | Trust-root separation (identity / permissions / mTLS CA) | Cross-use the three roots in the same deployment | In the live keystore, `identity_ca.cert.pem` and `permissions_ca.cert.pem` are not two files with the same content — they are **symbolic links** to `ca.cert.pem` (one inode, three names). And the `scripts/sros2_provision.sh` we ship signs the gRPC mTLS certificates **with that SROS2 CA** — the collapse is not a deployment accident but **our tool's default**. The seal carries only **one** gRPC CA fingerprint (`control_trust_anchors`) and `SealInput` has **no** place for the other two roots — we measured that the seal canonical texts of a collapsed tree and a separated tree are **byte-identical** | **quiet** |
 | L4 | Identity of the target object | Request an action with no target identity | No target-identity axis **exists** in the issuance/gate path. Optical identity is a separate perception driver, default off — the pass is as declared, and an absent axis has nothing to propagate (O-3) | **as declared** |
 | L5 | Absence of paths that bypass the gate | Skip the gate and publish `/safe_cmd_vel` directly | In the Enforce shape, a rogue enclave's publish attempt was **refused with a named reason** — `rt/safe_cmd_vel topic not found in allow rule`, process rc=1. The shape with SROS2 off remains as the seal's `S1` axis (`test_config_seal`: `S1 must change the canonical text`) | **observed** |
@@ -271,6 +265,42 @@ splitting them apart here in advance would shorten the list while the
 splitting criterion is written nowhere. The disposition (promote from
 delegation to guarantee, keep the delegation but build an observation point,
 or write down that quiet is acceptable) must be decided row by row.
+
+
+### 4.5 Known limits of this release
+
+These are open items of this release, not delegations. Each says what is not done,
+what follows from it, and what to do until it is.
+
+1. **One issuer key signs tokens, journal checkpoints and anchor records.** The token
+   signature covers the serialized token with no purpose prefix; checkpoints and anchor
+   records carry their own prefixes. A leaked issuer key can forge an authorization and
+   re-sign the evidence that would show it. Until the keys are split: keep the private key
+   out of the PAIL process (`PAIL_SIGNER=vault`) and anchor journal heads to a witness the
+   issuer host cannot write.
+2. **Revoking an issuer key does not reach a running gate.** The operator command puts the
+   issuer into permanent LOCKDOWN; a gate refuses the key only after it has loaded a bundle
+   listing it under `revoked_keys`, and it does not re-check its bundle while running.
+   Until then, tokens signed by the leaked key still pass that gate. After a revocation,
+   apply a new bundle to the issuer and **every** gate and restart them
+   ([`docs/TRUST_OPERATIONS.md`](docs/TRUST_OPERATIONS.md) §5).
+3. **The keyring root cannot be rotated or revoked.** Consumers hold one root public key
+   (`PAIL_ROOT_PUBKEY_FILE`). A leaked root lets its holder make any key trusted; replacing
+   it means re-pointing every consumer by hand. The version-floor state file
+   (`PAIL_KEYRING_STATE`) has no integrity protection, and a missing file reads as a first
+   load (`G-DEL-04`). Keep the root in an offline signer, preferably hardware, and the state
+   file on a protected persistent volume.
+4. **A local private key is protected by its file mode only.** Start-up requires mode 0600
+   (`S19`); it does not check the owner, and the key is not protected in process memory.
+   Anyone who can read the file or the process can sign. In production use the external
+   signer (`PAIL_SIGNER=vault`), so the private key never enters a PAIL process.
+5. **A journal cut back to an earlier signed checkpoint is not detected at start-up.** The
+   issuer verifies every checkpoint signature when it starts, but a journal truncated
+   exactly at an earlier checkpoint is a valid signed prefix, so a later lock can be erased
+   that way. Records after the last checkpoint, up to `PAIL_CHECKPOINT_EVERY_RECORDS`, are
+   accepted unsigned after an unclean stop. Where an independent anchor is used, compare
+   the journal with the head the anchor holds:
+   `blackbox_verify -check-chain -dir <journal> -pubkey <issuer public key> -expect-head <anchored head>`.
 
 ---
 

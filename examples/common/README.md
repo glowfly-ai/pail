@@ -148,10 +148,61 @@ An explicit **new fake-profile** example (not an audit-retention recommendation)
 
 Defaults: `schema_version=1`, `retention_mode="retain_no_delete"`,
 `raw_max_bytes=0` (no configured raw quota), `retain_days=0`,
-`trash_grace_seconds=3600`, DB 2GiB and WAL 256MiB. Schema version must be
-explicit in a supplied document. Managed deletion requires positive explicit
-raw bytes and days. Grace is 1..31,536,000 seconds; days are 0..36,500.
-No file is automatically deleted when the configuration is absent.
+`trash_grace_seconds=3600`, `db_max_bytes=0` (no fixed index budget),
+`wal_max_bytes` 256MiB, `index_retain_days=7` and `disk_free_min_bytes=0`
+(automatic). Schema version must be explicit in a supplied document. Managed
+deletion requires positive explicit raw bytes and days. Grace is 1..31,536,000
+seconds; days are 0..36,500. No file is automatically deleted when the
+configuration is absent.
+
+### The index keeps a window
+
+The SQLite index is derived from the raw observation files and the journal and
+can be rebuilt from them. It keeps observation rows for `index_retain_days`
+(default 7; `0` keeps everything). Older rows are removed from the index a
+bounded number per pass; lines older than the window are read and counted
+(`ExpiredLines`) but not indexed, which also bounds `-reindex`. Raw observation
+files are not touched by this — their retention is `retention_mode` above — and
+rows derived from the journal are never removed.
+
+The index does not stop ingesting because it is full. What it may use is set by
+the disk: it leaves `disk_free_min_bytes` free on its filesystem (automatic: a
+tenth of the filesystem, between 1GiB and 20GiB), and by `db_max_bytes` when one
+is given. When that room runs out the oldest observation rows leave first, so
+the window becomes shorter than configured while new observations keep
+arriving. `DB_DISK_PRESSURE` is left for the case where nothing removable
+remains. Space is measured as pages in use: a SQLite file does not shrink when
+rows are deleted, it reuses the freed pages, so the file stops growing rather
+than getting smaller.
+
+`GET /v1/telemetry/storage` reports the window under `index.window`:
+
+| field | meaning |
+| --- | --- |
+| `retain_days` | the configured window |
+| `covers_from_ms` | oldest observation the index holds |
+| `pruned_through_ms` | the index holds no observation row before this |
+| `used_bytes`, `file_bytes` | pages in use, and the file size |
+| `budget_bytes` | `db_max_bytes` (`0` = none) |
+| `rate_bytes_per_day` | growth per day, estimated from the span the index covers (`0` = not yet known) |
+| `window_need_bytes` | `rate_bytes_per_day` x `retain_days` |
+| `disk_free_bytes`, `disk_total_bytes`, `disk_floor_bytes` | the filesystem, and what is left free on it |
+| `disk_days_left` | days until the disk reaches its floor at this rate (`-1` = not known) |
+| `guidance` | one word, below |
+
+| `guidance` | meaning |
+| --- | --- |
+| `KEEP_ALL` | `index_retain_days` is `0`; nothing is removed |
+| `MEASURING` | less than an hour of data: no daily growth is stated yet |
+| `OK` | the window fits the room the index has |
+| `DISK_LOW` | at this rate the disk reaches its floor before the window is full |
+| `WINDOW_CUT_BY_BUDGET` | `db_max_bytes` keeps less than the window |
+| `WINDOW_CUT_BY_DISK` | the disk floor keeps less than the window |
+
+The rate is an estimate. It includes the rows derived from the journal, so it
+errs towards asking for more. A line is logged whenever the guidance word
+changes. Measured on synthetic bursts, one observation line costs about 1.2KB
+of index; at 20 lines a second one robot needs about 2GiB a day.
 
 The writer creates `decisions-YYYYMMDD-NNNNNN.jsonl`, rolling at the UTC day
 boundary or before exceeding 64MiB. It takes a directory-scoped OS writer lock
@@ -197,12 +248,13 @@ origins and a persistent replacement count. This is observation-file change
 detection, **not** a cryptographic verification of an arbitrary rewritten whole
 file. The signed blackbox verifier remains independent.
 
-DB budget exhaustion does not delete the index or blackbox. WAL checkpoint
-checks its returned busy/result values with a 100ms busy wait; pinned-reader
-failure is `WAL_BUSY`. Increase an explicitly reviewed budget or arrange
-maintenance; do not delete raw/blackbox data to make a dashboard green. The
-2GB dense-input benchmark from M2-01 used about 6GB of index storage and cannot
-be assumed to fit the default 2GiB derived-DB budget. Operator diagnosis and
+Running out of index room never deletes the index file, a raw file or the
+blackbox; it removes the oldest observation rows of the index, as described
+above. WAL checkpoint checks its returned busy/result values with a 100ms busy
+wait; pinned-reader failure is `WAL_BUSY`. Do not delete raw/blackbox data to
+make a dashboard green. The 2GB dense-input benchmark from M2-01 used about 6GB
+of index storage: with a `db_max_bytes` smaller than that the index would hold
+only the newest part of such an input. Operator diagnosis and
 explicit recovery are required after persistent observation loss.
 
 

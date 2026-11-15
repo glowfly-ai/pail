@@ -55,6 +55,14 @@ def cmd(args,name,timeout=1200):
   error=PrerequisiteFailed if name in ['runtime-ownership','reference-access','permission-service','permission-host'] else RuntimeError
   raise error(name+' rc='+str(proc.returncode)+'; see '+str(e/(name+'.log')))
  return (e/(name+'.log')).read_text()
+def verify_journal():
+ # blackbox_verify exits 7 while the newest records are not yet under a signed checkpoint. The Issuer covers them once
+ # its writes pause for about a second, so wait for that instead of accepting records outside every signature.
+ for attempt in range(6):
+  try:return cmd(compose+['exec','-T','issuer','blackbox_verify','-check-chain','-dir','/var/log/pail_blackbox','-keyfile','/etc/pail/keys/issuer_ed25519.json'],'journal-verify')
+  except RuntimeError:
+   if attempt==5 or 'UNATTESTED_TAIL' not in (e/'journal-verify.log').read_text():raise
+   time.sleep(1.5)
 def check(id,ok,expected,actual):
  checks.append(dict(id=id,passed=bool(ok),expected=expected,actual=actual,t=time.time()));print(('PASS ' if ok else 'FAIL ')+id+' '+str(actual),flush=True)
  (e/'results.json').write_text(json.dumps(checks,indent=2))
@@ -203,7 +211,7 @@ try:
  # Stop only the gate child. The bridge and mock base remain running under launch.
  start=time.time();cmd(compose+['exec','-T','robot','pkill','-KILL','-x','pep_gate_node'],'kill-gate');wait(lambda:any(r['event']=='drive' and r['x']==0 and r['z']==0 for r in rows('base',start)),'bridge explicit zero');time.sleep(1);mark=time.time();time.sleep(2);check('bridge_deadman',not drives(mark),'zero with planner still publishing',dict(nonzero=len(drives(mark)),inputs=sum(x['event']=='input' for x in rows('planner',mark))))
  set_input(False);time.sleep(2)
- out=cmd(compose+['exec','-T','issuer','blackbox_verify','-check-chain','-dir','/var/log/pail_blackbox','-keyfile','/etc/pail/keys/issuer_ed25519.json'],'journal-verify');ck=re.search(r'(\d+) checkpoints',out);check('journal_verifies','OK: chain verified' in out and ck is not None and int(ck[1])>0,'chain + at least one checked signature',out.strip())
+ out=verify_journal();ck=re.search(r'(\d+) checkpoints',out);check('journal_verifies','OK: chain verified' in out and ck is not None and int(ck[1])>0,'chain + at least one checked signature',out.strip())
 except Exception as ex:
  if isinstance(ex,PrerequisiteFailed):(e/'prerequisite-failure.json').write_text(json.dumps({'kind':'clock' if isinstance(ex,ClockPrerequisiteFailed) else 'stack' if isinstance(ex,StackNotUp) else 'permissions','message':str(ex)},indent=2))
  (e/'error.txt').write_text(traceback.format_exc());print('ERROR '+str(ex),flush=True)

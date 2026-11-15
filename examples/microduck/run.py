@@ -22,6 +22,33 @@ def call(args,env=None,log=None,check=True):
         raise RuntimeError('Command failed (%s): %s%s%s'%(p.returncode,' '.join(args),(' — '+cause) if cause else '',(' — see '+str(log))if log else '\n'+p.stdout[-4000:]))
     return p
 
+ELF_MACHINE={'arm64':183,'amd64':62}   # the same table as examples/common/target_platform.py
+
+
+def docker_architecture():
+    out=subprocess.run(['docker','info','--format','{{.Architecture}}'],capture_output=True,text=True,timeout=30).stdout.strip()
+    return {'aarch64':'arm64','arm64':'arm64','x86_64':'amd64','amd64':'amd64'}.get(out,out)
+
+
+def adapter_architecture(root,daemon=None):
+    """0.2.2 F2: the architecture a supplied adapter must have — the bundle's (images.lock.json beside pail-core),
+    or the Docker daemon's in a Core-only tree (the images are then built here, for that daemon)."""
+    lock=Path(root).parent/'images.lock.json'
+    if lock.is_file():
+        return json.loads(lock.read_text())['architecture']
+    return (daemon or docker_architecture)()
+
+
+def check_adapter_binary(source,arch):
+    """Named refusals, not tracebacks: a missing file, or anything but a little-endian ELF64 of this architecture."""
+    source=Path(source)
+    if not source.is_file():raise ValueError('CUSTOM_ADAPTER_NOT_FOUND: '+str(source)+' is not an existing file')
+    head=source.read_bytes()[:64]
+    if len(head)<20 or head[:4]!=b'\x7fELF' or head[4]!=2 or head[5]!=1 or int.from_bytes(head[18:20],'little')!=ELF_MACHINE.get(arch):
+        raise ValueError('CUSTOM_ADAPTER_PLATFORM: supply an executable Linux %s ELF binary (this bundle\'s architecture, images.lock.json) '
+                         'with the documented Microduck UDS contract'%arch)
+
+
 def atomic_json(path,obj):
     tmp=path.with_name(path.name+'.tmp-'+uuid.uuid4().hex)
     with tmp.open('x') as f:json.dump(obj,f,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
@@ -119,10 +146,7 @@ def run(profile,state,image,skip_build=False,adapter_binary=None,backend='microd
     if adapter_binary:
         import shutil
         source=Path(adapter_binary).resolve()
-        if not source.is_file():raise ValueError('CUSTOM_ADAPTER_NOT_FOUND: '+str(source)+' is not an existing file')   # a named refusal, not a traceback
-        head=source.read_bytes()[:64]
-        if head[:4]!=b'\x7fELF' or head[4]!=2 or int.from_bytes(head[18:20],'little')!=183:
-            raise ValueError('CUSTOM_ADAPTER_PLATFORM: supply an executable Linux ARM64 ELF binary with the documented Microduck UDS contract')
+        check_adapter_binary(source,adapter_architecture(ROOT))
         target=state/'adapter-under-test';shutil.copyfile(source,target);target.chmod(0o555)
         meta['custom_adapter']={'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'source':str(source),'mounted_roles':['adapter','observe','harness']}
         patch={'services':{role:{'volumes':[str(target)+':/usr/local/bin/pail-duckd:ro']} for role in meta['custom_adapter']['mounted_roles']}}

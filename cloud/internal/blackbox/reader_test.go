@@ -44,12 +44,12 @@ func TestWalkDirRoundTripAcrossRestart(t *testing.T) {
 	if err := w.Append(RecordGateDecision, 222, []byte(`{"b":2}`)); err != nil {
 		t.Fatalf("append: %v", err)
 	}
-	w.Close()
+	w.Abandon()
 	w2 := testWriter(t, dir) // restart: new segment inheriting the tail
 	if err := w2.Append(RecordChainRevoked, 333, []byte(`{"c":3}`)); err != nil {
 		t.Fatalf("append: %v", err)
 	}
-	w2.Close()
+	w2.Abandon()
 
 	var got []Record
 	torn, err := WalkDir(dir, func(r Record) error { got = append(got, r); return nil })
@@ -104,7 +104,7 @@ func TestWalkDirTornTailTolerated(t *testing.T) {
 	if err := w.Append(RecordGateDecision, 2, []byte(`{"b":2}`)); err != nil {
 		t.Fatalf("append: %v", err)
 	}
-	w.Close()
+	w.Abandon()
 
 	p := lastSegmentPath(t, dir)
 	fi, err := os.Stat(p)

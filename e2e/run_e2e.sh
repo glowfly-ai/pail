@@ -121,6 +121,9 @@ docker info > /dev/null 2>&1 || { echo "Docker is installed but its daemon is un
 PAIL_E2E_SERVICES_IMAGE="$(python3 "$ROOT/examples/common/evaluation_runtime.py" --root "$ROOT" --role issuer)"
 PAIL_E2E_GATE_IMAGE="$(python3 "$ROOT/examples/common/evaluation_runtime.py" --root "$ROOT" --role tb3_gate)"
 export PAIL_E2E_SERVICES_IMAGE PAIL_E2E_GATE_IMAGE
+# 0.2.2 F5: a run on another architecture than the bundle's (emulation) says so here, in the state and in the result line.
+E2E_PLATFORM_NOTE="$(python3 "$ROOT/examples/common/evaluation_runtime.py" --root "$ROOT" --platform)" || exit 2
+[ "$E2E_PLATFORM_NOTE" = native ] || echo "EMULATION: $E2E_PLATFORM_NOTE — this E2E run is not a measurement of the bundle architecture"
 
 # Each run owns fresh state. Never erase a previous run or its evidence.
 STATE="$(python3 - "$STATE" "$ROOT" <<'PYSTATE'
@@ -138,6 +141,7 @@ PYSTATE
 )" || exit 2
 export PAIL_E2E_STATE="$STATE"
 mkdir -p "$STATE/evidence" "$STATE/blackbox" "$STATE/anchor"
+printf '%s\n' "$E2E_PLATFORM_NOTE" > "$STATE/evidence/platform.txt"
 # The source is read-only input; all generated material belongs to this run.
 CONFIG="$STATE/provision/config"
 mkdir -p "$CONFIG"
@@ -485,10 +489,18 @@ if [ "$VAULT" = 1 ]; then
   [ -n "$VAULT_PUB" ] || fail "could not read the transit public key from /pail-vault/keyring.json"
   VERIFY_KEY=(-pubkey "$VAULT_PUB")
 fi
-OUT="$("${COMPOSE[@]}" exec -T pail-services \
-        blackbox_verify --check-chain -dir /var/log/pail_blackbox \
-        "${VERIFY_KEY[@]}" 2>&1)" \
-  || fail "blackbox_verify: $OUT"
+# Exit 7: the newest records are not yet under a signed checkpoint. The Issuer
+# covers them once its writes pause for about a second, so wait for that rather
+# than accept records outside every signature.
+for attempt in 1 2 3 4 5 6; do
+  VRC=0
+  OUT="$("${COMPOSE[@]}" exec -T pail-services \
+          blackbox_verify --check-chain -dir /var/log/pail_blackbox \
+          "${VERIFY_KEY[@]}" 2>&1)" || VRC=$?
+  [ "$VRC" = 7 ] && [ "$attempt" != 6 ] || break
+  sleep 1.5
+done
+[ "$VRC" = 0 ] || fail "blackbox_verify (rc=$VRC): $OUT"
 echo "$OUT"
 case "$OUT" in *"OK: chain verified"*) : ;; *) fail "blackbox_verify did not print 'OK: chain verified'" ;; esac
 CKPTS="$(printf '%s\n' "$OUT" | sed -n 's/.*OK: chain verified (.*records, \([0-9]*\) checkpoints).*/\1/p' | head -1)"
@@ -814,4 +826,4 @@ echo "E2E-B GREEN — refused without authorization, permitted under the issued 
 forged_bundle_control
 
 echo
-echo "E2E GREEN — $PASS_N judgments, each naming the identifier it read"
+echo "E2E GREEN — $PASS_N judgments, each naming the identifier it read$( [ "$E2E_PLATFORM_NOTE" = native ] || printf ' (%s; not a measurement of the bundle architecture)' "$E2E_PLATFORM_NOTE")"

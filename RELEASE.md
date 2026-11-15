@@ -1,13 +1,13 @@
-# Verify this preview distribution
+# Verify this distribution
 
 [VERSION](VERSION) identifies the release. [CHANGELOG.md](CHANGELOG.md) describes changes.
 <!-- release-identity:delivery:start -->
-Public release: **`0.2.0`**. Four separate artifacts per architecture; the Linux ARM64 set:
+Public release: **`0.2.2`**. Four separate artifacts per architecture; the Linux ARM64 set:
 
-- `PAIL-Core-0.2.0-src.zip` — Apache-2.0 Core source, including the complete robot gateway (one source ZIP for both architectures).
-- `PAIL-Issuer-Eval-0.2.0-linux-arm64-image.tar` — Issuer evaluation image, executable only (Linux ARM64).
-- `PAIL-Evaluation-0.2.0.zip` — evaluation bootstrap; the runtime images are the separate TAR downloads of the same release.
-- `PAIL-Evaluation-0.2.0-linux-arm64-offline.zip` — same evaluation with pinned runtime images included.
+- `PAIL-Core-0.2.2-src.zip` — Apache-2.0 Core source, including the complete robot gateway (one source ZIP for both architectures).
+- `PAIL-Issuer-Eval-0.2.2-linux-arm64-image.tar` — Issuer evaluation image, executable only (Linux ARM64).
+- `PAIL-Evaluation-0.2.2.zip` — evaluation bootstrap; the runtime images are the separate TAR downloads of the same release.
+- `PAIL-Evaluation-0.2.2-linux-arm64-offline.zip` — same evaluation with pinned runtime images included.
 
 The Linux amd64 delivery uses the same names with `linux-amd64` in place of `linux-arm64`:
 the evaluation bootstrap `…-linux-amd64.zip`, the offline bundle `…-linux-amd64-offline.zip`,
@@ -22,7 +22,7 @@ The bootstrap bundle pulls nothing from a registry: load the image archives.
 Offline means runtime, not rebuilding all source without dependencies.
 
 ```sh
-shasum -a 256 -c PAIL-Core-0.2.0-src.zip.sha256
+shasum -a 256 -c PAIL-Core-0.2.2-src.zip.sha256
 ```
 <!-- release-identity:delivery:end -->
 
@@ -47,18 +47,18 @@ python3 scripts/sign_release.py --public-key RELEASE-SIGNING-KEY.pub --fingerpri
 # the standalone verifier (standard-library Go, no module download; the Core source
 # carries it and every evaluation bundle ships it built as native/pail_verify-<host>):
 go run ./cloud/cmd/pail_verify --sig-only \
-  --manifest PAIL-Core-0.2.0-src.zip.manifest.json \
+  --manifest PAIL-Core-0.2.2-src.zip.manifest.json \
   --public-key RELEASE-SIGNING-KEY.pub \
   --expected-fingerprint 8917d27e9c68e0e88538177c76279db450ad615ffe00a58f338a45474f318a17
 # or with the python `cryptography` package:
 python3 scripts/sign_release.py --public-key RELEASE-SIGNING-KEY.pub \
   --expected-fingerprint 8917d27e9c68e0e88538177c76279db450ad615ffe00a58f338a45474f318a17 \
-  --verify PAIL-Core-0.2.0-src.zip.manifest.json
+  --verify PAIL-Core-0.2.2-src.zip.manifest.json
 # or with OpenSSL 3 (the macOS system `openssl` is LibreSSL and cannot verify Ed25519;
 # use Homebrew's openssl@3 there):
 openssl pkeyutl -verify -pubin -inkey RELEASE-SIGNING-KEY.pub -rawin \
-  -in PAIL-Core-0.2.0-src.zip.manifest.json \
-  -sigfile PAIL-Core-0.2.0-src.zip.manifest.json.sig
+  -in PAIL-Core-0.2.2-src.zip.manifest.json \
+  -sigfile PAIL-Core-0.2.2-src.zip.manifest.json.sig
 ```
 
 `verify_release.py` and `verify_evaluation.py` run the same check and accept
@@ -97,9 +97,9 @@ build, test or provisioning. Obtain the manifest and checksum from a trusted cha
 ```sh
 python3 pail-core/scripts/verify_release.py \
   --root pail-core \
-  --manifest PAIL-Core-0.2.0-src.zip.manifest.json \
-  --zip PAIL-Core-0.2.0-src.zip \
-  --expected-release 0.2.0
+  --manifest PAIL-Core-0.2.2-src.zip.manifest.json \
+  --zip PAIL-Core-0.2.2-src.zip \
+  --expected-release 0.2.2
 ```
 
 Obtain the manifest through a trusted channel. The evaluation launcher checks

@@ -154,7 +154,7 @@ preserve_logs() {
   archive=$(mktemp -d "$archive_root/run.XXXXXXXX") || return 1
   since=$(cat "$D/restart-logs/.last" 2>/dev/null || true)
   stamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  for name in pailhw-gate pailhw-bridge pailhw-planner pailhw-drive pailhw-base pailhw-agent pailhw-safety pailhw-robot; do
+  for name in pailhw-gate pailhw-bridge pailhw-planner pailhw-drive pailhw-base pailhw-agent pailhw-safety pailhw-evidence pailhw-robot; do
     if docker inspect "$name" >/dev/null 2>&1; then
       if [ -n "$since" ]; then
         docker logs --timestamps --since "$since" "$name" >"$archive/$name.log" 2>&1 || return 1

@@ -13,9 +13,9 @@ is claimed.
 2. Work on a writable copy of `pail-core/`; commands below run from that copy.
    Set `PAIL_HW_STATE=/tmp/hw-state`. Use the matching image IDs from
    `images.lock.json`; the tags below name this release (the Linux amd64 bundle's tags carry an `-amd64` suffix).
-3. Operator Issuer: `pail/issuer-eval:0.2.0`. Robot services:
-   `pail/core-microduck:0.2.0` (contains the public agent, no Issuer).
-   Gate base: `pail/core-tb3-gate:0.2.0`. Add the vendor driver using hardware/Dockerfile and this matching gate image.
+3. Operator Issuer: `pail/issuer-eval:0.2.2`. Robot services:
+   `pail/core-microduck:0.2.2` (contains the public agent, no Issuer).
+   Gate base: `pail/core-tb3-gate:0.2.2`. Add the vendor driver using hardware/Dockerfile and this matching gate image.
 4. Build host-native console tools **on macOS or Linux** (Go 1.27.2+ and cached or
    online Go dependencies required):
 
@@ -73,9 +73,9 @@ responsibility. Section 8 lists what the maintainers measured.
 - The vendor driver image: built on the operator PC from that gate image and loaded on the robot:
 
 ```sh
-docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.0 \
+docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.2 \
   -t pail/tb3-hardware:<tag> -f examples/tb3/hardware/Dockerfile examples/tb3/hardware
-docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.0 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
+docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.2 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
 ```
 
 The Dockerfile adds only `ros-humble-turtlebot3-node` and `ros-humble-turtlebot3-bringup` to
@@ -151,7 +151,7 @@ Then, **on the robot**, with the wheels raised (or the floor cleared, §7):
 echo raised > pail-hw/control/hardware_confirmed          # the operator's statement, written by the operator
 export PAIL_HW_CONFIG=/home/<user>/pail-robot-config \
        PAIL_HW_CLOUD_ADDR=<pc-ip>:50064 \
-       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.0 \
+       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.2 \
        PAIL_HW_GATE_IMAGE=pail/tb3-hardware:<tag>
 pail-hw/start_demo_rig.sh up        # RIG_UP after 1–3 minutes on a Raspberry Pi 3
 pail-hw/start_demo_rig.sh status
@@ -192,7 +192,7 @@ docker logs pailhw-agent 2>&1 | tail -3                # burst CHECKPOINT lines:
 
 ```sh
 export PAIL_HW_STATE=/path/to/demo/state \
-       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.0 \
+       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.2 \
        PAIL_HW_ISSUER_IP=<pc-ip>
 examples/tb3/hardware/issuer_host.sh up            # ISSUER_UP <pc-ip>:50064 …
 ```

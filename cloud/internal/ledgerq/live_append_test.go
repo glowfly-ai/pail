@@ -127,7 +127,7 @@ func (lw *liveWriter) stopAndClose(t *testing.T) {
 	if e := lw.failed.Load(); e != nil {
 		t.Fatalf("writer failed: %v", e)
 	}
-	if err := lw.w.Close(); err != nil {
+	if err := lw.w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -271,7 +271,7 @@ func TestLedgerTornTailOfActiveSegmentIsPending(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	path, off := lastRecordOffset(t, bb)
@@ -310,7 +310,7 @@ func TestLedgerTornTailInClosedSegmentIsAnError(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	segs, _ := filepath.Glob(filepath.Join(bb, "pail_blackbox.*.seg"))

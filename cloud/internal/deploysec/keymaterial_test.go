@@ -318,8 +318,7 @@ func TestEvaluateDeploymentS8(t *testing.T) {
 	r := EvaluateDeployment("pail_cloud", probe(map[string]string{
 		"PAIL_ISSUER_KEYFILE": bad,
 		"PAIL_KEYRING":        filepath.Join(dir, "absent.json"),
-		"PAIL_GRPC_TLS":       "off",
-		"PAIL_GRPC_UDS_PATH":  "/run/pail/x.sock",
+		"PAIL_GRPC_TLS":       "on",
 	}))
 	if len(r.Fail) != 1 || r.Fail[0].ID != "S8" {
 		t.Fatalf("want exactly one S8 failure, got %+v", r.Fail)
@@ -328,13 +327,12 @@ func TestEvaluateDeploymentS8(t *testing.T) {
 	r = EvaluateDeployment("pail_cloud", probe(map[string]string{
 		"PAIL_ISSUER_KEYFILE": good,
 		"PAIL_KEYRING":        filepath.Join(dir, "absent.json"),
-		"PAIL_GRPC_TLS":       "off",
-		"PAIL_GRPC_UDS_PATH":  "/run/pail/x.sock",
+		"PAIL_GRPC_TLS":       "on",
 	}))
 	if len(r.Fail) != 0 {
 		t.Fatalf("a fresh key must pass: %+v", r.Fail)
 	}
-	if strings.Join(r.Checked, ",") != "S4,S5,S8,S9,S40" {
+	if strings.Join(r.Checked, ",") != "S4,S5,S41,S8,S9,S40" { // S41: SEC-H08A, the replay switch
 		t.Errorf("Checked=%v", r.Checked)
 	}
 
@@ -354,10 +352,9 @@ func TestEvaluateDeploymentS8(t *testing.T) {
 // line still listed S8, so "unexamined" and "clean" printed the same green.
 func TestS8RejectsUnregisteredComponent(t *testing.T) {
 	env := map[string]string{
-		"PAIL_GRPC_TLS":      "off",
-		"PAIL_GRPC_UDS_PATH": "/run/pail/x.sock",
-		"PAIL_BLACKBOX_DIR":  "/data/pail/blackbox",
-		"PAIL_ANCHOR_URL":    "http://anchor.example:46100",
+		"PAIL_GRPC_TLS":     "on",
+		"PAIL_BLACKBOX_DIR": "/data/pail/blackbox",
+		"PAIL_ANCHOR_URL":   "http://anchor.example:46100",
 	}
 	if ComponentRegistered("pail_future_daemon") {
 		t.Fatal("fixture name must not be registered")
@@ -397,9 +394,8 @@ func TestS8ScansBurstRecvKeyring(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := fakeProbe(map[string]string{
-		"PAIL_KEYRING":       path,
-		"PAIL_GRPC_TLS":      "off",
-		"PAIL_GRPC_UDS_PATH": "/run/pail/x.sock",
+		"PAIL_KEYRING":  path,
+		"PAIL_GRPC_TLS": "on",
 	}, nil)
 	p.ReadFile = os.ReadFile
 

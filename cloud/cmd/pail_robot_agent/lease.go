@@ -213,7 +213,7 @@ func (m *tokenMirror) absorbLocked(resp *tokenpb.GetActiveTokenResponse) error {
 // decision, not a state transition — walked the whole chain: BLOCK beacon ->
 // lease dropped -> census 0 -> LEASE_RETRACTED -> the gate's next recheck
 // NO_TOKEN. Measured on the Viam rig: LEASE_GRANTED and LEASE_RETRACTED
-// alternating a few seconds apart, and `CA-16` unmeasurable because the permit
+// alternating a few seconds apart, and `CA-19` unmeasurable because the permit
 // never survived long enough to end at its own deadline.
 //
 // What each event means for authority:

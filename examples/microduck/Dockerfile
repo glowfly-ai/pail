@@ -2,7 +2,7 @@
 # Copyright 2026 Glowfly Identity Systems Co.,Ltd
 # Context: public repository root. No ROS or private build image is required.
 ARG RUST_IMAGE=rust:1-bookworm@sha256:9a73a5088750b4c95158ab26629c854c3d6fc4b173cb7bc8079ad252d8ed7bfa
-ARG GO_IMAGE=golang:1.27.3-bookworm@sha256:21ade014faf952365b9ecbd8dbdb87176fbacb82fac9fb132d9f2a7b8cc3f132
+ARG GO_IMAGE=golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea
 FROM ${RUST_IMAGE} AS build-base
 ENV CARGO_BUILD_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -52,7 +52,7 @@ RUN go mod download all && mkdir -p /licenses/go && go list -m -mod=readonly -f 
     while read name dir; do test -z "$name" && continue; mkdir -p "/licenses/go/$name"; \
     find "$dir" -maxdepth 1 -type f \( -iname '*license*' -o -iname 'notice*' -o -iname 'copying*' \) \
     -exec cp {} "/licenses/go/$name/" \;; done
-FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS tooling
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS tooling
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libprotobuf32 libsodium23 libyaml-cpp0.7 libudev1 ca-certificates python3 python3-venv \
     protobuf-compiler openssl && rm -rf /var/lib/apt/lists/*

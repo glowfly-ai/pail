@@ -49,7 +49,7 @@ func buildTamperJournal(t *testing.T) string {
 			}
 			ms++
 		}
-		if err := w.Close(); err != nil {
+		if err := w.Abandon(); err != nil {
 			t.Fatal(err)
 		}
 	}

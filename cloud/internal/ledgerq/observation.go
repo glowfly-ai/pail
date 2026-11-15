@@ -62,10 +62,14 @@ func (d *DB) ingestObservations(dir string, now time.Time) (st TelemetryStatus, 
 		if err != nil {
 			d.storageError(storageCode(err))
 		}
+		// OBS-RET: the window and the disk are reported whether or not this
+		// pass got through — a refusal is when the numbers are wanted most.
+		d.refreshGuidance(now)
 	}()
 	if err = d.checkStorage(); err != nil {
 		return st, err
 	}
+	cut := d.retentionCut(now)
 	if err = d.loadRawHealth(dir); err != nil {
 		return st, err
 	}
@@ -78,10 +82,24 @@ func (d *DB) ingestObservations(dir string, now time.Time) (st TelemetryStatus, 
 	}
 	sort.Strings(names)
 	for _, path := range names {
-		if err = d.ingestObservationFile(path, &st); err != nil {
+		if err = d.ingestObservationFile(path, &st, cut); err != nil {
 			return st, err
 		}
 		st.Files++
+	}
+	// OBS-RET: rows that have aged out of the window leave, a bounded number
+	// per pass. Only when none older remain is the edge recorded as "the
+	// index holds nothing before this".
+	if cut > 0 {
+		more, perr := d.pruneBefore(cut, pruneAgeLimit)
+		if perr != nil {
+			return st, perr
+		}
+		if !more {
+			if err = d.setPrunedThrough(cut); err != nil {
+				return st, err
+			}
+		}
 	}
 	err = d.setMeta("last_ingest_ms", strconv.FormatInt(now.UnixMilli(), 10))
 	if err == nil {
@@ -94,7 +112,9 @@ func (d *DB) ingestObservations(dir string, now time.Time) (st TelemetryStatus, 
 	return st, err
 }
 
-func (d *DB) ingestObservationFile(path string, st *TelemetryStatus) error {
+// cut (OBS-RET) is the retention edge of this pass; a line older than it is
+// read and counted but not indexed. 0 = no window.
+func (d *DB) ingestObservationFile(path string, st *TelemetryStatus, cut int64) error {
 	basename := filepath.Base(path)
 	f, err := os.Open(path)
 	if err != nil {
@@ -188,6 +208,20 @@ func (d *DB) ingestObservationFile(path string, st *TelemetryStatus) error {
 			if perr != nil {
 				bad++
 				st.BadLines++
+				continue
+			}
+			if cut > 0 && int64(rec.Ms) < cut {
+				// Not put in only to be removed at the end of the pass: this
+				// is what keeps a rebuild over months of raw files bounded.
+				// The per-robot last permit is the one thing kept current
+				// regardless of age; that table has a row per robot.
+				st.ExpiredLines++
+				if rec.Kind == telemetry.KindPermit {
+					if _, err = tx.Exec(`INSERT INTO observation_latest(robot_hash,file_id,file_offset,payload) VALUES(?,?,?,?) ON CONFLICT(robot_hash) DO UPDATE SET file_id=excluded.file_id,file_offset=excluded.file_offset,payload=excluded.payload WHERE excluded.file_id>observation_latest.file_id OR (excluded.file_id=observation_latest.file_id AND excluded.file_offset>observation_latest.file_offset)`, rec.Robot, name, start, string(payload)); err != nil {
+						tx.Rollback()
+						return err
+					}
+				}
 				continue
 			}
 			inserted, insertErr := tx.Exec(`INSERT OR IGNORE INTO observation_records(source_id,file_id,file_offset,kind,received_ms,robot_hash,event,reason,payload) VALUES(?,?,?,?,?,?,?,?,?)`, observationSource, name, start, rec.Kind, int64(rec.Ms), rec.Robot, rec.Event, int64(rec.ReasonValue), string(payload))

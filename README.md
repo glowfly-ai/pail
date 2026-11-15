@@ -39,7 +39,7 @@ Three commands on a laptop with Docker. The issuer, the gate and the motion brid
 are the real components; only the TurtleBot3 base, its tag reader and its safety
 feed are simulated. No ROS on the host, no account, no hardware. Download the
 evaluation bundle for your architecture from the
-[0.2.0 release page](https://github.com/glowfly-ai/pail/releases/tag/0.2.0) and run
+[0.2.2 release page](https://github.com/glowfly-ai/pail/releases/tag/0.2.2) and run
 these from its directory:
 
 ```sh
@@ -164,10 +164,10 @@ certification; a hardware judge with raised wheels is not floor driving.
 
 | Platform | Scope | Latest measured result | Report |
 |---|---|---|---|
-| Software bundles (Docker, Linux arm64 and amd64) | Microduck preview, simulated TurtleBot3 base, fleet, adapter conformance, lifecycle, plan supersede | Microduck 15/15 · TurtleBot3 13/13 · fleet 27/27 (dev and mTLS) · gate CTest 37/37 · lifecycle 21/21 · supersede 8/8 | the measured validation report (VALIDATION) shipped inside each evaluation bundle; [TRY_IT.md](TRY_IT.md) |
+| Software bundles (Docker, Linux) | Microduck preview, simulated TurtleBot3 base, fleet, adapter conformance, lifecycle, plan supersede | Microduck 15/15 · simulated TurtleBot3 test 8/8 checks · fleet of two robots, 15/15 each · gate CTest 37/37 · lifecycle 21/21 · supersede 8/8 | the measured validation report (VALIDATION) shipped inside each evaluation bundle; [TRY_IT.md](TRY_IT.md) |
 |<!-- hw-measurements:begin hardware_row --> TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build and is not a hardware acceptance claim for this release | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 <!-- hw-measurements:end hardware_row -->|
 | Jetson Orin Nano Super (native arm64, CPU only) | role-isolated synthetic reference with the real gate and bridge | 7/7 scenarios; 8-hour segmented soak: 752 exercise/cancel cycles, 22 injected faults, every cleanup PASS | [examples/nvidia/README.md](examples/nvidia/README.md) |
-| Isaac Sim 6.0.1 on one L40S VM (Linux amd64) | the actual SDK endpoint behind the same gate; BS-01..12 / BP-01..12 bypass and lifecycle matrix | 14 of 14 cases PASS in two fresh-state repeats of the release run, 28 of 28 runs complete (the BP-11 positive control is DETECTED); one earlier run of the same images recorded one INCONCLUSIVE, disclosed on the release page and in ISAAC.md; rest is judged on position change per physics step, with the SDK-reported velocities kept as evidence | [examples/nvidia/ISAAC.md](examples/nvidia/ISAAC.md) |
+| Isaac Sim 6.0.1 on one L40S VM (Linux amd64) | the actual SDK endpoint behind the same gate; BS-01..12 / BP-01..12 bypass and lifecycle matrix | 14 of 14 cases PASS in two fresh-state repeats of the release run, 28 of 28 runs complete (the BP-11 positive control is DETECTED); one run of an earlier pre-release recorded one INCONCLUSIVE, disclosed on the release page and in ISAAC.md; rest is judged on position change per physics step, with the SDK-reported velocities kept as evidence | [examples/nvidia/ISAAC.md](examples/nvidia/ISAAC.md) |
 
 The recipient path of the delivered archives has been reproduced by an evaluation
 run that did not share the publisher's working tree: on an Apple Silicon Mac for every
@@ -372,12 +372,12 @@ cd cmd/pail-verify && go test ./...          # 81 conformance vectors + the nega
 go build -o pail-verify . && ./pail-verify   # usage
 ```
 
-Native verifier builds require Go 1.27.3 or newer. Alternatively, after obtaining a
-`golang:1.27.3` image, use Docker without network access for the verifier itself:
+Native verifier builds require Go 1.27.4 or newer. Alternatively, after obtaining a
+`golang:1.27.4` image, use Docker without network access for the verifier itself:
 
 ```sh
 docker run --rm --network none -v "$PWD":/src:ro -w /src/cmd/pail-verify \
-  -e GOCACHE=/tmp/gc -e GOPATH=/tmp/gp golang:1.27.3 go test ./...
+  -e GOCACHE=/tmp/gc -e GOPATH=/tmp/gp golang:1.27.4 go test ./...
 ```
 
 The second tool, [`cmd/pail-recompute/`](cmd/pail-recompute/), answers a
@@ -622,10 +622,8 @@ Glowfly offers, separately from this repository:
   path and is not an independent witness.
 - **Fleet operations** — the robot-operations orchestrator (planning, approval, apply,
   recovery) that drives the contracts shipped in
-  [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md); the fleet preview here is
-  measured 27/27.
-- **Replicated issuer and multi-site operation** — for deployments that cannot accept
-  the single-node durability window stated in [`SECURITY.md`](SECURITY.md) §4.2.
+  [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md); the fleet preview here runs
+  two robots through the Microduck scenes, 15/15 each.
 
 After an incident the journal answers the questions an investigator, an insurer or
 a regulator asks first — who authorized this motion, within what bounds, what did the
@@ -658,9 +656,7 @@ software-only: not hardware certification and not a safety-system replacement.
 
 ### Scope of the evaluation issuer
 
-The evaluation issuer is a single node. It refuses to start under any `PAIL_HA_*`
-replication setting rather than run as a single node under a configuration that
-asked for a fence; the single-node durability window is stated in
+The evaluation issuer is a single node; its durability window is stated in
 [`SECURITY.md`](SECURITY.md) §4.2. The robot-operations contracts ship with their
 issuer and robot endpoints, two offline checkers and a runnable example
 ([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) §1); the orchestrator that

@@ -188,7 +188,7 @@ func TestMOBSFrontier2000CheckpointsAndPlans(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err = w.Close(); err != nil {
+	if err = w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	d, err := Open(filepath.Join(t.TempDir(), "index.db"))
@@ -287,7 +287,7 @@ func TestMOBSFrontierMissingMiddleAndForeignSegment(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if err = w.Close(); err != nil {
+			if err = w.Abandon(); err != nil {
 				t.Fatal(err)
 			}
 			files, err := filepath.Glob(filepath.Join(bb, "*.seg"))
@@ -503,7 +503,7 @@ func TestMOBSFrontierEmptyHeaderReplacementAndAppend(t *testing.T) {
 				if e = w.Append(blackbox.RecordPlanAccepted, tBurst+1, []byte(`{"plan_id":"later"}`)); e != nil {
 					t.Fatal(e)
 				}
-				if e = w.Close(); e != nil {
+				if e = w.Abandon(); e != nil {
 					t.Fatal(e)
 				}
 			}

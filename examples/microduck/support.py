@@ -42,9 +42,23 @@ def prepare():
             os.chown(p,10001,10001)
     print('PREPARED: fresh private keys, public verification material, scoped socket volume')
 
+class NotReady(Exception):
+    """0.2.2 F6: a socket that is not there yet is a named readiness result, not a traceback."""
+
+
+SOCKET_ROLE={'/run/duck/raw/robotd.sock':'the robot daemon is not listening','/run/duck/pail.sock':'the adapter under test did not open its public socket'}
+
+
 def uds(path,msg):
     with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as s:
-        s.settimeout(3);s.connect(str(path));s.sendall((json.dumps(msg)+'\n').encode());f=s.makefile('rb');return json.loads(f.readline())
+        s.settimeout(3)
+        try:
+            s.connect(str(path))
+        except FileNotFoundError:
+            raise NotReady('%s: socket missing (%s)'%(path,SOCKET_ROLE.get(str(path),'no listener'))) from None
+        except (ConnectionRefusedError,socket.timeout) as e:
+            raise NotReady('%s: %s (%s)'%(path,type(e).__name__,SOCKET_ROLE.get(str(path),'no listener'))) from None
+        s.sendall((json.dumps(msg)+'\n').encode());f=s.makefile('rb');return json.loads(f.readline())
 
 def ready():
     hello=uds('/run/duck/raw/robotd.sock',{'jsonrpc':'2.0','id':1,'method':'hello','params':{'api_version':44}})
@@ -123,4 +137,8 @@ def demo():
         write_json(STATE/'evidence/demo.json',{'schema_version':1,'hardware_tested':False,'checks':checks})
 
 if __name__=='__main__':
-    ap=argparse.ArgumentParser();ap.add_argument('action',choices=['prepare','ready','permissions','demo']);a=ap.parse_args();globals()[a.action]()
+    ap=argparse.ArgumentParser();ap.add_argument('action',choices=['prepare','ready','permissions','demo']);a=ap.parse_args()
+    try:
+        globals()[a.action]()
+    except NotReady as e:   # run.py retries until its readiness deadline and then reports this line, not a traceback
+        print('NOT_READY: '+str(e),file=sys.stderr);sys.exit(3)

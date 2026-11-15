@@ -32,7 +32,7 @@ What counts as a vulnerability is defined in
 These entries assign operating responsibilities and manual recovery procedures.
 They do not classify every listed issue as an intentional feature exclusion.
 Unresolved defects remain the maintainer's responsibility for investigation.
-The DDS rediscovery defect in G-DEL-L16 remains open; only keeping stopped
+The DDS authentication defect in G-DEL-L16 remains open; only keeping stopped
 and manual recovery are assigned to the operating team.
 The full text and refutation condition of each entry are in
 [`TRUST_BOUNDARY.md`](TRUST_BOUNDARY.md) §3.

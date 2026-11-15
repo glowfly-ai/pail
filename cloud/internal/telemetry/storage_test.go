@@ -300,7 +300,7 @@ func TestMOBSStorageStrictConfig(t *testing.T) {
 	if e != nil || c.RetainDays != 7 {
 		t.Fatal(c, e)
 	}
-	for _, b := range []string{`{}`, `{"schema_version":1,"schema_version":1}`, `{"schema_version":2}`, `{"schema_version":1,"x":2}`, `{"schema_version":1,"db_max_bytes":0}`, `{"schema_version":1,"raw_max_bytes":-1}`, `{"schema_version":1,"retention_mode":"managed"}`, good + ` {}`, `{"schema_version":1,"retain_days":1.2}`} {
+	for _, b := range []string{`{}`, `{"schema_version":1,"schema_version":1}`, `{"schema_version":2}`, `{"schema_version":1,"x":2}`, `{"schema_version":1,"db_max_bytes":-1}`, `{"schema_version":1,"raw_max_bytes":-1}`, `{"schema_version":1,"retention_mode":"managed"}`, good + ` {}`, `{"schema_version":1,"retain_days":1.2}`} {
 		if _, e := ParseStorageConfig([]byte(b)); e == nil {
 			t.Fatal("accepted", b)
 		}

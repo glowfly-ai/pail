@@ -106,8 +106,8 @@ policy, not by that binding.
 `test-adapter` drives one concrete shape: the **Microduck-compatible UDS/CLI profile**,
 written down in [the adapter contract, §5a](../../spec/ADAPTER_CONTRACT.md#5a-microduck-compatible-udscli-profile)
 (sockets, command line, `hello`/`api_version`, gate-log lines, runtime image and
-`libpail_gate` ABI). If your adapter keeps that shape, compile a Linux ARM64 executable
-and keep it outside the delivered source tree:
+`libpail_gate` ABI). If your adapter keeps that shape, compile a Linux executable for this bundle's architecture
+(`architecture` in `images.lock.json`) and keep it outside the delivered source tree:
 
 ```sh
 python3 evaluation.py test-adapter --adapter-binary /absolute/my-pail-duckd \
@@ -115,10 +115,10 @@ python3 evaluation.py test-adapter --adapter-binary /absolute/my-pail-duckd \
 ```
 
 The runner mounts **that exact file** into the enforcing adapter, observe adapter
-and harness, records its SHA-256 in run.json, and runs CA-01..CA-15 through the
-published backend. It does not silently substitute the supplied adapter. The
+and harness, records its SHA-256 in run.json, and runs CA-01..CA-13, CA-15..CA-18 and
+CB-1 through the published backend. It does not silently substitute the supplied adapter. The
 reference backend has CA-15 `NEEDS_UPSTREAM_BUILTIN_LIST` as SKIP, not PASS.
-A path that does not exist or a file that is not a Linux ARM64 ELF is refused by
+A path that does not exist or a file that is not a Linux ELF of that architecture is refused by
 name (`CUSTOM_ADAPTER_NOT_FOUND`, `CUSTOM_ADAPTER_PLATFORM`); an ELF that does not
 open the public socket makes the run `BLOCKED` at the adapter readiness deadline.
 
@@ -146,7 +146,7 @@ is green before your code is in it:
   IMG=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["images"]["microduck"]["id"])' images.lock.json)
   C=$(docker create "$IMG"); docker cp "$C:/usr/local/bin/pail-duckd" /tmp/reference-pail-duckd; docker rm "$C" >/dev/null
   python3 evaluation.py test-adapter --adapter-binary /tmp/reference-pail-duckd --state /tmp/ad-reference )
-# PASS_WITH_LIMITATIONS 14 pass / 0 fail / 1 skip; run.json custom_adapter.sha256 == sha256sum of the file
+# PASS_WITH_LIMITATIONS 17 pass / 0 fail / 1 skip; run.json custom_adapter.sha256 == sha256sum of the file
 ```
 
 **Step 2 — build your own from source** in a working copy (online; the delivered tree
@@ -166,7 +166,7 @@ just installed rustup.
   command -v cargo >/dev/null || . "$HOME/.cargo/env"   # rustup puts cargo on PATH only for NEW shells
   cd /tmp/pail-adapter-work/adapters/microduck && PAIL_GATE_LIB_DIR=/tmp/gate-build cargo build --locked --features libgate
   python3 "$EVAL"/evaluation.py test-adapter --adapter-binary /tmp/pail-adapter-work/adapters/microduck/target/debug/pail-duckd --state /tmp/ad-built )
-# PASS_WITH_LIMITATIONS 14 pass / 0 fail / 1 skip for a healthy build; INCONCLUSIVE (see above) is the host, not your code
+# PASS_WITH_LIMITATIONS 17 pass / 0 fail / 1 skip for a healthy build; INCONCLUSIVE (see above) is the host, not your code
 ```
 
 A debug binary built on Ubuntu 24.04 (glibc 2.39, needing `GLIBC_2.34` at most) ran in
@@ -179,8 +179,9 @@ of the MOVE arm in `adapters/microduck/src/relay.rs` with a call whose result is
 builds, **copies the defective binary out of the working copy**, then restores the source
 and rebuilds, so the working copy ends healthy and `/tmp/defective-pail-duckd` is the only
 defective file. Expected: `RESULT=FAIL` (the block's exit status is 1 for that reason)
-with **exactly these eight** cases red — CA-01..06, 09, 10, the ones where a BLOCK on a MOVE
-must keep bytes from the robot. CA-13 stays green: it is a skill call (`robot.do`), and the
+with **exactly these nine** cases red — CA-01..06, 09, 10, the ones where a BLOCK on a MOVE
+must keep bytes from the robot, and CA-16, which sends commands without a token that must be
+refused. CA-13 stays green: it is a skill call (`robot.do`), and the
 defect ignores BLOCK on the MOVE arm only (an earlier build listed it among the red cases
 because the previous case's unspent lease leaked into it; each case is now isolated). CA-08
 (deadman timing) can additionally come out red or `INCONCLUSIVE` on a loaded host for a

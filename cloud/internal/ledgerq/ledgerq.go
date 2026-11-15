@@ -76,6 +76,8 @@ CREATE INDEX IF NOT EXISTS ev_token_hash  ON events(token_hash);
 CREATE INDEX IF NOT EXISTS ev_target_ms   ON events(target, ms);
 CREATE INDEX IF NOT EXISTS ev_outcome_ms  ON events(outcome, ms);
 CREATE UNIQUE INDEX IF NOT EXISTS ev_origin ON events(src, seg, off);
+-- OBS-RET: finds the oldest observation events without walking the journal rows
+CREATE INDEX IF NOT EXISTS ev_telemetry_ms ON events(ms) WHERE src='telemetry';
 CREATE TABLE IF NOT EXISTS ticks (ms INTEGER PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `
@@ -94,6 +96,10 @@ type DB struct {
 	storageHealth     IndexStorageHealth
 	observationMu     sync.Mutex
 	observationReady  atomic.Bool
+	// OBS-RET: the newest edge that pruning for space has imposed, and which
+	// bound asked for it ("budget" | "disk"). Guarded by observationMu.
+	spaceCutMs int64
+	spaceCutBy string
 	// ZoneResolver (AL-4) resolves zones of rows that predate zone_id from a
 	// kept site-model snapshot. Optional; nil = "unresolved" for such rows.
 	ZoneResolver ZoneResolver
@@ -164,7 +170,12 @@ func open(path string) (*DB, error) {
 		return nil, err
 	}
 	reader.SetMaxOpenConns(4)
-	return &DB{sql: db, observationReader: reader, path: path, storageConfig: telemetry.DefaultStorageConfig(), storageHealth: IndexStorageHealth{State: "BUILDING"}}, nil
+	// OBS-RET: a handle nobody configured keeps everything. The collector
+	// states its retention through ConfigureStorage; tools that open the
+	// index to read or rebuild it do not silently drop rows.
+	c := telemetry.DefaultStorageConfig()
+	c.IndexRetainDays = 0
+	return &DB{sql: db, observationReader: reader, path: path, storageConfig: c, storageHealth: IndexStorageHealth{State: "BUILDING"}}, nil
 }
 
 // removeIndexFiles deletes the index and its WAL side files. It is the ONLY

@@ -287,6 +287,9 @@ def s6(f):
     # Recorded, not judged: ERR_NO_TOKEN on a fresh stack, ERR_ISSUER_UNREACHABLE while the Issuer link is impaired
     # (the preview.36 network-impairment replay refused this scene on exactly that reason; the fake had not moved).
     f['gate_refusal_reasons'] = sorted({str(e.get('reason')) for e in refusals})
+    # 0.2.2 F1: the raw drive (4 s) outlasts the 3.5 s above; the next scene's token is requested only after the
+    # planner recorded the end of the raw drive (0.2.1 fleet robot-1: a leftover raw command started the new step early)
+    L.wait(i, 'raw drive ended', 10, event='raw_done')
     control_move(f)
 
 

@@ -33,9 +33,9 @@ func TestEvaluate(t *testing.T) {
 	}{
 		{"empty env defaults to production", map[string]string{}, "production", "", "S6"},
 		{"plaintext grpc", map[string]string{"PAIL_GRPC_TLS": "off", "PAIL_ATTESTATION": "required"}, "production", "S4", ""},
-		{"plaintext grpc over uds is allowed", map[string]string{
+		{"plaintext grpc with a uds path is refused all the same", map[string]string{
 			"PAIL_GRPC_TLS": "off", "PAIL_GRPC_UDS_PATH": "/var/run/pail/cloud.sock", "PAIL_ATTESTATION": "required",
-		}, "production", "", ""},
+		}, "production", "S4", ""},
 		{"unsigned keyring", map[string]string{"PAIL_KEYRING_MODE": "unsigned-dev", "PAIL_ATTESTATION": "log"}, "production", "S5", ""},
 		{"both, order fixed", map[string]string{
 			"PAIL_GRPC_TLS": "off", "PAIL_KEYRING_MODE": "unsigned-dev", "PAIL_ATTESTATION": "required",

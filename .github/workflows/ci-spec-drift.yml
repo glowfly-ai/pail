@@ -670,7 +670,7 @@ jobs:
       # A/B/C bundle boundary. PAIL-Core (Apache-2.0) must never import PAIL-Issuer
       # (the issuing bundle, not part of a Core delivery); the Go toolchain enforces it for cloud/issuer/internal/, and this
       # checker measures the whole boundary — direction, per-bundle SPDX headers, the
-      # bundle-B licence parameters, the absence of the private set and the HA seam. The control
+      # bundle-B licence parameters, the absence of the private set and the extension seam. The control
       # plants one issuer import into a PAIL-Core source file.
       - name: Positive control - PAIL-Core importing the issuer
         run: |

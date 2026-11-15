@@ -71,7 +71,7 @@ func issuerLedger(t *testing.T) string {
 	if err := w.Append(blackbox.RecordChainRevoked, ms+1, []byte("ERR_BARE_STRING")); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	return bb

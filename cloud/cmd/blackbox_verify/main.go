@@ -42,6 +42,23 @@ import (
 // --check-chain verifies: per-record hashes, header-to-first-record chaining,
 // segment-boundary tail inheritance, and CHECKPOINT signatures (needs -pubkey or -keyfile).
 // --find searches TOKEN_ISSUED records across all segments.
+//
+// What a pass means (SEC-H07). The hash chain can be recomputed by anyone who
+// can write the files, so the chain alone shows consistency, not origin; only
+// the signed CHECKPOINT records do. "OK: chain verified" is therefore printed
+// only when a key was given and every record sits under a verified checkpoint:
+//
+//	no signed checkpoint in a non-empty journal       -> FAIL, rc 1
+//	records after the last signed checkpoint          -> UNATTESTED_TAIL, rc 7
+//	                                                     (-allow-unattested-tail: pass, tail reported)
+//	no key                                            -> usage error, rc 2
+//	-structure-only (no key)                          -> "chain structure consistent ... UNAUTHENTICATED"
+//	-expect-head <hash> not in the journal            -> FAIL, rc 1
+//
+// What it cannot mean: a journal cut exactly at a signed checkpoint, or emptied
+// altogether, is a valid signed prefix. Nothing inside the files says it is
+// short. That is detected only against a value held elsewhere — -expect-head,
+// or the external anchor.
 
 const (
 	segMagic      = "PBSG"
@@ -78,6 +95,9 @@ func main() {
 		keyfile    = flag.String("keyfile", "", "issuer key JSON file (reads ed25519_public_key_base64)")
 		retention  = flag.Bool("retention", false, "report the sealed policy's retention: per segment (needs -policy); rc 4 mismatched, 5 unsealed, 6 sealed policy invalid")
 		policyPath = flag.String("policy", "", "policy.yaml to compare against the newest CONFIG_SEALED policy_file_sha256")
+		allowTail  = flag.Bool("allow-unattested-tail", false, "with --check-chain: accept records after the last signed CHECKPOINT (a live or power-cut journal); their count is still printed")
+		structOnly = flag.Bool("structure-only", false, "with --check-chain and no key: check hash linkage only; the result is UNAUTHENTICATED")
+		expectHead = flag.String("expect-head", "", "with --check-chain: a record hash (64 hex) the journal must contain, held outside the journal; detects truncation")
 	)
 	flag.Parse()
 
@@ -103,6 +123,33 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "pubkey: %v\n", err)
 		os.Exit(2)
+	}
+	// [SEC-H07] Decide what this run is able to claim before reading anything.
+	var (
+		wantHead [32]byte
+		haveHead bool
+	)
+	if !*checkChain && (*expectHead != "" || *allowTail || *structOnly) {
+		fmt.Fprintln(os.Stderr, "-expect-head / -allow-unattested-tail / -structure-only need --check-chain")
+		os.Exit(2)
+	}
+	if *checkChain {
+		switch {
+		case pub == nil && !*structOnly:
+			fmt.Fprintln(os.Stderr, "--check-chain needs the issuer key (-pubkey or -keyfile); use -structure-only to check hash linkage without one (that does not authenticate the records)")
+			os.Exit(2)
+		case pub != nil && *structOnly:
+			fmt.Fprintln(os.Stderr, "-structure-only cannot be combined with a key")
+			os.Exit(2)
+		}
+		if *expectHead != "" {
+			h, herr := parseExpectHead(strings.TrimPrefix(strings.ToLower(*expectHead), "0x"))
+			if herr != nil {
+				fmt.Fprintln(os.Stderr, herr)
+				os.Exit(2)
+			}
+			wantHead, haveHead = h, true
+		}
 	}
 
 	wantFind := strings.TrimPrefix(strings.ToLower(*findToken), "0x")
@@ -130,8 +177,9 @@ func main() {
 		totalRecords     int
 		totalCkpts       int
 		found            bool
-		unverifiedCkpts  int
 		unattestedCounts int
+		cov              coverage
+		headAt           string // where -expect-head was found ("" = not found)
 		segInfos         []segInfo
 		sealedSHA        string
 		sealSkipped      int
@@ -197,6 +245,10 @@ func main() {
 						name, r.idx, r.offset, hex.EncodeToString(r.thisHash[:]), hex.EncodeToString(expected[:]))
 					os.Exit(1)
 				}
+				cov.record()
+				if haveHead && headAt == "" && r.thisHash == wantHead {
+					headAt = fmt.Sprintf("%s record[%d]", name, r.idx)
+				}
 
 				if r.recType == blackbox.RecordCheckpoint || r.recType == blackbox.RecordCheckpointV2 {
 					v2 := r.recType == blackbox.RecordCheckpointV2
@@ -245,9 +297,12 @@ func main() {
 							// borrow v2's meaning.
 							unattestedCounts++
 						}
-					} else {
-						unverifiedCkpts++
+						// v1 signs the head too, so it covers the records
+						// before it; only its count is outside the signature.
+						cov.checkpoint(name, r.idx)
 					}
+					// pub == nil is -structure-only: the checkpoint's shape was
+					// checked above, its signature is not, and it covers nothing.
 					ckpts++
 				}
 
@@ -281,17 +336,42 @@ func main() {
 		totalRecords += len(records)
 	}
 
+	// [SEC-H07] The verdict. exitAfter defers a non-zero status that must not
+	// cut off the output of the other actions requested in the same run.
+	exitAfter := 0
 	if *checkChain {
-		if unverifiedCkpts > 0 {
-			fmt.Fprintf(os.Stderr, "FAIL: %d CHECKPOINT record(s) present but no -pubkey/-keyfile given for signature verification\n", unverifiedCkpts)
+		summary := fmt.Sprintf("(%d segments, %d records, %d checkpoints)", len(segs), totalRecords, totalCkpts)
+		// The held head is judged first: a journal that lacks it must not get
+		// an "OK: chain verified" line printed above its failure.
+		if haveHead && headAt == "" {
+			fmt.Fprintf(os.Stderr, "FAIL: expected head %s not found: the journal was cut before it, or this is a different journal\n", hex.EncodeToString(wantHead[:]))
 			os.Exit(1)
 		}
-		if unattestedCounts > 0 {
-			fmt.Printf("NOTE: %d CHECKPOINT v1 record(s): signature verified, record_count NOT attested by it (X13a)\n", unattestedCounts)
+		switch {
+		case *structOnly:
+			fmt.Printf("OK: chain structure consistent %s; UNAUTHENTICATED: no issuer key was given, so this does not show who wrote the records\n", summary)
+		case cov.seen > 0 && cov.verified == 0:
+			fmt.Fprintf(os.Stderr, "FAIL: no signed CHECKPOINT in this journal (%d records): nothing here is attested by the issuer key\n", cov.seen)
+			os.Exit(1)
+		case cov.tail() > 0 && !*allowTail:
+			fmt.Println(cov.line())
+			fmt.Fprintf(os.Stderr, "UNATTESTED_TAIL: %d record(s) after the last signed CHECKPOINT are not covered by any signature (a live or power-cut journal has a short one; pass -allow-unattested-tail to accept it)\n", cov.tail())
+			exitAfter = exitUnattestedTail
+		default:
+			if unattestedCounts > 0 {
+				fmt.Printf("NOTE: %d CHECKPOINT v1 record(s): signature verified, record_count NOT attested by it (X13a)\n", unattestedCounts)
+			}
+			fmt.Printf("OK: chain verified %s\n", summary)
+			fmt.Println(cov.line())
+			if cov.tail() > 0 {
+				fmt.Printf("NOTE: %d record(s) after the last signed CHECKPOINT are not covered by any signature\n", cov.tail())
+			}
+			// EC-3: what the verified records are evidence of, by intervention class.
+			printClassCounts(os.Stdout, classCounts(allRecords))
 		}
-		fmt.Printf("OK: chain verified (%d segments, %d records, %d checkpoints)\n", len(segs), totalRecords, totalCkpts)
-		// EC-3: what the verified records are evidence of, by intervention class.
-		printClassCounts(os.Stdout, classCounts(allRecords))
+		if haveHead {
+			fmt.Printf("OK: expected head found at %s\n", headAt)
+		}
 	}
 	if wantFind != "" && !found {
 		fmt.Printf("NOT_FOUND: token_hash_hex=%s\n", wantFind)
@@ -306,6 +386,9 @@ func main() {
 		if rc := printRetention(os.Stdout, rep, sealSkipped); rc != 0 {
 			os.Exit(rc)
 		}
+	}
+	if exitAfter != 0 {
+		os.Exit(exitAfter)
 	}
 }
 

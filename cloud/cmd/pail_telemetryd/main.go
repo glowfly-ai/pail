@@ -51,7 +51,7 @@ var dashboardFS embed.FS
 
 func main() {
 	var (
-		observationConfig = flag.String("observability-config", "", "strict schema_version=1 raw retention and DB/WAL budget JSON; default retain_no_delete")
+		observationConfig = flag.String("observability-config", "", "strict schema_version=1 JSON: raw retention, index window and DB/WAL budget; default keeps raw files and 7 days of observation rows in the index")
 		pushListen        = flag.String("push-listen", "", "TLS bind addr for observation uploads of robots on other machines (design 15); client certificates are required and bound to robots by the registry")
 		pushCA            = flag.String("push-ca", "", "CA that issued the robots' client certificates (with -push-listen)")
 		pushCert          = flag.String("push-cert", "", "server certificate of the push listener (with -push-listen)")
@@ -93,7 +93,21 @@ func main() {
 		os.Exit(runCheck(*check, *maxGap))
 	}
 	if *reindex {
-		os.Exit(runReindex(ledgerIndexPath, ledgerBlackboxDir, *dir))
+		// OBS-RET: a rebuild follows the same storage configuration as the
+		// running collector, so it indexes the retention window and not every
+		// line of every raw file.
+		rc := telemetry.DefaultStorageConfig()
+		if *observationConfig != "" {
+			b, e := os.ReadFile(*observationConfig)
+			if e == nil {
+				rc, _, e = parseObservationConfig(b)
+			}
+			if e != nil {
+				fmt.Fprintf(os.Stderr, "observability-config: %v\n", e)
+				os.Exit(2)
+			}
+		}
+		os.Exit(runReindex(ledgerIndexPath, ledgerBlackboxDir, *dir, rc))
 	}
 	if *indexCheck {
 		os.Exit(runIndexCheck(ledgerIndexPath, ledgerBlackboxDir))
@@ -827,8 +841,8 @@ func ledgerQueryError(w http.ResponseWriter, err error) {
 }
 
 // runReindex rebuilds the index from scratch and prints what it found.
-func runReindex(indexPath, blackboxDir, telemetryDir string) int {
-	d, cs, ts, err := ledgerq.Rebuild(indexPath, blackboxDir, telemetryDir, time.Now())
+func runReindex(indexPath, blackboxDir, telemetryDir string, storage telemetry.StorageConfig) int {
+	d, cs, ts, err := ledgerq.RebuildWithStorage(indexPath, blackboxDir, telemetryDir, time.Now(), storage)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reindex: %v\n", err)
 		return 1

@@ -31,7 +31,7 @@ Jetson Orin Nano Super(네이티브 CPU), L40S 위의 Isaac Sim(amd64)에서 측
 
 Docker 가 있는 노트북에서 명령 세 줄이다. 이슈어·게이트·모션 브리지는 실제 구성 요소이고,
 시뮬레이션인 것은 TurtleBot3 베이스와 태그 리더, 안전 피드뿐이다. 호스트 ROS 도, 계정도,
-하드웨어도 필요 없다. 평가 꾸러미는 [0.2.0 release 페이지](https://github.com/glowfly-ai/pail/releases/tag/0.2.0)에서
+하드웨어도 필요 없다. 평가 꾸러미는 [0.2.2 release 페이지](https://github.com/glowfly-ai/pail/releases/tag/0.2.2)에서
 아키텍처에 맞는 것을 받아 그 디렉터리에서 아래를 실행한다.
 
 ```sh
@@ -146,10 +146,10 @@ v5 스킬 등재부를 명시적으로 선택하고, 원본 관측과 기계 판
 
 | 플랫폼 | 범위 | 최근 측정 결과 | 보고서 |
 |---|---|---|---|
-| 소프트웨어 꾸러미(Docker, Linux arm64·amd64) | Microduck 프리뷰, 시뮬레이션 TurtleBot3 베이스, fleet, 어댑터 적합성, 수명주기, 계획 대체 | Microduck 15/15 · TurtleBot3 13/13 · fleet 27/27(dev·mTLS) · 게이트 CTest 37/37 · 수명주기 21/21 · 대체 8/8 | 각 평가 꾸러미 안에 든 측정 검증 보고서(VALIDATION); [TRY_IT.ko.md](TRY_IT.ko.md) |
-|<!-- hw-measurements:begin hardware_row --> TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 <!-- hw-measurements:end hardware_row -->|
+| 소프트웨어 꾸러미(Docker, Linux) | Microduck 프리뷰, 시뮬레이션 TurtleBot3 베이스, fleet, 어댑터 적합성, 수명주기, 계획 대체 | Microduck 15/15 · 시뮬레이션 TurtleBot3 시험 8/8 점검 · 로봇 2대 fleet 각 15/15 · 게이트 CTest 37/37 · 수명주기 21/21 · 대체 8/8 | 각 평가 꾸러미 안에 든 측정 검증 보고서(VALIDATION); [TRY_IT.ko.md](TRY_IT.ko.md) |
+|<!-- hw-measurements:begin hardware_row --> TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서 13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 <!-- hw-measurements:end hardware_row -->|
 | Jetson Orin Nano Super(네이티브 arm64, CPU) | 실제 게이트·브리지를 쓰는 역할 격리 합성 참조 | 7/7 시나리오; 8시간 분할 반복: exercise/cancel 752회, 결함 주입 22회, 정리 전부 PASS | [examples/nvidia/README.ko.md](examples/nvidia/README.ko.md) |
-| L40S VM 1대 위의 Isaac Sim 6.0.1(Linux amd64) | 같은 게이트 뒤의 실제 SDK endpoint; BS-01~12·BP-01~12 우회·수명주기 행렬 | 14 케이스 전부 릴리스 실행의 새 상태 반복 2회 PASS, 28/28 완료(BP-11 양성 대조는 DETECTED); 같은 이미지의 이전 실행 1회는 INCONCLUSIVE 1건을 기록했고 release 페이지와 ISAAC.ko.md 에 공개했다; 정지는 physics step 당 위치 변화로 판정하고 SDK 보고 velocity 는 증거로 보존 | [examples/nvidia/ISAAC.ko.md](examples/nvidia/ISAAC.ko.md) |
+| L40S VM 1대 위의 Isaac Sim 6.0.1(Linux amd64) | 같은 게이트 뒤의 실제 SDK endpoint; BS-01~12·BP-01~12 우회·수명주기 행렬 | 14 케이스 전부 릴리스 실행의 새 상태 반복 2회 PASS, 28/28 완료(BP-11 양성 대조는 DETECTED); 같은 이미지의 이전 시험판의 실행 1회는 INCONCLUSIVE 1건을 기록했고 release 페이지와 ISAAC.ko.md 에 공개했다; 정지는 physics step 당 위치 변화로 판정하고 SDK 보고 velocity 는 증거로 보존 | [examples/nvidia/ISAAC.ko.md](examples/nvidia/ISAAC.ko.md) |
 
 전달된 아카이브의 수령자 경로는 발행자의 작업 트리를 공유하지 않는 평가 실행이 재현했다:
 이 분할 꾸러미 계열의 모든 빌드를 Apple Silicon Mac 에서, 변경이 amd64 경로에 닿은 빌드를
@@ -254,13 +254,13 @@ ROS 가 없는 로봇은 [C ABI 어댑터 계약](spec/ADAPTER_CONTRACT.md)으�
 [어댑터 상태표](spec/ADAPTERS.tsv), [적합성 하네스](pvs-public/conformance/)를 참고하세요.
 fake 시험은 실제 로봇 인증이 아니며 별도 어댑터 전체 소스가 동봉됐다는 뜻도 아닙니다.
 
-네이티브 독립 검증기를 빌드하려면 Go 1.27.3 이상이 필요합니다. Go가 없는 호스트는
-`golang:1.27.3` 이미지를 받은 뒤 검증기 자체는 네트워크 차단 상태의 Docker 로 돌릴 수 있습니다
+네이티브 독립 검증기를 빌드하려면 Go 1.27.4 이상이 필요합니다. Go가 없는 호스트는
+`golang:1.27.4` 이미지를 받은 뒤 검증기 자체는 네트워크 차단 상태의 Docker 로 돌릴 수 있습니다
 (최초 이미지 다운로드만 네트워크가 필요합니다):
 
 ```sh
 docker run --rm --network none -v "$PWD":/src:ro -w /src/cmd/pail-verify \
-  -e GOCACHE=/tmp/gc -e GOPATH=/tmp/gp golang:1.27.3 go test ./...
+  -e GOCACHE=/tmp/gc -e GOPATH=/tmp/gp golang:1.27.4 go test ./...
 ```
 
 릴리스 식별: [VERSION](VERSION), 변경: [CHANGELOG.md](CHANGELOG.md),
@@ -378,7 +378,7 @@ Microduck 경로에도 라이브 데모가 있습니다: `python3 evaluation.py 
 [`cmd/pail-recompute/`](cmd/pail-recompute/)(토큰에 서명된 world-slice 해시 재계산기)가 실린다.
 둘 다 생산자와 코드를 공유하지 않는 독립 Go 모듈이며 종료 코드는 `0` 검증됨 · `1` 발견 ·
 `2` 검증 불가 세 상태다. 명령과 벡터 수는 [영문 README](README.md#verify-the-evidence-yourself)를
-따른다. 네이티브 빌드에는 Go 1.27.3 이상이 필요하고, Go 가 없는 호스트는 영문 README 의 Docker
+따른다. 네이티브 빌드에는 Go 1.27.4 이상이 필요하고, Go 가 없는 호스트는 영문 README 의 Docker
 명령을 쓴다. 먼저 읽을 것은 초록이 아니라 도구가 **무엇을 거부하는가**다.
 
 ## 로봇 운영 계약 (실험적, 선택 활성화)
@@ -556,9 +556,7 @@ status=ACCEPTED chain_id=248561ae-… rejected= tokens=1
 - **Anchor SaaS** — 저널 머리를 위한 호스팅 외부 증인. 앵커가 운영자의 손 밖에 놓인다. 평가의
   로컬 파일 앵커는 같은 경로를 돌려 보는 것이지 독립 증인이 아니다.
 - **함대 운영** — [`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.md) 에 실린 계약을 구동하는
-  로봇 운영 오케스트레이터(계획·승인·적용·복구). 여기의 fleet 프리뷰는 27/27 로 측정됐다.
-- **복제 이슈어와 다중 사이트 운영** — [`SECURITY.md`](SECURITY.md) §4.2 의 단일 노드 내구성
-  구간을 받아들일 수 없는 배치를 위한 것.
+  로봇 운영 오케스트레이터(계획·승인·적용·복구). 여기의 fleet 프리뷰는 로봇 2대가 Microduck 장면을 각각 15/15 로 통과한다.
 
 사고 뒤 저널은 조사관·보험사·규제 기관이 가장 먼저 묻는 것 — 누가 이 움직임을 인가했고,
 어떤 한계 안에서, 게이트는 무엇을 했고, 어떤 순서였는가 — 에 운영자가 들키지 않고 고칠 수 없는
@@ -584,8 +582,7 @@ status=ACCEPTED chain_id=248561ae-… rejected= tokens=1
 
 ### 평가 이슈어의 범위
 
-평가 이슈어는 단일 노드입니다. `PAIL_HA_*` 복제 설정이 있으면 단일 노드로 조용히 도는
-대신 기동을 거부하며, 단일 노드의 내구성 구간은 [`SECURITY.md`](SECURITY.md) §4.2 에
+평가 이슈어는 단일 노드이며, 그 내구성 구간은 [`SECURITY.md`](SECURITY.md) §4.2 에
 있습니다. 로봇 운영 계약은 이슈어·로봇 종단, 오프라인 검사기 둘, 실행 가능한 예제와 함께
 실립니다([`spec/ROBOT_OPERATIONS.md`](spec/ROBOT_OPERATIONS.ko.md) §1). 그것을 구동하는
 오케스트레이터는 별도로 제공합니다([오픈 코어 너머](#오픈-코어-너머)).

@@ -2,7 +2,7 @@ module github.com/glowfly/pail/tools/grpc_client_go
 
 go 1.27
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require google.golang.org/grpc v1.83.2
 

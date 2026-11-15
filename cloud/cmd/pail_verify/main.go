@@ -158,7 +158,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	if !*noReceipt {
 		// The receipt never changes the exit code. A receipt inside the delivery tree would itself be an extra file.
-		if !*noTree && *receiptDir != "" && insideTree(*receiptDir, root) {
+		// P021-M1: judge the directory the receipt would actually go to (flag, PAIL_VERIFICATION_RECEIPT_DIR or the default).
+		if dir, derr := receiptDirectory(*receiptDir); derr == nil && !*noTree && insideTree(dir, root) {
 			fmt.Fprintln(stdout, "RECEIPT: not written (receipt directory is inside the delivery tree; keep receipts outside)")
 			return 0
 		}
@@ -170,17 +171,32 @@ func run(args []string, stdout, stderr io.Writer) int {
 // insideTree reports whether dir equals root or lies under it (both made
 // absolute, symlinks resolved where the path exists).
 func insideTree(dir, root string) bool {
-	canon := func(p string) string {
-		if abs, err := filepath.Abs(p); err == nil {
-			p = abs
-		}
-		if resolved, err := filepath.EvalSymlinks(p); err == nil {
-			p = resolved
-		}
-		return filepath.Clean(p)
-	}
-	d, r := canon(dir), canon(root)
+	d, r := canonPath(dir), canonPath(root)
 	return d == r || strings.HasPrefix(d, r+string(filepath.Separator))
+}
+
+// canonPath makes p absolute, resolves symlinks in its nearest existing ancestor
+// and re-joins the rest. P021-M1: a receipt directory usually does not exist
+// yet; resolving only existing paths left /tmp/<tree>/receipts unresolved while
+// the tree resolved to /private/tmp/<tree> on macOS, and the receipt landed
+// inside the tree.
+func canonPath(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		p = abs
+	}
+	p = filepath.Clean(p)
+	rest := ""
+	for cur := p; ; {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(resolved, rest)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return p
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
 }
 
 // compareTree compares root with the manifest when the check is not skipped

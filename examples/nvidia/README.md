@@ -8,7 +8,7 @@ This is **not a general claim of NVIDIA/Jetson/Isaac Sim compatibility** and no 
 |---|---|---|---|
 | mock v1/v2/v3 | arm64, amd64 | synthetic reference with the real gate/bridge; fault suite (normal, bridge stall, endpoint/monitor loss, orphan, permit replay, log corruption) | physical robots, GPU |
 | jetson v3 | arm64 (Orin Nano Super, L4T 36) | native CPU reference 7/7; 8 h segmented soak | GPU, Isaac ROS, motors |
-| isaac v4 | amd64 (Brev L40S) | BS-01..12 / BP-01..12 matrix: 12/14 cases repeatable PASS or DETECTED, where a PASS means authorized motion starts (≥1 mm) and the cancel brings the body to rest — not distance or trajectory accuracy; `gate_kill` INCONCLUSIVE and `orphan` 1 PASS / 1 FAIL on post-stop wheel-reading jitter with zero displacement | other GPUs/OS/SDK versions, OmniGraph ROS bridge, streaming, 50 Hz worst-case latency, SDK image redistribution |
+| isaac v4 | amd64 (Brev L40S) | BS-01..12 / BP-01..12 matrix: 14/14 cases with the expected result in two fresh-state repeats of the release run (13 PASS, the BP-11 positive control DETECTED), where a PASS means authorized motion starts (≥1 mm) and the cancel brings the body to rest — not distance or trajectory accuracy; one run of an earlier pre-release recorded one INCONCLUSIVE ([ISAAC.md](ISAAC.md)) | other GPUs/OS/SDK versions, OmniGraph ROS bridge, streaming, 50 Hz worst-case latency, SDK image redistribution |
 
 The Isaac Sim image is derived locally from the pinned upstream digest with the two Dockerfiles under [`sim/sdk/`](sim/sdk/SDK_IMAGE.md) and the asset tree with [`sim/assets/`](sim/assets/ASSETS.md); PAIL ships the recipes, the test-only drive overlay and notices, never the image or converted assets.
 

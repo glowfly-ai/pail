@@ -125,8 +125,14 @@ def unlock(a):
 
 
 def verify(a):
-    p = subprocess.run(['blackbox_verify', '-check-chain', '-dir', '/var/log/pail_blackbox', '-keyfile', '/etc/pail/keys/issuer_ed25519.json'],
-                       capture_output=True, text=True, timeout=60)
+    # Exit 7 means the newest records are not yet under a signed checkpoint. The Issuer covers them once its writes
+    # pause for about a second, so wait for that instead of accepting records outside every signature.
+    for attempt in range(6):
+        p = subprocess.run(['blackbox_verify', '-check-chain', '-dir', '/var/log/pail_blackbox', '-keyfile', '/etc/pail/keys/issuer_ed25519.json'],
+                           capture_output=True, text=True, timeout=60)
+        if p.returncode != 7 or attempt == 5:
+            break
+        time.sleep(1.5)
     out = (p.stdout + p.stderr).strip()
     return {'ok': p.returncode == 0 and 'OK: chain verified' in out, 'rc': p.returncode, 'output': out[-1500:]}
 

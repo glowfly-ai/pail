@@ -265,6 +265,9 @@ type TelemetryStatus struct {
 	Bursts   int64
 	Ticks    int64
 	BadLines int64
+	// ExpiredLines (OBS-RET) were read and counted but not put into the index:
+	// they are older than the retention window. They remain in the raw file.
+	ExpiredLines int64
 }
 
 // IngestTelemetry tails every decisions-*.jsonl in dir from the byte offset

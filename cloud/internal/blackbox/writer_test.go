@@ -198,7 +198,7 @@ func TestChainContinuesAcrossRestart(t *testing.T) {
 	if err := w.Append(RecordTokenIssued, 2, []byte(`{"b":2}`)); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -210,7 +210,7 @@ func TestChainContinuesAcrossRestart(t *testing.T) {
 	if err := w.Append(RecordGateDecision, 3, []byte(`{"c":3}`)); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -241,7 +241,7 @@ func TestRotationAtMaxBytes(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	w.Close()
+	w.Abandon()
 
 	segs := verifySegments(t, dir, key.Public().(ed25519.PublicKey))
 	if len(segs) < 2 {
@@ -266,7 +266,7 @@ func TestCheckpointEveryNRecords(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	w.Close()
+	w.Abandon()
 
 	segs := verifySegments(t, dir, key.Public().(ed25519.PublicKey))
 	ckpts := 0
@@ -341,7 +341,7 @@ func TestOpenRecoversTruncatedTail(t *testing.T) {
 	if err := w.Append(RecordPlanAccepted, 1, []byte(`{"a":1}`)); err != nil {
 		t.Fatal(err)
 	}
-	w.Close()
+	w.Abandon()
 
 	path := filepath.Join(dir, segmentName(1))
 	st, err := os.Stat(path)
@@ -512,7 +512,7 @@ func TestRotationTailAcrossEmptySegment(t *testing.T) {
 	if err := w.Append(RecordTokenIssued, 2, []byte(`{"b":2}`)); err != nil {
 		t.Fatal(err)
 	}
-	w.Close()
+	w.Abandon()
 
 	// verifySegments enforces prev_segment_tail_hash inheritance including
 	// empty-segment transparency; the reader must agree.
@@ -547,14 +547,14 @@ func TestEmptySegmentTransparentInheritance(t *testing.T) {
 		t.Fatal(err)
 	}
 	tail1 := w.prevHash
-	w.Close()
+	w.Abandon()
 
 	// seg 2: opened but crashed before any record (header only)
 	w, err = OpenDir(dir, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.Close()
+	w.Abandon()
 
 	// seg 3: must still inherit seg 1's record tail through the empty seg 2
 	w, err = OpenDir(dir, cfg)
@@ -564,7 +564,7 @@ func TestEmptySegmentTransparentInheritance(t *testing.T) {
 	if err := w.Append(RecordGateDecision, 3, []byte(`{}`)); err != nil {
 		t.Fatal(err)
 	}
-	w.Close()
+	w.Abandon()
 
 	segs := verifySegments(t, dir, key.Public().(ed25519.PublicKey))
 	if len(segs) != 3 {

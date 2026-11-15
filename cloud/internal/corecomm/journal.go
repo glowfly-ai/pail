@@ -18,6 +18,7 @@ import (
 
 var ErrConflict = errors.New("CORE_OPERATION_CONFLICT")
 var ErrCapacity = errors.New("CORE_OPERATION_CAPACITY")
+var ErrPersistenceUncertain = errors.New("CORE_JOURNAL_PERSISTENCE_UNCERTAIN: verified recovery required")
 
 const DefaultMaxEntries = 4096
 const DefaultMaxBytes = 64 << 20
@@ -45,6 +46,7 @@ type Entry struct {
 type Journal struct {
 	mu                   sync.Mutex
 	writer               *blackbox.Writer
+	persistenceErr       error
 	entries              map[string]Entry
 	legacyPlans          map[string]bool
 	blocked              map[string]int
@@ -132,7 +134,10 @@ func (j *Journal) append(e Entry) error {
 		typ = blackbox.RecordCoreReport
 	}
 	if err = j.writer.AppendDurable(typ, uint64(e.AtMS), b); err != nil {
-		return err
+		// Local bytes may exist even when replication ACK/checkpoint failed.
+		// Do not append a contradictory history until verified recovery.
+		j.persistenceErr = fmt.Errorf("%w: %v", ErrPersistenceUncertain, err)
+		return j.persistenceErr
 	}
 	j.bytes += len(b)
 	return nil
@@ -140,6 +145,9 @@ func (j *Journal) append(e Entry) error {
 func (j *Journal) Begin(e Entry) (Entry, bool, error) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if j.persistenceErr != nil {
+		return Entry{}, false, j.persistenceErr
+	}
 	e.Key = Key(e.Scope, e.Robot, e.Kind, e.ID)
 	if old, ok := j.entries[e.Key]; ok {
 		if !bytes.Equal(old.Digest, e.Digest) {
@@ -171,6 +179,9 @@ func (j *Journal) Begin(e Entry) (Entry, bool, error) {
 	e.Phase = "IN_PROGRESS"
 	e.Recovered = false
 	if err := j.append(e); err != nil {
+		e.Phase = "OUTCOME_UNKNOWN"
+		e.Recovered = true
+		j.put(clone(e))
 		return Entry{}, false, err
 	}
 	j.put(clone(e))
@@ -179,6 +190,9 @@ func (j *Journal) Begin(e Entry) (Entry, bool, error) {
 func (j *Journal) Finish(e Entry, phase string, response []byte) (Entry, error) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if j.persistenceErr != nil {
+		return Entry{}, j.persistenceErr
+	}
 	old, ok := j.entries[e.Key]
 	if !ok || old.Phase != "IN_PROGRESS" || !bytes.Equal(old.Digest, e.Digest) {
 		return Entry{}, ErrConflict
@@ -233,6 +247,9 @@ func (j *Journal) Blocked(robot string) bool { return j.BlockedExcept(robot, "")
 func (j *Journal) BlockedExcept(robot, except string) bool {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if j.persistenceErr != nil {
+		return true
+	}
 	n := j.blocked[robot]
 	if e, ok := j.entries[except]; ok && e.Robot == robot && isBlocking(e) {
 		n--
@@ -247,6 +264,9 @@ func (e Entry) Reference() string { return fmt.Sprintf("core-comm:v1:%s", e.Key)
 func (j *Journal) ResolveWithdrawn(cancel Entry) error {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if j.persistenceErr != nil {
+		return j.persistenceErr
+	}
 	proof, ok := j.entries[cancel.Key]
 	if !ok || proof.Kind != "CANCEL" || proof.Phase != "COMMITTED" {
 		return errors.New("durable cancellation proof required")

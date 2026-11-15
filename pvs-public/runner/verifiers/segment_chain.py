@@ -113,6 +113,14 @@ class Result:
     segments: int = 0
     records: int = 0
     checkpoints_verified: int = 0
+    # SEC-H07: what the signatures cover. A hash chain can be recomputed by
+    # anyone who can write the files, so `ok` alone says "consistent", not
+    # "written by the issuer". `attested_records` counts the records up to and
+    # including the last checkpoint whose signature was verified;
+    # `unattested_tail` is what comes after it. Both stay 0/records when no key
+    # was supplied, because then nothing was verified.
+    attested_records: int = 0
+    unattested_tail: int = 0
     head_hash: Optional[bytes] = None      # this_hash of last record overall
     errors: List[str] = field(default_factory=list)
     all_records: List[Record] = field(default_factory=list)
@@ -223,14 +231,20 @@ def _parse_segment(path: Path, res: Result, issuer_pub: Optional[List[bytes]],
                      f"(stored={this_hash.hex()[:16]} recomputed={want.hex()[:16]})")
             return None
 
+        covers = False
         if rtype in (REC_CHECKPOINT, REC_CHECKPOINT_V2):
             if not _verify_checkpoint(path, idx, rtype, payload, prev_hash,
                                       seg_seq, issuer_pub, res):
                 return None
+            covers = res.checkpoints[-1].signature_verified
 
         res.all_records.append(Record(seg_seq, idx, rver, rtype, unix_ms,
                                       payload, rec_prev, this_hash))
         res.records += 1
+        if covers:
+            # The signed head is bound to every earlier record, across segments
+            # (the header carries the inherited tail, checked above).
+            res.attested_records = res.records
         prev_hash = this_hash
         seg_tail = this_hash
         off = end
@@ -333,8 +347,16 @@ def _normalize_pubs(issuer_pub) -> Optional["_Ring"]:
     return _Ring([bytes(p) for p in issuer_pub], None)
 
 
-def verify(seg_dir, issuer_pub=None) -> Result:
+def verify(seg_dir, issuer_pub=None, *, require_attested: bool = False) -> Result:
     """Verify the full segment chain across a blackbox directory.
+
+    require_attested (SEC-H07): also fail when the journal has records but no
+    checkpoint with a verified signature, or when records trail after the last
+    one. The default keeps the earlier meaning of `ok` (chain consistent, and
+    every checkpoint that IS present verifies); the coverage is reported in
+    `attested_records` / `unattested_tail` either way. A journal cut exactly at
+    a signed checkpoint is a valid signed prefix and passes both modes — that is
+    what the anchor cross-check is for.
 
     issuer_pub: if provided, CHECKPOINT signatures are verified (M5 attestation).
     Accepts a single 32-byte public key, an iterable of them (D5-b rotation), or
@@ -365,6 +387,14 @@ def verify(seg_dir, issuer_pub=None) -> Result:
         res.segments += 1
         res.head_hash = tail
 
+    res.unattested_tail = res.records - res.attested_records
+    if require_attested:
+        if res.records > 0 and res.attested_records == 0:
+            res.fail("no signed checkpoint: nothing in this journal is attested "
+                     "by an issuer key")
+        elif res.unattested_tail > 0:
+            res.fail(f"unattested tail: {res.unattested_tail} record(s) after the "
+                     f"last signed checkpoint")
     return res
 
 
@@ -432,6 +462,7 @@ if __name__ == "__main__":
     r = verify(args.seg_dir, pub)
     print(f"chain={'PASS' if r.ok else 'FAIL'} segments={r.segments} records={r.records} "
           f"checkpoints_verified={r.checkpoints_verified} "
+          f"attested={r.attested_records} unattested_tail={r.unattested_tail} "
           f"head={None if r.head_hash is None else r.head_hash.hex()[:16]}")
     for c in r.checkpoints:
         # "몇 개가 통과했다"만 찍으면 v1 과 v2 가 같은 줄로 도착한다 — 무엇이

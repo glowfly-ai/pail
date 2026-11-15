@@ -1,7 +1,7 @@
 # PAIL PEP gate container (ROS 2 Humble) — public-tree build.
 #
 # Includes the gate, standalone decision library and motion bridge.
-FROM ros:humble-ros-base@sha256:860e53793ccf575e5369b5e9a19939de2bfcfb46a299954d06f54f2af54fed19
+FROM ros:humble-ros-base@sha256:d9f14e84747bea639a65e00cf871d2c68ae55385d2acf6239614de0cadb41dcc
 
 SHELL ["/bin/bash", "-lc"]
 

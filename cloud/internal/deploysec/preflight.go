@@ -42,6 +42,12 @@ func (r Result) ids(f []Finding) string {
 	return strings.Join(out, ",")
 }
 
+// ReplayOff reports whether the development switch that skips the issuer's
+// journal replay is set. One predicate serves both the issuer and rule S41:
+// two readings of the variable could drift apart and leave a value that skips
+// the replay without being refused.
+func ReplayOff(get func(string) string) bool { return get("PAIL_REPLAY") == "off" }
+
 // Evaluate is pure: it reads only through get and never exits. It does not vary
 // its Fail list by profile — what counts as a violation and whether to refuse
 // are separate decisions, so the dev banner can list exactly what production
@@ -51,7 +57,7 @@ func Evaluate(get func(string) string) Result {
 	if profile == "" {
 		profile = "production"
 	}
-	r := Result{Profile: profile, Checked: []string{"S4", "S5"}}
+	r := Result{Profile: profile, Checked: []string{"S4", "S5", "S41"}}
 
 	if profile != "production" && profile != "dev" {
 		r.Fail = append(r.Fail, Finding{"S0", fmt.Sprintf("PAIL_PROFILE=%s (want production|dev)", profile)})
@@ -61,15 +67,26 @@ func Evaluate(get func(string) string) Result {
 		return r
 	}
 
-	// UDS exception: grpcauth's contract is "mTLS over TCP, or a unix socket
-	// protected by file permissions". Plaintext TCP is neither.
-	if get("PAIL_GRPC_TLS") == "off" && get("PAIL_GRPC_UDS_PATH") == "" {
+	// [SEC-H05] No Unix-socket exception. A socket set with PAIL_GRPC_UDS_PATH is
+	// an ADDITIONAL listener: pail_cloud, pail_services and pail_robot_agent all
+	// open their TCP port regardless (pail_cloud has no such socket at all), and
+	// with TLS off that port is plaintext. The earlier rule let "TLS off + any
+	// socket path" start in production with that port open.
+	if get("PAIL_GRPC_TLS") == "off" {
 		r.Fail = append(r.Fail, Finding{"S4",
-			"PAIL_GRPC_TLS=off with no PAIL_GRPC_UDS_PATH — the control plane accepts unauthenticated ReportDecision/Unlock from any local process"})
+			"PAIL_GRPC_TLS=off — the TCP listener is plaintext, with or without PAIL_GRPC_UDS_PATH: the control plane accepts unauthenticated ReportDecision/Unlock from any local process"})
 	}
 	if get("PAIL_KEYRING_MODE") == "unsigned-dev" {
 		r.Fail = append(r.Fail, Finding{"S5",
 			"PAIL_KEYRING_MODE=unsigned-dev — unsigned keyring trust path (KM2 W2: a swapped keyring makes forged tokens verify)"})
+	}
+	// [SEC-H08A] The issuer restores its state by replaying its journal at
+	// start-up, and that replay is also where the journal's checkpoint
+	// signatures are verified. The switch skips all of it; it was honoured in
+	// every profile with one warning line.
+	if ReplayOff(get) {
+		r.Fail = append(r.Fail, Finding{"S41",
+			"PAIL_REPLAY=off — the issuer would start without replaying its journal: the lockdown, the consumed tokens and the issuance history are not restored and no checkpoint signature is verified"})
 	}
 	if m := get("PAIL_ATTESTATION"); m == "" || m == "off" {
 		r.Warn = append(r.Warn, Finding{"S6",

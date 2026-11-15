@@ -36,10 +36,21 @@ type StorageConfig struct {
 	TrashGraceSeconds int64  `json:"trash_grace_seconds"`
 	DBMaxBytes        int64  `json:"db_max_bytes"`
 	WALMaxBytes       int64  `json:"wal_max_bytes"`
+	// [OBS-RET] The query index is derived and can be rebuilt; it must not
+	// stop taking in what is happening now because it kept everything that
+	// ever happened. IndexRetainDays is how long observation rows stay in it
+	// (0 = keep all; journal rows are never removed by it). DiskFreeMinBytes is
+	// what the index leaves free on its filesystem (0 = automatic: a tenth of
+	// the filesystem, between 1 GiB and 20 GiB). DBMaxBytes is now an optional
+	// fixed budget (0 = none); reaching either bound removes the oldest
+	// observation rows instead of refusing new ones.
+	IndexRetainDays  int   `json:"index_retain_days"`
+	DiskFreeMinBytes int64 `json:"disk_free_min_bytes"`
 }
 
 func DefaultStorageConfig() StorageConfig {
-	return StorageConfig{1, "retain_no_delete", 0, 0, 3600, 2 << 30, 256 << 20}
+	return StorageConfig{SchemaVersion: 1, RetentionMode: "retain_no_delete", TrashGraceSeconds: 3600,
+		WALMaxBytes: 256 << 20, IndexRetainDays: 7}
 }
 func ParseStorageConfig(b []byte) (StorageConfig, error) {
 	c := DefaultStorageConfig()
@@ -83,7 +94,8 @@ func ParseStorageConfig(b []byte) (StorageConfig, error) {
 	return c, nil
 }
 func (c StorageConfig) Validate() error {
-	if c.SchemaVersion != 1 || (c.RetentionMode != "retain_no_delete" && c.RetentionMode != "managed") || c.RawMaxBytes < 0 || c.RetainDays < 0 || c.RetainDays > 36500 || c.TrashGraceSeconds < 1 || c.TrashGraceSeconds > 31536000 || c.DBMaxBytes <= 0 || c.WALMaxBytes <= 0 {
+	if c.SchemaVersion != 1 || (c.RetentionMode != "retain_no_delete" && c.RetentionMode != "managed") || c.RawMaxBytes < 0 || c.RetainDays < 0 || c.RetainDays > 36500 || c.TrashGraceSeconds < 1 || c.TrashGraceSeconds > 31536000 || c.DBMaxBytes < 0 || c.WALMaxBytes <= 0 ||
+		c.IndexRetainDays < 0 || c.IndexRetainDays > 36500 || c.DiskFreeMinBytes < 0 {
 		return errors.New("OBSERVABILITY_CONFIG: invalid limits")
 	}
 	if c.RetentionMode == "managed" && (c.RawMaxBytes <= 0 || c.RetainDays <= 0) {

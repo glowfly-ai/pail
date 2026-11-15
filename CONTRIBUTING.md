@@ -83,7 +83,6 @@ retain its reason; SKIP is neither a failure nor evidence of a successful test.
 | Item | Boundary |
 |---|---|
 | Anchor SaaS server | Offered as a hosted service; the public formats and verification inputs it speaks are in `spec/` |
-| Issuer replication and standby | The evaluation issuer is single-node and refuses `PAIL_HA_*` replication settings at startup |
 | Design rationale and field evidence | What the public needs is in `spec/`, the README and `KNOWN_ISSUES.md` |
 | Operator-owned deployment layers | See [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) §3 |
 

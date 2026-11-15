@@ -371,6 +371,17 @@ world changes: a person walks into a zone, an object is moved, a robot goes into
 maintenance. Mutations are serialised with issuance, so every token is signed
 against a consistent cut of the world.
 
+Who may send one is decided by the requester registry, the same file that names
+the identities allowed to submit plans. An entry carries a `context_events`
+grant: event kind names, `CUSTOM:<namespace>.<name>` for a declared custom
+event, or `"*"`. With a registry loaded the default is refusal — a transport
+identity that is not in the registry, or whose entry has no grant for the kind
+it sends, is refused, and the arrival is still journaled. A custom event is
+granted by its declared name, not through the built-in kind it maps to. The
+lock register (`ApplyLock`, `ReleaseLock`) is authorized by its own ownership rules and does not ask
+for this grant. What a granted sender reports is not verified: the grant says
+who may speak, not that what is said is true.
+
 <!-- vocab: context_event_kind -->
 
 | kind | number | `node_id` / `arg` |

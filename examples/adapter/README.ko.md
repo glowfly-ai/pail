@@ -43,7 +43,7 @@ EVAL=$PWD      # the extracted pail-evaluation directory (contains evaluation.py
 
 `test-adapter`가 구동하는 형상은 하나, [어댑터 계약 §5a](../../spec/ADAPTER_CONTRACT.ko.md)에
 적은 **Microduck 호환 UDS/CLI 프로필**(소켓, 명령줄, `hello`/`api_version`, 게이트 로그 줄,
-런타임 이미지와 `libpail_gate` ABI)입니다. 그 형상을 지킨 자체 Linux ARM64 실행 파일은
+런타임 이미지와 `libpail_gate` ABI)입니다. 그 형상을 지킨 자체 Linux 실행 파일(아키텍처는 `images.lock.json`)은
 다음으로 직접 시험합니다.
 
 ```sh
@@ -53,7 +53,7 @@ python3 evaluation.py test-adapter --adapter-binary /absolute/my-pail-duckd \
 
 실제 파일을 세 시험 역할에 읽기 전용으로 연결하고 SHA-256을 기록합니다. 공급된 어댑터로
 몰래 대체하지 않습니다. CA-15는 이 백엔드에서 미지원이므로 SKIP로 남깁니다. 없는 경로나
-Linux ARM64 ELF가 아닌 파일은 이름을 대며 거부하고(`CUSTOM_ADAPTER_NOT_FOUND`,
+그 아키텍처 Linux ELF가 아닌 파일은 이름을 대며 거부하고(`CUSTOM_ADAPTER_NOT_FOUND`,
 `CUSTOM_ADAPTER_PLATFORM`), 공개 소켓을 열지 않는 ELF는 어댑터 준비 시한에서 `BLOCKED`가 됩니다.
 
 증거가 되는 세 단계. 여기부터 모든 블록은 `$EVAL`(§1)에서 시작하는 서브셸이라 첫 오류에서 멈추고
@@ -76,7 +76,7 @@ Linux ARM64 ELF가 아닌 파일은 이름을 대며 거부하고(`CUSTOM_ADAPTE
   IMG=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["images"]["microduck"]["id"])' images.lock.json)
   C=$(docker create "$IMG"); docker cp "$C:/usr/local/bin/pail-duckd" /tmp/reference-pail-duckd; docker rm "$C" >/dev/null
   python3 evaluation.py test-adapter --adapter-binary /tmp/reference-pail-duckd --state /tmp/ad-reference )
-# PASS_WITH_LIMITATIONS 14 pass / 0 fail / 1 skip; run.json custom_adapter.sha256 == sha256sum of the file
+# PASS_WITH_LIMITATIONS 17 pass / 0 fail / 1 skip; run.json custom_adapter.sha256 == sha256sum of the file
 ```
 
 **2단계 — 작업 사본에서 직접 빌드**합니다(온라인; 배포 트리는 그대로 둠). 준비물(Ubuntu 24.04):
@@ -94,7 +94,7 @@ apt `cmake protobuf-compiler libsodium-dev libyaml-cpp-dev pkg-config build-esse
   command -v cargo >/dev/null || . "$HOME/.cargo/env"   # rustup puts cargo on PATH only for NEW shells
   cd /tmp/pail-adapter-work/adapters/microduck && PAIL_GATE_LIB_DIR=/tmp/gate-build cargo build --locked --features libgate
   python3 "$EVAL"/evaluation.py test-adapter --adapter-binary /tmp/pail-adapter-work/adapters/microduck/target/debug/pail-duckd --state /tmp/ad-built )
-# PASS_WITH_LIMITATIONS 14 pass / 0 fail / 1 skip for a healthy build; INCONCLUSIVE (see above) is the host, not your code
+# PASS_WITH_LIMITATIONS 17 pass / 0 fail / 1 skip for a healthy build; INCONCLUSIVE (see above) is the host, not your code
 ```
 
 Ubuntu 24.04 에서 빌드한 디버그 바이너리(glibc 2.39, 최대 `GLIBC_2.34` 요구)가 bookworm 이미지에서
@@ -104,8 +104,8 @@ Ubuntu 24.04 에서 빌드한 디버그 바이너리(glibc 2.39, 최대 `GLIBC_2
 `adapters/microduck/src/relay.rs` MOVE 분기의 `if !shared.judge(...) { continue; }` 를 결과를 버리는
 호출로 바꿔 빌드하고, **결함 바이너리를 작업 사본 밖으로 복사**한 뒤 소스를 복원해 다시 빌드합니다.
 그래서 작업 사본은 정상으로 끝나고 `/tmp/defective-pail-duckd` 만 결함 파일입니다. 기대값:
-`RESULT=FAIL`(그래서 블록의 종료 코드는 1), **정확히 다음 8건** 실패(CA-01~06, 09, 10 — MOVE 의 BLOCK 이
-바이트를 막아야 하는 케이스들). CA-13 은 초록으로 남습니다: 스킬 호출(`robot.do`)이고 결함은 MOVE 분기의
+`RESULT=FAIL`(그래서 블록의 종료 코드는 1), **정확히 다음 9건** 실패(CA-01~06, 09, 10 — MOVE 의 BLOCK 이
+바이트를 막아야 하는 케이스들 — 와 토큰 없는 명령이 거부되어야 하는 CA-16). CA-13 은 초록으로 남습니다: 스킬 호출(`robot.do`)이고 결함은 MOVE 분기의
 BLOCK 만 무시하기 때문입니다(이전 판들이 CA-13 을 붉은 목록에 넣은 것은 직전 케이스의 미사용 리스가 새어
 들어온 탓이었고, 이제 케이스마다 격리됩니다). CA-08(데드맨 타이밍)은 바쁜 호스트에서 결함과 무관하게 붉거나
 `INCONCLUSIVE` 가 될 수 있으며 정상 바이너리에서는 PASS 입니다. 두 run.json의 `custom_adapter.sha256`이 다릅니다.

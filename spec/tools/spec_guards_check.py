@@ -192,7 +192,7 @@ def gotest(mount, rel):
     else:
         argv = ['docker', 'run', '--rm', '-v', mount + ':/work',
                 '-v', 'pail-gocache:/go', '-w', '/work/' + rel,
-                'golang:1.27.3', 'go', 'test', '-count=1', './...']
+                'golang:1.27.4', 'go', 'test', '-count=1', './...']
         cwd = None
     proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True)
     return proc.returncode, proc.stdout + proc.stderr

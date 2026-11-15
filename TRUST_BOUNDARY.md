@@ -225,13 +225,13 @@ This entry is the broad one that contains the existing entry G-DEL-02 (Vault/Anc
 
 > **If the delegation fails** records are read or tampered with in transit. Tampering is caught by signature verification; reading is not — signatures give no confidentiality.
 
-*Refutation condition* — False if plaintext PAIL traffic exists — it can. What PAIL enforces is one leg only: the control-plane gRPC in the production profile (`S4`: plaintext TCP is refused, with a unix-socket exception). Every other leg, the Vault and Anchor legs included, is decided by deployment configuration
+*Refutation condition* — False if plaintext PAIL traffic exists — it can. What PAIL enforces is one leg only: the control-plane gRPC in the production profile (`S4`: plaintext TCP is refused). Every other leg, the Vault and Anchor legs included, is decided by deployment configuration
 
 ### G-DEL-L08 — Availability · redundancy · uninterrupted operation
 
 **Delegated to**  Operator (redundancy shape; capacity planning; recovery procedure)  ·  **Layer** `deployment` / `cross`
 
-PAIL provides an HA shape but promises no availability target. The peculiarity of this delegation is that **its failure mode looks like normal operation** — if the issuer dies, no tokens are issued, and the gate blocks when there is no token. That halt is not the symptom of a defect but the execution of fail-closed.
+PAIL promises no availability target. The peculiarity of this delegation is that **its failure mode looks like normal operation** — if the issuer dies, no tokens are issued, and the gate blocks when there is no token. That halt is not the symptom of a defect but the execution of fail-closed.
 
 > **If the delegation fails** work stops. What is dangerous here is not the stoppage itself but the improvised measure of bypassing the gate to avoid it — that measure realizes G-DEL-L05 by one's own hand.
 
@@ -323,18 +323,18 @@ evidence topics carry **no signature at all** (§3 G-DEL-03). Under
 `PAIL_PROFILE=production` the gate refuses to start (S1/S2), but the `dev` profile does
 not refuse. **Do not move a real vehicle on the dev profile.**
 
-### 4.2 HA / single node — durability
+### 4.2 Single node — durability
 
-In issuer-first (§2.2), what "append" means depends on the shape.
+In issuer-first (§2.2), "append" means the following on the single-node issuer of this
+distribution.
 
 | Deployment | The level at which issuer-first is true | On power loss |
 |---|---|---|
-| **Replicated issuer** (standby-node shipping configured; the evaluation issuer is single-node and refuses `PAIL_HA_*`) | Responds only after fsync **on another machine's disk** plus chain verification | Even if the primary dies, the standby node holds the record |
 | **Single node** | Handed to the OS + **fsync at checkpoint time** (default: 1000 records or 60 s) | **The window since the last checkpoint can be lost** |
 
 On a single node, if power is lost abruptly, issuer-first does not hold at the disk
-level for that lost window. A deployment that cannot accept this limit uses a replicated
-issuer or lowers the checkpoint interval. The full wording is in the durability-model
+level for that lost window. A deployment that cannot accept this limit lowers
+the checkpoint interval. The full wording is in the durability-model
 section of [`SECURITY.md`](SECURITY.md).
 
 > **Honesty notice** — the evidence we can present today is **syscall-level** (fsync is
@@ -472,8 +472,9 @@ received.**
 | `S36` | the physical safety controller is undeclared — this edition warns and records S36 in the seal; it does not refuse startup or provide a safety controller | warning only (startup continues) |
 | `S40` | production, but no change-authorization bundle for the policy file (`PAIL_POLICY_AUTH`) — the issuer's standing inputs are loaded only under a change approval from distinct trusted principals; dev is the declaration to run without it and shows in the INSECURE banner (AS-4 / O-4) | implemented |
 | `S40b` | production, but a site model (`PAIL_SITE_MODEL`) is configured without its change-authorization bundle (`PAIL_SITE_MODEL_AUTH`) — the same discipline as the policy; the bundle is judged on the exact bytes `LoadSiteModel` read (AS-4b) | implemented |
+| `S41` | production, but the development switch that skips the journal replay is set (`PAIL_REPLAY=off`) — an issuer started without the replay restores no lockdown, consumed token or issuance history and verifies no checkpoint signature | implemented |
 
-Declared in 253 Core source files; declaration is not proof that a rule trips in every deployment. This table covers Core source only. The separate Issuer evaluation executable does not include its source. Its integration tests are distinct from Core source tests.
+Declared in 259 Core source files; declaration is not proof that a rule trips in every deployment. This table covers Core source only. The separate Issuer evaluation executable does not include its source. Its integration tests are distinct from Core source tests.
 
 <!-- END GENERATED: startup-gates -->
 

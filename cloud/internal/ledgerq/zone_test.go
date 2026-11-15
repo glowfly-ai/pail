@@ -47,7 +47,7 @@ func fixtureZones(t *testing.T) (bbDir, telDir string) {
 			t.Fatal(err)
 		}
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	return bbDir, telDir

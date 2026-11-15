@@ -47,7 +47,7 @@ func ledgerFixture(t *testing.T) {
 	if err := w.Append(blackbox.RecordTokenIssued, 1_700_000_001_000, tok); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	d := false

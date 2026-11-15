@@ -27,7 +27,7 @@ func appendPlans(t *testing.T, bb string, n int64) {
 			t.Fatal(err)
 		}
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 }

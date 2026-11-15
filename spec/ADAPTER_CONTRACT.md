@@ -128,7 +128,7 @@ session, an E-stop registration — rather than the permit heartbeat itself. The
 not rows in `CA_MAP.yaml`, which is the execution map of the socket and ROS 2
 backends; a gRPC adapter reports them by these ids and the definitions here govern:
 
-- **CA-16** — the permit ends by the step deadline: the adapter's hold is released and
+- **CA-19** — the permit ends by the step deadline: the adapter's hold is released and
   the safe state executed. (gRPC interposer: the upstream session is dropped and `Stop`
   sent. Sockets and ROS 2: `NO_HOLD_INGRESS` — their hold *is* the permit heartbeat, so
   there is nothing separate to release.)

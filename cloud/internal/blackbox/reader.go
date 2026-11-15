@@ -29,6 +29,13 @@ type Record struct {
 	// (AL-1, G-LED-02: an index row that cannot be re-derived from its origin
 	// has betrayed the ledger). Filled by scanSegment; zero-cost to carry.
 	Offset int64
+	// Index is the record's position within its segment (0-based) and PrevHash
+	// the chain value just before it — the segment header's hash for the first
+	// record. A CHECKPOINT can only be judged against these two (its head and
+	// its count), so the scan hands them over instead of every verifier
+	// re-deriving them (SEC-H08).
+	Index    uint64
+	PrevHash [32]byte
 }
 
 // WalkDir replays all records in dir in segment order, calling fn for each.

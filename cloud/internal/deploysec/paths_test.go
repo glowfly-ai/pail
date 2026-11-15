@@ -152,10 +152,9 @@ func TestTmpfsUnderAnOrdinaryPath(t *testing.T) {
 // for a filesystem it never touches would be noise the operator learns to skip.
 func TestRobotAgentIsNotJudgedOnPaths(t *testing.T) {
 	env := map[string]string{
-		"PAIL_BLACKBOX_DIR":  "/tmp/bb",
-		"PAIL_GRPC_TLS":      "off",
-		"PAIL_GRPC_UDS_PATH": "/run/pail/x.sock",
-		"PAIL_POLICY_AUTH":   "/etc/pail/policy-auth.json", // S40 is its own test; keep this one about paths
+		"PAIL_BLACKBOX_DIR": "/tmp/bb",
+		"PAIL_GRPC_TLS":     "on",
+		"PAIL_POLICY_AUTH":  "/etc/pail/policy-auth.json", // S40 is its own test; keep this one about paths
 	}
 	if r := EvaluateDeployment("pail_robot_agent", fakeProbe(env, nil)); failIDs(r.Fail) != "" {
 		t.Fatalf("want no failure, got %+v", r.Fail)

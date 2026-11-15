@@ -262,10 +262,28 @@ def issuer_image(root):
     return runtime_images(root)['issuer']
 
 
+def docker_architecture():
+    out = subprocess.run(['docker', 'info', '--format', '{{.Architecture}}'], capture_output=True, text=True, timeout=30).stdout.strip()
+    return {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'amd64', 'amd64': 'amd64'}.get(out, out)
+
+
+def platform_note(root, daemon_arch=None):
+    """0.2.2 F5: 'native', or 'emulated bundle=<lock> docker=<daemon>' when the bundle's images run on another
+    architecture. A Core-only tree has no lock: its images are built here, for this daemon."""
+    lock = Path(root).parent / 'images.lock.json'
+    if not lock.is_file():
+        return 'native'
+    bundle = json.loads(lock.read_text())['architecture']
+    daemon = daemon_arch or docker_architecture()
+    return 'native' if bundle == daemon else 'emulated bundle=%s docker=%s' % (bundle, daemon)
+
+
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--root', required=True, type=Path)
-    ap.add_argument('--role', required=True, choices=('issuer', 'microduck', 'tb3_gate'))
+    what = ap.add_mutually_exclusive_group(required=True)
+    what.add_argument('--role', choices=('issuer', 'microduck', 'tb3_gate'))
+    what.add_argument('--platform', action='store_true', help='print native, or emulated bundle=<arch> docker=<arch>')
     args = ap.parse_args()
-    print(runtime_images(args.root)[args.role])
+    print(platform_note(args.root) if args.platform else runtime_images(args.root)[args.role])

@@ -35,11 +35,10 @@ emitted for that v10 completion. Historical lease records and `OVER_LEASE`
 revocations retain their read semantics.
 
 The accepted completion uses an explicit local fsync boundary before success.
-The writer's existing synchronous replication hook also remains in the path.
 Other report writes retain their existing batching/flush policy; do not read this
 as changing the durability guarantee of every PAIL record.
 
-An append can fail AFTER bytes have been written or replicated. The issuer then
+An append can fail AFTER bytes have been written. The issuer then
 returns an unavailable/indeterminate RPC error and enters its existing journal
 failure guard; it does not claim that consumption definitely did not happen.
 Reconcile before assuming whether to retry. A crash after a valid completion

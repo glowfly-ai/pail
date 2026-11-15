@@ -69,7 +69,7 @@ func fixture(t *testing.T) (bbDir, telDir string) {
 	if err := w.Append(999, tToken+1, []byte{0x01, 0x02}); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Abandon(); err != nil {
 		t.Fatal(err)
 	}
 	d := false

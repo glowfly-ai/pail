@@ -414,6 +414,12 @@ import urllib.request  # noqa: E402
 # ---------------------------------------------------------------------------------------
 class Console:
     defer_future_wallclock = True
+    # 0.2.2 F1: a raw stream still running when the next token is requested would be the first thing the new permit
+    # lets through, and the gate's step clock would start on it before the planner had read the plan (0.2.1 fleet
+    # robot-1 scene 6; the TB3 console found the same on a real TurtleBot3 on 2026-09-16). End raw, wait for the
+    # planner's acknowledgement and for its post-stop zero window (STOP_CMD_S 0.5 s in demo_io.py), then issue.
+    RAW_STOP_CONFIRM_S = 2.0
+    RAW_STOP_SETTLE_S = 0.6
     def __init__(self, stack, dashboard=None, feed=None):
         self.stack = stack
         self.dashboard = dashboard
@@ -544,7 +550,34 @@ class Console:
         self.stack.write_control(instruction=True, mode=mode, steps=run, plan_id=r.get('plan'), **control)
         return {'accepted': True, 'plan': r.get('plan'), 'tokens': tokens, 'steps': run, 'explain': explain}
 
+    def wait_ack(self, instruction, timeout):
+        """True once the planner recorded that it read instruction number `instruction`."""
+        end = time.monotonic() + timeout
+        with self.cond:
+            while time.monotonic() < end:
+                if any(e.get('source') == 'planner' and e.get('event') == 'instruction' and e.get('instruction') == instruction for e in self.events):
+                    return True
+                self.cond.wait(max(0.0, end - time.monotonic()))
+        return False
+
+    def end_raw_before_issue(self, text):
+        """None when nothing streams (or the stream ended and settled); a refusal when the planner never confirmed."""
+        if self.stack.control.get('mode') != 'raw':
+            return None
+        t0 = time.monotonic()
+        c = self.stack.write_control(instruction=True, mode='idle', steps=[], override_linear=None)
+        if not self.wait_ack(c['instruction'], self.RAW_STOP_CONFIRM_S):
+            detail = 'the planner did not confirm the end of the raw drive within %.1f s; no token was requested' % self.RAW_STOP_CONFIRM_S
+            self.emit('raw_stop_unconfirmed', text=text, instruction=c['instruction'], detail=detail)
+            return {'accepted': False, 'reason': 'RAW_STOP_UNCONFIRMED', 'detail': detail}
+        time.sleep(self.RAW_STOP_SETTLE_S)
+        self.emit('raw_ended', acknowledged=True, waited_s=round(time.monotonic() - t0, 3))
+        return None
+
     def submit(self, text, steps, explain, override_linear=None):
+        refused = self.end_raw_before_issue(text)
+        if refused:
+            return refused
         self.emit('plan', text=text, steps=steps, explain=explain)
         r = self.stack.probe('submit', '--steps', json.dumps([{k: s[k] for k in ('linear', 'angular', 'duration')} for s in steps]), '--target', TARGET)
         return self._issued(text, r, steps, explain, 'plan', override_linear=override_linear)
@@ -553,6 +586,9 @@ class Console:
         if name not in SKILLS:
             self.emit('parse_error', text=text or name, detail='unknown skill %r' % name)
             return {'accepted': False, 'error': 'unknown skill'}
+        refused = self.end_raw_before_issue(text or name)
+        if refused:
+            return refused
         explain = ['robot.do %s (skill, class %s)' % (name, SKILLS[name])]
         self.emit('plan', text=text or name, steps=[], explain=explain, skill=name)
         r = self.stack.probe('skill', '--name', name, '--classes', SKILLS[name], '--duration', '3')

@@ -294,6 +294,9 @@ def completion_unknown(plan, row):
 # Console
 # ---------------------------------------------------------------------------------------
 class Console:
+    # 0.2.2 F1: bound of the planner's acknowledgement, and its post-stop zero window (STOP_CMD_S 0.5 s in demo_io.py)
+    RAW_STOP_CONFIRM_S = 2.0
+    RAW_STOP_SETTLE_S = 0.6
     defer_future_wallclock = True
     def __init__(self, stack):
         self.stack = stack
@@ -455,6 +458,20 @@ class Console:
             return dict(parsed, accepted=False, cancelled=cancelled)
         return self.submit(text, parsed['steps'], parsed['explain'])
 
+    def end_raw_before_issue(self, text):
+        """None when nothing streams (or the stream ended and settled); a refusal when the planner never confirmed."""
+        if self.stack.control.get('mode') != 'raw':
+            return None
+        t0 = time.monotonic()
+        c = self.stack.write_control(instruction=True, mode='idle', steps=[], override_linear=None)
+        if not self.wait_ack(c['instruction'], self.RAW_STOP_CONFIRM_S):
+            detail = 'the planner did not confirm the end of the raw drive within %.1f s; no token was requested' % self.RAW_STOP_CONFIRM_S
+            self.emit('raw_stop_unconfirmed', text=text, instruction=c['instruction'], detail=detail)
+            return {'accepted': False, 'reason': 'RAW_STOP_UNCONFIRMED', 'detail': detail}
+        time.sleep(self.RAW_STOP_SETTLE_S)
+        self.emit('raw_ended', acknowledged=True, waited_s=round(time.monotonic() - t0, 3))
+        return None
+
     def wait_ack(self, instruction, timeout):
         """True once the planner recorded that it read instruction number `instruction`."""
         end = time.monotonic() + timeout
@@ -466,14 +483,15 @@ class Console:
         return False
 
     def submit(self, text, steps, explain, override_linear=None):
-        if self.stack.control.get('mode') == 'raw':
-            # A raw stream (driving without permission) that is still running would be the first
-            # thing the new permit lets through, and the gate's step clock would start on it
-            # before the planner has even read the plan (seen on a real TurtleBot3 2026-09-16:
-            # the plan's last commands were then refused as a step overrun). End it first and
-            # wait for the planner's acknowledgement.
-            c = self.stack.write_control(instruction=True, mode='idle', steps=[], override_linear=None)
-            self.emit('raw_ended', acknowledged=self.wait_ack(c['instruction'], 2.0))
+        # A raw stream (driving without permission) that is still running would be the first
+        # thing the new permit lets through, and the gate's step clock would start on it
+        # before the planner has even read the plan (seen on a real TurtleBot3 2026-09-16:
+        # the plan's last commands were then refused as a step overrun). End it first and
+        # wait for the planner's acknowledgement (0.2.2 F1: no acknowledgement = no token,
+        # and the planner's post-stop zero window is waited out too).
+        refused = self.end_raw_before_issue(text)
+        if refused:
+            return refused
         self.emit('plan', text=text, steps=steps, explain=explain)
         r = self.stack.probe('-mode', 'submit', '-steps', json.dumps([{k: s[k] for k in ('linear', 'angular', 'duration')} for s in steps]))
         if r.get('operation_outcome') in ('UNKNOWN','HISTORICAL_ONLY'):
@@ -524,7 +542,13 @@ class Console:
         return r
 
     def verify(self):
-        rc, out, err = self.stack.exec_issuer('blackbox_verify', '-check-chain', '-dir', '/var/log/pail_blackbox', '-keyfile', '/etc/pail/keys/issuer_ed25519.json', timeout=60)
+        # Exit 7 means the newest records are not yet under a signed checkpoint. The Issuer covers them once its
+        # writes pause for about a second, so wait for that instead of accepting records outside every signature.
+        for attempt in range(6):
+            rc, out, err = self.stack.exec_issuer('blackbox_verify', '-check-chain', '-dir', '/var/log/pail_blackbox', '-keyfile', '/etc/pail/keys/issuer_ed25519.json', timeout=60)
+            if rc != 7 or attempt == 5:
+                break
+            time.sleep(1.5)
         ok = rc == 0 and 'OK: chain verified' in out
         self.emit('ledger_verified', ok=ok, output=(out + err).strip()[-600:])
         return {'ok': ok, 'output': (out + err).strip()}

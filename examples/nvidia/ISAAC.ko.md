@@ -11,7 +11,7 @@
 |---|---|
 | 검증 조합 | Nebius/Brev L40S 1 GPU, Ubuntu 24.04.5, NVIDIA 580.173.02, Docker 29.9.2, Isaac Sim 6.0.1 security-candidate 파생 이미지(`sim/sdk/` 레시피, 0.2.0 amd64 gate 기준), TurtleBot3 Waffle Pi USD(`sim/assets/` 레시피, 트리 해시 `3d46465d…`) |
 | 행렬 | `check_isaac_matrix.py` BS-01~12·BP-01~12, 케이스마다 새 상태(캐시 시드, `READY_LOCKED` 37~41 s), 새 상태 반복 2회 |
-| 결과 | 14 케이스 전부 릴리스 실행의 새 상태 반복 2회 PASS(BP-11 양성 대조는 모두 DETECTED), 28/28 완료, suite 판정 PASS, 무허가 이동 샘플 0; 같은 이미지의 이전 실행 1회는 INCONCLUSIVE 1건(`deadline`, 반복 2, 정지 후 판독 지터)을 기록했고 PASS 로 세지 않았으며 release 페이지에 공개했다. 정지는 physics step 당 위치 변화로 판정한다(snapshot schema 3). 급정지 뒤 joint·본체가 움직이지 않는데도 튀는 SDK 보고 velocity 는 모든 기록에 증거로 남는다 |
+| 결과 | 14 케이스 전부 릴리스 실행의 새 상태 반복 2회 PASS(BP-11 양성 대조는 모두 DETECTED), 28/28 완료, suite 판정 PASS, 무허가 이동 샘플 0; 같은 이미지의 이전 시험판의 실행 1회는 INCONCLUSIVE 1건(`deadline`, 반복 2, 정지 후 판독 지터)을 기록했고 PASS 로 세지 않았으며 release 페이지에 공개했다. 정지는 physics step 당 위치 변화로 판정한다(snapshot schema 3). 급정지 뒤 joint·본체가 움직이지 않는데도 튀는 SDK 보고 velocity 는 모든 기록에 증거로 남는다 |
 | 렌더링 | 시험 장면에 DistantLight 를 두고 viewport 캡처(비검정 픽셀 비율 0.979, 2026-10-19 캡처). 조명 없는 첫 캡처는 검은 프레임이었다 |
 | 미검증 | 실물 로봇, RTX 5080, 다른 OS/Sim 버전, 공식 OmniGraph ROS 2 bridge, 스트리밍/viewer, 50 Hz 최악 지연, 장시간 단일 프로세스 |
 

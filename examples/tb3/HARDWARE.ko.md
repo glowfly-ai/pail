@@ -9,9 +9,9 @@
   준비되면 다른 터미널에서 `evaluation.py stop-tb3 --state /tmp/hw-state`로 정지합니다
   (각 명령 앞에 `python3`). 설정은 `/tmp/hw-state/runtime/config`에 있습니다.
 - 아래 명령은 `pail-core`의 쓰기 가능한 작업 사본에서 실행합니다. Issuer 소스는 필요 없습니다.
-- 운영 PC는 `pail/issuer-eval:0.2.0`, 로봇 agent는 공개
-  `pail/core-microduck:0.2.0`, 게이트 기준 이미지는
-  `pail/core-tb3-gate:0.2.0`입니다. 이는 이번 배포의 태그입니다(Linux amd64 꾸러미의 태그에는 `-amd64` 접미사가 붙습니다).
+- 운영 PC는 `pail/issuer-eval:0.2.2`, 로봇 agent는 공개
+  `pail/core-microduck:0.2.2`, 게이트 기준 이미지는
+  `pail/core-tb3-gate:0.2.2`입니다. 이는 이번 배포의 태그입니다(Linux amd64 꾸러미의 태그에는 `-amd64` 접미사가 붙습니다).
   잠금 이미지 ID를 확인하고 이 게이트 기준 이미지에 vendor 드라이버를 추가합니다.
 - Mac/Linux 호스트에서 공개 네이티브 도구를 빌드합니다(Go 1.27.2+와 의존성 캐시 또는
   인터넷이 필요합니다; 임시 패키지는 자동 제거됩니다):
@@ -66,9 +66,9 @@ English (canonical): [`HARDWARE.md`](HARDWARE.md)
 - 벤더 드라이버 이미지: 운영자 PC 에서 그 게이트 이미지 위에 빌드해 로봇에 싣는다:
 
 ```sh
-docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.0 \
+docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.2 \
   -t pail/tb3-hardware:<tag> -f examples/tb3/hardware/Dockerfile examples/tb3/hardware
-docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.0 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
+docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.2 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
 ```
 
 Dockerfile 은 공개 게이트 이미지에 `ros-humble-turtlebot3-node` 와 `ros-humble-turtlebot3-bringup`
@@ -141,7 +141,7 @@ ssh <user>@<robot> 'mkdir -p pail-hw/control && echo "{\"seq\": 0, \"instruction
 echo raised > pail-hw/control/hardware_confirmed          # 운영자의 진술, 운영자가 쓴다
 export PAIL_HW_CONFIG=/home/<user>/pail-robot-config \
        PAIL_HW_CLOUD_ADDR=<pc-ip>:50064 \
-       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.0 \
+       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.2 \
        PAIL_HW_GATE_IMAGE=pail/tb3-hardware:<tag>
 pail-hw/start_demo_rig.sh up        # Raspberry Pi 3 에서 1–3분 뒤 RIG_UP
 pail-hw/start_demo_rig.sh status
@@ -170,7 +170,7 @@ docker logs pailhw-agent 2>&1 | tail -3                # burst CHECKPOINT 줄: �
 
 ```sh
 export PAIL_HW_STATE=/path/to/demo/state \
-       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.0 \
+       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.2 \
        PAIL_HW_ISSUER_IP=<pc-ip>
 examples/tb3/hardware/issuer_host.sh up            # ISSUER_UP <pc-ip>:50064 …
 ```
@@ -274,13 +274,13 @@ SROS2 Enforce, mTLS on, 이 꾸러미의 게이트 이미지 위에 `hardware/Do
 
 | 확인 | 확립된 것 | 출처 |
 |---|---|---|
-|<!-- hw-measurements:begin table --> 전체 판정기(13 장면, 6절) | 독립 실행 3회 모두13/13; 소요 시간 미기록 | 독립(0.2.0-preview.45 꾸러미): 13/13 x3 |
+|<!-- hw-measurements:begin table --> 전체 판정기(13 장면, 6절) | 독립 실행 3회 모두 13/13; 소요 시간 미기록 | 독립(0.2.0-preview.45 꾸러미): 13/13 x3 |
 | 장면 8 단독(안전 `UNSAFE` → `ESTOP` → `OK`; 중단된 계획은 재개되지 않음) | 5/5 | 독립(0.2.0-preview.22 꾸러미): 5/5; 발행자(0.2.0-preview.19 빌드): 5/5 |
-| 살아 있는 허가로 이동 중 E-STOP 을 가로지르는 Issuer 단절 — `fault_inject.py --mode permit`, Issuer 를 12 s·30 s 일시정지, 그 사이 `UNSAFE` → `OK` | E-STOP 중 Issuer12 s 정지: PASS, OK 뒤 구동0. 이번 평가에서30 s 경우는 재실행하지 않음. | 독립(0.2.0-preview.45 꾸러미): 12 s PASS; OK 뒤 구동0 |
+| 살아 있는 허가로 이동 중 E-STOP 을 가로지르는 Issuer 단절 — `fault_inject.py --mode permit`, Issuer 를 12 s·30 s 일시정지, 그 사이 `UNSAFE` → `OK` | E-STOP 중 Issuer 12 s 정지: PASS, OK 뒤 구동 0. 이번 평가에서 30 s 경우는 재실행하지 않음. | 독립(0.2.0-preview.45 꾸러미): 12 s PASS; OK 뒤 구동 0 |
 | 허가가 없는 상태의 E-STOP — `fault_inject.py --mode outage`: 게이트가 이미 `BLOCK ERR_ISSUER_UNREACHABLE` 이 될 때까지 Issuer 를 일시정지한 뒤 `UNSAFE`, `OK` 0.5 s 뒤 Issuer 재개 | 2회 모두 `OK` 뒤 구동 명령 0; 스텝이 끊긴 체인은 거부되고 다음 계획은 자기 토큰으로 실행 | 소프트웨어 데모(0.2.0-preview.23 빌드): `--wait-block 4` 로 2/2; 독립(0.2.0-preview.22 꾸러미): 실물의 무허가 outage 전제는 아직 달성하지 못했다. 다중 스텝·긴 대기만으로 보장되지 않는다. 이미 위임된 창은 Issuer 정지 중에도 다음 스텝을 허가할 수 있다. PRECONDITION_NOT_MET는 안전 PASS가 아니다. |
-| 스텝 중 로봇 시스템 시계 ±0.6 s 스텝(`date -s`), 4 s 뒤 되돌림 | ±0.6 s 4회 모두clock abort; 시계 복귀 뒤 전달0, 새 계획 정상 | 독립(0.2.0-preview.44 꾸러미): 4/4; 양방향 |
+| 스텝 중 로봇 시스템 시계 ±0.6 s 스텝(`date -s`), 4 s 뒤 되돌림 | ±0.6 s 4회 모두 clock abort; 시계 복귀 뒤 전달 0, 새 계획 정상 | 독립(0.2.0-preview.44 꾸러미): 4/4; 양방향 |
 | 정상 이동 중 스텝 기한 초과 거부 | 위 모든 판정기·결함 주입에서 0건 | 독립(0.2.0-preview.22 꾸러미): 0건; 발행자(0.2.0-preview.19 빌드): 0건 |
-| 1 m 지시, 엔코더 거리 | 3회0.998~1.005 m(바퀴 공중 엔코더) | 독립(0.2.0-preview.44 꾸러미): 0.998~1.005 m x3 |
+| 1 m 지시, 엔코더 거리 | 3회 0.998~1.005 m(바퀴 공중 엔코더) | 독립(0.2.0-preview.44 꾸러미): 0.998~1.005 m x3 |
 | 게이트 재시작부터 준비까지(장면 R, SROS2 디스커버리) | DDS 인증 정체 미해결: 29회 중 1회; 별도 117회 중 1회 및 별개 이동 미달 1회. 고정 실패율·라이브러리 수정 완료 주장 없음. | 독립(0.2.0-preview.45 꾸러미): 늦은 Final/인증 비대칭 관측; 보고된 수동 복구 5/5, 자동 복구 아님 |
 | 바닥 1.5 m(7절 장면 F0–F9) | F2 0.952 m / −0.996 m; F6 +88.4° / −89.2°; F5 플래너가 0.3 m/s 를 요구하는 동안 게이트가 드라이버를 ≤ 0.1 m/s 로 유지; F8 `UNSAFE` → 게이트 `ESTOP` 0.164 s, 입력 뒤 이동 0.045 m, 그 뒤 드라이버 명령 없음, `OK` 뒤에도 운영자가 행동할 때까지 이동 없음 | 발행자(0.2.0-preview.19 빌드): 같은 게이트 계열의 이전 빌드; 바닥 장면은 그 뒤 다시 돌리지 않았다 <!-- hw-measurements:end table -->|
 

@@ -149,6 +149,13 @@ type Writer struct {
 	// **다음 Append 가 반환한다** — writeCheckpoint 의 fail-closed 자세와 같다.
 	// 삼키면 「내구화됐다」와 「내구화 시도가 실패했다」가 같은 침묵이 된다.
 	idleErr error
+	// [SEC-H07] idleSealErr is an idle checkpoint that could not be written
+	// (signer down, standby gone) and is still owed. Unlike idleErr it is not
+	// terminal: the next Append retries the checkpoint first and refuses its
+	// record only while that retry keeps failing. idleSeals counts the idle
+	// checkpoints that landed.
+	idleSealErr error
+	idleSeals   uint64
 
 	// [OR3/X30] Durability seam. Production calls (*os.File).Sync; the unit
 	// harness counts calls, because "did fsync run" is the only durability
@@ -454,6 +461,16 @@ func (w *Writer) Append(recordType uint32, unixMs uint64, payload []byte) error 
 	if w.idleErr != nil {
 		return w.idleErr
 	}
+	// [SEC-H07] An idle checkpoint that failed is owed before anything new is
+	// accepted: records are not added on top of a tail we could not attest.
+	// A signer that came back heals this by itself; one that is still down
+	// keeps refusing, which is where issuance would fail anyway.
+	if w.idleSealErr != nil {
+		if err := w.writeCheckpoint(); err != nil {
+			return fmt.Errorf("blackbox: pending idle checkpoint: %w", err)
+		}
+		w.idleSealErr = nil
+	}
 	if err := w.rotateIfNeeded(); err != nil {
 		return err
 	}
@@ -480,14 +497,24 @@ func (w *Writer) armIdle() {
 	}
 }
 
-// idleFlush is the debounce callback: fsync only, nothing else.
+// idleFlush is the debounce callback. When records are waiting outside every
+// signature it writes a checkpoint over them (which also fsyncs); otherwise it
+// only fsyncs.
 //
-// 체크포인트 레코드를 쓰지 않는 것은 게으름이 아니라 결정이다. 두 가지 이유가
-// 있다. (1) 체크포인트는 서명을 요구하는데, 배경 고루틴에는 KMS 실패를 보고할
-// 곳이 없다 — issuer-first 를 지킬 수 없는 자리에서 서명을 시도하면 안 된다.
-// (2) 온디스크 형식은 동결돼 있다. 내구성 수정이 동결 창(`R1`)을 요구하게
-// 만들면 그 수정은 영원히 미뤄진다. fsync 는 이미 써진 바이트를 내려보낼 뿐
-// 형식에 아무것도 더하지 않으므로 두 제약을 모두 피한다.
+// [SEC-H07] Until 0.2.0 this callback deliberately wrote no checkpoint, for two
+// reasons, and both are answered rather than dropped:
+//
+//	(1) "a background goroutine has nowhere to report a signing failure" —
+//	    the failure is kept in idleSealErr and the next Append repays it before
+//	    accepting its record (issuer-first is kept: nothing new lands on top
+//	    of a tail that could not be attested).
+//	(2) "the on-disk format is frozen" — nothing is added to it. The record is
+//	    the same CHECKPOINT v2 the Append path has always written.
+//
+// What the old behaviour cost is the reason for the change: the last records
+// before a pause — and every record of a short run — stayed outside any
+// signature, so a verifier could not insist on signed coverage without failing
+// honest journals, and so it insisted on nothing.
 func (w *Writer) idleFlush() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -502,11 +529,37 @@ func (w *Writer) idleFlush() {
 		w.idleTimer.Reset(rest)
 		return
 	}
+	if w.sinceCkptRecords > 0 {
+		err := w.writeCheckpoint()
+		switch {
+		case err == nil:
+			w.idleSeals++
+			w.idleFlushes++ // writeCheckpoint fsyncs
+			return
+		case errors.Is(err, errCheckpointFsync):
+			w.idleErr = fmt.Errorf("blackbox: idle checkpoint: %w", err)
+			return
+		default:
+			// Owed, not lost. Fall through to the plain fsync: the durability
+			// of what is already in the file (F-PRF-1) must not depend on the
+			// signer or the standby being reachable.
+			w.idleSealErr = fmt.Errorf("blackbox: idle checkpoint: %w", err)
+		}
+	}
 	if err := w.syncFn(w.f); err != nil {
 		w.idleErr = fmt.Errorf("blackbox: idle fsync: %w", err)
 		return
 	}
 	w.idleFlushes++
+}
+
+// IdleSealStats reports the idle checkpoints: how many landed, and the one
+// still owed (nil when none is). A non-nil error here is not yet a failure of
+// the journal — the next Append repays it or returns it.
+func (w *Writer) IdleSealStats() (seals uint64, owed error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.idleSeals, w.idleSealErr
 }
 
 // IdleFlushStats reports the debounce's behaviour: how many times the callback
@@ -558,6 +611,21 @@ func (w *Writer) rotateIfNeeded() error {
 	return w.startSegment(tail)
 }
 
+// shipError is a record that is in the local segment file but was not
+// acknowledged by the standby. For a grant that is a refusal; for the closing
+// checkpoint it is not a failure of the stop (SEC-H07): the tail is covered in
+// the local journal and catch-up ships the record on reconnect.
+type shipError struct{ err error }
+
+func (e *shipError) Error() string { return "blackbox: ship (sync replication): " + e.err.Error() }
+func (e *shipError) Unwrap() error { return e.err }
+
+// errCheckpointFsync marks the one checkpoint failure that must not be retried:
+// after a failed fsync a later "success" says nothing about the bytes that were
+// pending, so the idle path treats it as terminal (idleErr) while a signing or
+// shipping failure is merely owed (idleSealErr).
+var errCheckpointFsync = errors.New("blackbox: checkpoint fsync")
+
 // writeCheckpoint appends a CHECKPOINT v2 record (E-C3; LLD-v2 §5.3 as amended):
 // payload(112) = head_hash(32) | record_count(u64 BE) | segment_seq(u64 BE) | sig(64).
 // head_hash is the this_hash of the preceding record; record_count counts the
@@ -595,7 +663,7 @@ func (w *Writer) writeCheckpoint() error {
 	// hold a head the blackbox does not contain. Keeping the order inside this
 	// function is what stops the next caller from getting it wrong again.
 	if err := w.syncFn(w.f); err != nil {
-		return fmt.Errorf("blackbox: checkpoint fsync: %w", err)
+		return fmt.Errorf("%w: %v", errCheckpointFsync, err)
 	}
 	if w.cfg.OnCheckpoint != nil {
 		w.cfg.OnCheckpoint(head, count)
@@ -639,7 +707,7 @@ func (w *Writer) appendRecord(recordType uint32, unixMs uint64, payload []byte) 
 		// checkpoint. HA is what makes the record survive a power loss here,
 		// because the standby fsyncs before it acks.
 		if err := w.cfg.Ship(w.segSeq, offset, rec); err != nil {
-			return fmt.Errorf("blackbox: ship (sync replication): %w", err)
+			return &shipError{err: err}
 		}
 	}
 	return nil
@@ -665,7 +733,42 @@ func (w *Writer) Snapshot() (headHash [32]byte, segmentSeq uint64, recordCount u
 // tests and the ledger index use it to replay what was written).
 func (w *Writer) Dir() string { return w.dir }
 
-func (w *Writer) Close() error {
+func (w *Writer) Close() error { return w.closeFile(true) }
+
+// Checkpoint writes a CHECKPOINT now, whether or not records are waiting.
+//
+// [SEC-H08] The Issuer calls it right after opening the journal when start-up
+// replay adopted records that no signature covered (an unclean stop): on a new
+// segment the checkpoint signs the header hash, the header carries the previous
+// segment's tail, and so everything adopted is under a signature before the
+// first new record is written.
+func (w *Writer) Checkpoint() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed || w.f == nil {
+		return errors.New("blackbox: checkpoint on a closed writer")
+	}
+	if w.idleErr != nil {
+		return w.idleErr
+	}
+	return w.writeCheckpoint()
+}
+
+// IsShipError reports whether err is a record that is in the local segment
+// file but was not acknowledged by the standby.
+func IsShipError(err error) bool {
+	var se *shipError
+	return errors.As(err, &se)
+}
+
+// Abandon closes the segment file WITHOUT the closing checkpoint, leaving the
+// journal exactly as the appends left it — the shape a crash leaves. It exists
+// for fixtures and crash probes that need that shape on purpose. A service
+// stops with Close; nothing outside tests and probes calls this (pinned by
+// TestH07AbandonHasNoProductionCaller).
+func (w *Writer) Abandon() error { return w.closeFile(false) }
+
+func (w *Writer) closeFile(seal bool) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	// [F-PRF-1] Stop() 은 이미 발화한 콜백을 되돌리지 못한다. 그 콜백은 지금
@@ -675,8 +778,27 @@ func (w *Writer) Close() error {
 	if w.idleTimer != nil {
 		w.idleTimer.Stop()
 	}
+	// [SEC-H07] A clean stop leaves nothing outside a signature: whatever was
+	// appended since the last checkpoint is covered now. The file is closed
+	// either way; a checkpoint that could not be written is returned, because
+	// a stop that reports success while its last records are unattested is the
+	// same untruth as one that reports success while they are unsynced.
+	var sealErr error
+	if seal && w.f != nil && w.sinceCkptRecords > 0 {
+		sealErr = w.writeCheckpoint()
+		var se *shipError
+		if errors.As(sealErr, &se) {
+			// The checkpoint IS in the local file; only the standby has not
+			// acknowledged it. The local journal is covered, and a leader
+			// must be able to stop while its standby is away.
+			sealErr = nil
+		}
+	}
 	serr := w.syncFn(w.f)
 	cerr := w.f.Close()
+	if sealErr != nil {
+		return fmt.Errorf("blackbox: close checkpoint: %w", sealErr)
+	}
 	if serr != nil {
 		return fmt.Errorf("blackbox: close fsync: %w", serr)
 	}

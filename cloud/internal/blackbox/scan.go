@@ -133,12 +133,14 @@ func scanSegment(path string, expectTail *[32]byte, fn func(Record) error) (scan
 		if !bytes.Equal(h.Sum(nil), thisStored) {
 			return res, fmt.Errorf("this_hash mismatch at offset=%d (record tampered)", off)
 		}
+		before := prev
 		copy(prev[:], thisStored)
 		res.records++
 		res.cleanTail = prev
 		res.cleanSize = off + total
 		if fn != nil {
-			if err := fn(Record{SegmentSeq: res.segSeq, Type: rtype, UnixMs: unixMs, Payload: payload, Offset: off}); err != nil {
+			if err := fn(Record{SegmentSeq: res.segSeq, Type: rtype, UnixMs: unixMs, Payload: payload, Offset: off,
+				Index: uint64(res.records - 1), PrevHash: before}); err != nil {
 				return res, err
 			}
 		}

@@ -71,7 +71,7 @@ regions says "this candidate" only when a source build equals the tree's VERSION
       "check_en": "Full judge (13 scenes, §6)",
       "check_ko": "전체 판정기(13 장면, 6절)",
       "established_en": "13/13 in three independent runs; durations not reported",
-      "established_ko": "독립 실행 3회 모두13/13; 소요 시간 미기록",
+      "established_ko": "독립 실행 3회 모두 13/13; 소요 시간 미기록",
       "cells": [
         {
           "source": "independent_p45",
@@ -104,12 +104,12 @@ regions says "this candidate" only when a source build equals the tree's VERSION
       "check_en": "Issuer outage across an E-STOP while moving under a live permit — `fault_inject.py --mode permit`, Issuer paused 12 s and 30 s, `UNSAFE` → `OK` during the pause",
       "check_ko": "살아 있는 허가로 이동 중 E-STOP 을 가로지르는 Issuer 단절 — `fault_inject.py --mode permit`, Issuer 를 12 s·30 s 일시정지, 그 사이 `UNSAFE` → `OK`",
       "established_en": "12 s Issuer pause across E-STOP: PASS, no drive after OK. The 30 s case was not rerun in this evaluation.",
-      "established_ko": "E-STOP 중 Issuer12 s 정지: PASS, OK 뒤 구동0. 이번 평가에서30 s 경우는 재실행하지 않음.",
+      "established_ko": "E-STOP 중 Issuer 12 s 정지: PASS, OK 뒤 구동 0. 이번 평가에서 30 s 경우는 재실행하지 않음.",
       "cells": [
         {
           "source": "independent_p45",
           "en": "12 s PASS; no drive after OK",
-          "ko": "12 s PASS; OK 뒤 구동0"
+          "ko": "12 s PASS; OK 뒤 구동 0"
         }
       ]
     },
@@ -137,7 +137,7 @@ regions says "this candidate" only when a source build equals the tree's VERSION
       "check_en": "System-clock steps of ±0.6 s on the robot during a step (`date -s`), stepped back 4 s later",
       "check_ko": "스텝 중 로봇 시스템 시계 ±0.6 s 스텝(`date -s`), 4 s 뒤 되돌림",
       "established_en": "Clock abort in all four +/-0.6 s steps; no forwarding after the clock returned, and a new plan ran",
-      "established_ko": "±0.6 s 4회 모두clock abort; 시계 복귀 뒤 전달0, 새 계획 정상",
+      "established_ko": "±0.6 s 4회 모두 clock abort; 시계 복귀 뒤 전달 0, 새 계획 정상",
       "cells": [
         {
           "source": "independent_p44",
@@ -170,7 +170,7 @@ regions says "this candidate" only when a source build equals the tree's VERSION
       "check_en": "1 m instruction, encoder distance",
       "check_ko": "1 m 지시, 엔코더 거리",
       "established_en": "0.998–1.005 m over three runs (encoders, wheels raised)",
-      "established_ko": "3회0.998~1.005 m(바퀴 공중 엔코더)",
+      "established_ko": "3회 0.998~1.005 m(바퀴 공중 엔코더)",
       "cells": [
         {
           "source": "independent_p44",
@@ -210,7 +210,7 @@ regions says "this candidate" only when a source build equals the tree's VERSION
   ],
   "readme": {
     "hardware_row_en": "| TurtleBot3 hardware (wheels raised) | Encoder-based observation and acceptance judge | Latest independent hardware evidence: 13/13 scenes x3 on the final 0.2.0-preview.45 bundle; evidence is scoped to that build and is not a hardware acceptance claim for this release | [examples/tb3/HARDWARE.md](examples/tb3/HARDWARE.md) §8 |",
-    "hardware_row_ko": "| TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
+    "hardware_row_ko": "| TurtleBot3 실물(바퀴 띄움) | 엔코더 관측·수락 판정기 | 최신 독립 실물 근거: 최종 0.2.0-preview.45 꾸러미에서 13/13 장면 x3. 해당 빌드의 근거이며 이 릴리스의 실물 수락 주장이 아님 | [examples/tb3/HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
     "deadline_row_en": "| Step-deadline refusals at the gate during normal motion | TurtleBot3 on a Raspberry Pi 3, wheels raised | 0 in every judge: 3 independent runs {independent_of} and 3 publisher runs {publisher_of} | [HARDWARE.md](examples/tb3/HARDWARE.md) §8 |",
     "deadline_row_ko": "| 정상 이동 중 게이트의 스텝 기한 초과 거부 | Raspberry Pi 3 위 TurtleBot3, 바퀴 띄움 | 모든 판정기에서 0건: {independent_of_ko} 독립 3회와 {publisher_of_ko} 발행자 3회 | [HARDWARE.ko.md](examples/tb3/HARDWARE.ko.md) §8 |",
     "restart_row_en": "| Gate restart IO readiness | TurtleBot3 hardware | Unresolved DDS authentication stall; independent cohorts: 1/29 and separately 1/117, not a guaranteed rate. Manual recovery only | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) |",

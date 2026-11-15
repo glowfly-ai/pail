@@ -71,7 +71,9 @@ up)
   echo "ISSUER_UP $IP:$PORT image=$IMG journal=$ST/blackbox"
   ;;
 down)
-  docker rm -f "$NAME" >/dev/null 2>&1 || true
+  # SIGTERM first: pail_cloud runs its stop sequence (stop serving, close the journal) within its 5 s grace.
+  docker stop -t 10 "$NAME" >/dev/null 2>&1 || true
+  docker rm "$NAME" >/dev/null 2>&1 || true
   echo 'ISSUER_DOWN'
   ;;
 status)

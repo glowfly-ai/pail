@@ -139,6 +139,17 @@ rules that decision has to follow for the software's checks to mean anything.
   version and the approval reference are checked before the bundle is distributed (Stages 1–3
   with changed material, which `stage-renewal` refuses as a renewal — use the key-change
   path). A new root is a trust replacement for every consumer, not a rotation.
+- **Keep the old issuer key's public half when rotating.** At start-up the issuer verifies
+  every checkpoint of its journal against the issuer keys of its keyring. Keep the previous
+  key under `keys` or `revoked_keys` for as long as the journal holds checkpoints it signed:
+  a checkpoint signed by a key absent from both cannot be told from a forgery, and the issuer
+  refuses to start.
+- **Revoking an issuer key takes two steps.** The operator command `RevokeIssuerKey` puts the
+  issuer into permanent LOCKDOWN and reaches no gate. Then move the key to `revoked_keys` in a
+  new bundle and apply it (§4) to the issuer and **every** gate; a gate refuses the key's
+  tokens (`ERR_REVOKED_KEY_ID`) only after it has loaded that bundle. Moving the key also
+  keeps the issuer from starting with it again from a journal cut back to before the lock:
+  the issuer refuses to start with a signing key that is not an active issuer key.
 - **Do not** generate a new keyring or a new trust root to make a mismatch disappear, and do
   not **overwrite** a consumer's bundle to silence `ERR_BUNDLE_EXPIRED`; renew it (§4).
   Deleting a runtime environment (a state directory, a container, a VM)

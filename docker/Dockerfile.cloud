@@ -3,7 +3,7 @@
 # Layout note: in this repository the Go module lives at cloud/ and the wire
 # contract at sdk/proto/. The Makefile's PROTO_DIR default points elsewhere,
 # so it is passed explicitly below.
-FROM golang:1.27.3 AS builder
+FROM golang:1.27.4 AS builder
 ENV GOMAXPROCS=2 GOFLAGS=-p=2
 
 WORKDIR /repo

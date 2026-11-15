@@ -33,6 +33,9 @@ type IndexStorageHealth struct {
 	DBBytes          int64                   `json:"db_bytes"`
 	WALBytes         int64                   `json:"wal_bytes"`
 	Raw              telemetry.StorageHealth `json:"raw"`
+	// Window (OBS-RET): the retention window of the index and what the disk
+	// allows. Refreshed by every observation ingest pass.
+	Window IndexWindow `json:"window"`
 }
 
 func (d *DB) StorageHealth() IndexStorageHealth {
@@ -92,26 +95,18 @@ func (d *DB) checkStorage() error {
 	d.storageHealth.DBBytes = db
 	d.storageHealth.WALBytes = wal
 	d.storageMu.Unlock()
-	if db >= d.storageConfig.DBMaxBytes {
-		d.storageError("DB_DISK_PRESSURE")
-		return errors.New("DB_DISK_PRESSURE")
+	// [OBS-RET] Space is judged by what the index occupies, not by the size
+	// of a file that never shrinks, and running out of it removes the oldest
+	// observation rows before it refuses anything. Only an index that is over
+	// with nothing removable left (journal rows alone) is DB_DISK_PRESSURE.
+	if e = d.requireRoom(); e != nil {
+		return e
 	}
 	if wal >= d.storageConfig.WALMaxBytes {
-		// Dedicated writer connection; restore the normal bounded wait afterwards.
-		conn, e := d.sql.Conn(context.Background())
-		if e != nil {
+		// The dedicated connection is released before any other statement
+		// runs: the pool holds exactly one writer.
+		if e = d.truncateWAL(); e != nil {
 			return e
-		}
-		defer conn.Close()
-		if _, e = conn.ExecContext(context.Background(), "PRAGMA busy_timeout=100"); e != nil {
-			return e
-		}
-		defer conn.ExecContext(context.Background(), "PRAGMA busy_timeout=5000")
-		var busy, log, done int
-		e = conn.QueryRowContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&busy, &log, &done)
-		if e != nil || busy != 0 || log != done {
-			d.storageError("WAL_BUSY")
-			return errors.New("WAL_BUSY")
 		}
 		wal, e = sizeOf(d.path + "-wal")
 		if e != nil || wal >= d.storageConfig.WALMaxBytes {
@@ -126,10 +121,41 @@ func (d *DB) checkStorage() error {
 		d.storageHealth.DBBytes = db
 		d.storageHealth.WALBytes = wal
 		d.storageMu.Unlock()
-		if db >= d.storageConfig.DBMaxBytes {
-			d.storageError("DB_DISK_PRESSURE")
-			return errors.New("DB_DISK_PRESSURE")
-		}
+		return d.requireRoom()
+	}
+	return nil
+}
+
+func (d *DB) requireRoom() error {
+	ok, e := d.makeRoom()
+	if e != nil {
+		d.storageError("DB_STAT_FAILED")
+		return e
+	}
+	if !ok {
+		d.storageError("DB_DISK_PRESSURE")
+		return errors.New("DB_DISK_PRESSURE")
+	}
+	return nil
+}
+
+// truncateWAL checkpoints on a dedicated writer connection with a short busy
+// wait, and restores the normal bounded wait afterwards.
+func (d *DB) truncateWAL() error {
+	conn, e := d.sql.Conn(context.Background())
+	if e != nil {
+		return e
+	}
+	defer conn.Close()
+	if _, e = conn.ExecContext(context.Background(), "PRAGMA busy_timeout=100"); e != nil {
+		return e
+	}
+	defer conn.ExecContext(context.Background(), "PRAGMA busy_timeout=5000")
+	var busy, log, done int
+	e = conn.QueryRowContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&busy, &log, &done)
+	if e != nil || busy != 0 || log != done {
+		d.storageError("WAL_BUSY")
+		return errors.New("WAL_BUSY")
 	}
 	return nil
 }
