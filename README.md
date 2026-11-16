@@ -1,5 +1,7 @@
 # PAIL — Physical Action Identity Layer
 
+> **Release purpose and limits.** PAIL 0.2.2 is released for developer review, research, and integration evaluation. This release does not establish suitability for production operation or certify physical or functional safety. Any production deployment requires its own integration, security, and safety assessment. This statement describes the release's validation scope; it does not change the Apache-2.0 rights granted for PAIL Core.
+
 **An LLM planner hallucinates `forward 30 m`. A node nobody registered starts
 publishing to `/cmd_vel`. With PAIL in front of the base, neither command reaches
 the actuators: the issuer refuses the first request and names the bound it broke

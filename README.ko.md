@@ -1,5 +1,7 @@
 # PAIL — Physical Action Identity Layer
 
+> **공개 목적과 한계.** PAIL 0.2.2는 개발자 검토·연구·통합 평가를 목적으로 공개합니다. 이 공개본은 실운영 적합성이나 물리적·기능적 안전 인증을 보증하지 않습니다. 실운영 적용에는 해당 배치에 대한 별도의 통합·보안·안전성 평가가 필요합니다. 이는 공개본의 검증 범위를 설명하는 것으로, PAIL Core의 Apache-2.0 이용 권리를 변경하지 않습니다.
+
 > This is the Korean edition. The canonical document is
 > [`README.md`](README.md) (English).
 
