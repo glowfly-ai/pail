@@ -1,0 +1,29 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/glowfly-ai/pail",
+  "public_key": "pk_gzYBnHeq3vShQn6prLAk1",
+  "projectTitle": "PAIL Core",
+  "description": "PAIL (Physical Action Identity Layer) Core: an authorization and evidence layer for physical AI actions. A gate on the robot checks every command, such as a ROS 2 Twist on /cmd_vel, against a signed, single-use action token with named limits; unauthorized or out-of-bounds commands are refused with a reason code and not forwarded. Decisions go into a hash-chained journal that independent verifiers can check offline. Includes ROS 2 nodes, C ABI adapters, SDK, spec and test vectors.",
+  "excludeFolders": [
+    "**/testdata",
+    ".github",
+    "e2e",
+    "measurements",
+    "cloud/scripts"
+  ],
+  "excludeFiles": [
+    "CLA.md",
+    "CODE_OF_CONDUCT.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "rules": [
+    "PAIL is an authorization and audit layer, not a safety system. Keep the robot's own safety functions and emergency stop in place; do not describe PAIL as a brake, speed limiter or safety controller.",
+    "Integrate on the command path: remap the base driver's input to /drive_cmd_vel and run pail_pep_gate and pail_motion_bridge in front of it, as in examples/tb3. A topic remap without SROS2 access control is not a barrier; the reference stack runs with SROS2 Enforce.",
+    "Do not clamp or rewrite commands to fit a limit. When the gate refuses a command, read the reason code and the named limit (for example ERR_ENVELOPE_EXCEEDED with step.max_duration_s) and submit a new plan within the limit.",
+    "Limits belong in the issuer's policy YAML, not in planner or application code. The planner does not need to change.",
+    "The Issuer in the evaluation bundle is a closed-source evaluation executable for internal non-production R&D and CI only. Production operation or redistribution requires a separate license from Glowfly Identity Systems (https://www.glowfly.ai).",
+    "Before using an evaluation bundle, check its SHA-256 and verify the manifest signature against the release key fingerprint published on the GitHub release page, as described in RELEASE.md.",
+    "Measured scope: simulated and raised-wheel TurtleBot3, Jetson Orin Nano Super (CPU) and Isaac Sim, as listed in README 'What has been measured'. Do not claim support for other robots, latency guarantees or functional-safety certification."
+  ]
+}
