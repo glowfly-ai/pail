@@ -19,7 +19,7 @@
   ],
   "rules": [
     "PAIL is an authorization and audit layer, not a safety system. Keep the robot's own safety functions and emergency stop in place; do not describe PAIL as a brake, speed limiter or safety controller.",
-    "Integrate on the command path: remap the base driver's input to /drive_cmd_vel and run pail_pep_gate and pail_motion_bridge in front of it, as in examples/tb3. A topic remap without SROS2 access control is not a barrier; the reference stack runs with SROS2 Enforce.",
+    "Remap the base driver's input to /drive_cmd_vel and run pail_pep_gate and pail_motion_bridge before it, as in examples/tb3. A topic remap without SROS2 access control is not a barrier; the reference stack runs with SROS2 Enforce.",
     "Do not clamp or rewrite commands to fit a limit. When the gate refuses a command, read the reason code and the named limit (for example ERR_ENVELOPE_EXCEEDED with step.max_duration_s) and submit a new plan within the limit.",
     "Limits belong in the issuer's policy YAML, not in planner or application code. The planner does not need to change.",
     "The Issuer in the evaluation bundle is a closed-source evaluation executable for internal non-production R&D and CI only. Production operation or redistribution requires a separate license from Glowfly Identity Systems (https://www.glowfly.ai).",
