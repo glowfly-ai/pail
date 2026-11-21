@@ -130,6 +130,17 @@
       "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
     },
     {
+      "name": "fingerprint-empty",
+      "public_key": "TEST-SIGNING-KEY.pub",
+      "args": [
+        "--expected-fingerprint",
+        ""
+      ],
+      "expected_release": "0.2.0-test",
+      "zip": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip",
+      "manifest": "good/PAIL-Evaluation-0.2.0-test-arm64-offline.zip.manifest.json"
+    },
+    {
       "name": "allow-unsigned",
       "public_key": "TEST-SIGNING-KEY.pub",
       "args": [

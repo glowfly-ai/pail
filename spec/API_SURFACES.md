@@ -362,7 +362,11 @@ integrator's, and a ROS topic is not by itself a safety function.
 
 <!-- source: sdk/proto/operator_service.proto -->
 
-Three RPCs, all issuer-side. Robots and the gate never see any of them.
+Six RPCs, all issuer-side: `Unlock`, `RevokeIssuerKey`, `IngestContextEvent`, and
+the lock register's `ApplyLock`, `ReleaseLock` and `ListLocks`. Robots and the
+gate never see any of them. This section gives the message tables of the first
+three; the lock register's messages and ownership rules are written in the
+comments of the shipped `.proto`.
 
 ### 5.1 Context events
 
@@ -444,8 +448,14 @@ world version it was decided against.
 ### 5.2 Unlock and revoke
 
 Both are signed operator commands. `Unlock` returns a robot from a safe-stop
-state; `RevokeIssuerKey` puts the issuer into a lockdown that lasts for the
-lifetime of the process.
+state; `RevokeIssuerKey` puts the issuer into `LOCKDOWN`, which is permanent. No
+RPC leaves it, and it is not limited to the running process: the accepted
+revocation is a journal record, and an issuer started again on the same journal
+replays it and comes back in `LOCKDOWN`. (The service comment in the shipped
+`.proto` says "permanent for the process lifetime"; that is the in-process half
+of the same rule.) The development switch that skips the journal replay,
+`PAIL_REPLAY=off`, skips this restore as well; a production start-up refuses
+that switch (rule `S41` in `TRUST_BOUNDARY.md`).
 
 <!-- vocab: unlock -->
 

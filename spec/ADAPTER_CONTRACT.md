@@ -60,7 +60,7 @@ language that has protobuf can generate its bindings from that one file.
 | `pail_gate_observe_safety(SafetyInput)` | → `Outcome` | whenever the safety feed delivers; an `ESTOP` outcome is a stop |
 | `pail_gate_observe_evidence(EvidenceInput)` | | whenever an evidence source delivers |
 | `pail_gate_command(CommandInput)` | → `Outcome` | per command; `Outcome.forward` is the whole answer |
-| `pail_gate_tick(TickInput)` | → `TickOutcome` | every `permit_recheck_ms` after `set_token`; carries the recheck path and the step timer |
+| `pail_gate_tick(TickInput)` | → `TickOutcome` | every `permit_recheck_ms` after `set_token`; carries the recheck path and the step timer. It is also where a signed keyring bundle placed beside the running gate is taken up: a higher version that passes the load checks replaces the keys in force before the tick judges (`keys` / `revoked_keys` of `pail_gate_info` follow). A gate that is not ticked applies nothing. From the expiry of the bundle in force on, every outcome is `BLOCK ERR_BUNDLE_EXPIRED`; a permit held on a key the applied bundle revokes ends with `ERR_REVOKED_KEY_ID` |
 | `pail_gate_info()` | → `Info` | at start and for status |
 | `pail_gate_free()` / `pail_gate_free_buf()` | | |
 
@@ -187,7 +187,7 @@ and mounts it read-only at `/usr/local/bin/pail-duckd` in three containers of th
 runtime image: the enforcing adapter and the observe adapter run as uid 10001 with all
 capabilities dropped; the harness container (which starts the binary itself for the tool
 cases below) runs as root with capabilities kept, because it drives Docker and the fault
-seams. The image is Debian bookworm; the gate library is `/opt/pail/lib/libpail_gate.so`
+seams. The image is Debian 13 (trixie); the gate library is `/opt/pail/lib/libpail_gate.so`
 (C ABI of §2, loaded at start — refuse on a different major). Dependencies the binary
 needs must already be in that image or linked statically. A refused start exits 78 and
 names its gate in the gate's preflight vocabulary. Two cases start the binary directly

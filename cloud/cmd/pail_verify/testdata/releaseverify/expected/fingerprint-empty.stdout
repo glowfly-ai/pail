@@ -1,0 +1,1 @@
+EVALUATION_VERIFY: FAIL --expected-fingerprint was given but is empty; pass the fingerprint obtained from the publisher outside this archive, or omit the flag to record PUBLISHER_KEY: NOT_COMPARED

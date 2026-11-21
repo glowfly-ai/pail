@@ -53,8 +53,11 @@ preconditions:
     exempt_in_progress_step: false
 
 # How long a revoked fact keeps having effect, per fact. `unbounded` is a legal
-# value on purpose: issuer_key has no reload channel today, and writing a finite
-# number there would make the system look bounded when it is not.
+# value on purpose. For issuer_key it says that no finite bound is DECLARED here:
+# a running gate applies a revoking bundle within a second of its being placed,
+# without a restart — but a bundle reaches a gate only when it is placed or pulled,
+# and a gate that is not reached keeps the key until its own bundle expires.
+# Writing a finite number there would make the system look bounded when it is not.
 revocation_classes:
   - id: world_state
     mechanism: recheck_at_decision

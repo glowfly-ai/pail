@@ -281,11 +281,11 @@ Segments are hash-chained with signed checkpoints; moving whole older segments t
 
 **Delegated to**  Adopter (base-image rebase and rebuild cadence, own vulnerability policy)  ·  **Layer** `runtime` / `cross`
 
-The bundled scan_vulnerabilities.py lets a recipient rescan against a newer database. The publisher refreshes the base digest per release to remove fixable advisories (for example perl-base 5.36.0-7+deb12u4).
+The bundled scan_vulnerabilities.py lets a recipient rescan against a newer database. The publisher refreshes the base digest per release to remove fixable advisories and records a verdict for every Critical or High finding that has no fix.
 
 > **If the delegation fails** advisories of libraries the PAIL processes do not use remain in the image scan counts — PAIL's behaviour and evidence are unaffected.
 
-*Refutation condition* — Advisories the distribution leaves wont-fix stay in the image — on Debian 12 glibc CVE-2026-5450 (scanf `%mc` one-byte heap overflow) and sqlite CVE-2025-7458 (integer overflow for an attacker who can run arbitrary SQL). PAIL's executables are statically linked Go and sqlite is the pure-Go modernc.org/sqlite; neither library is linked
+*Refutation condition* — Advisories the distribution leaves wont-fix stay in the images that hold a distribution — for example python3.13 CVE-2026-19445 on Debian 13 (use after free when a TLS server's sni_callback switches the context; the public tree has no such call). The Issuer runtime image holds no distribution: PAIL's executables are statically linked Go and sqlite is the pure-Go modernc.org/sqlite
 
 ### G-DEL-L15 — Comparing the signing-key fingerprint outside the archive
 
@@ -460,8 +460,8 @@ received.**
 | `S20b` | the bundle lifetime ceiling is unset or is not a positive integer number of seconds (`PAIL_KEYRING_MAX_LIFETIME_SEC`) — an unbounded window is a decision, and an unmade decision is not it | implemented |
 | `S20c` | the keyring poll interval is unset or is not a non-negative integer (`PAIL_KEYRING_POLL_SEC`) — revocation reach is bundle lifetime plus this, and one term of that sum is unchosen | implemented |
 | `S20d` | the trust-anchor bundle has expired (`now >= expires_at`) — it refuses to keep verifying on it | implemented |
-| `S20e` | pulling is on but there is no way to apply a new bundle (`PAIL_GATE_RESTART_CMD`) — placing a bundle nobody loads is not a revocation path | implemented |
 | `S20f` | no expiry source was declared, or no freshness gate was installed — unexamined is not unexpiring | implemented |
+| `S20g` | the gate restart command is set but the shell that would interpret it is not there (`PAIL_GATE_RESTART_CMD`) — a fallback that cannot be executed is not a fallback | implemented |
 | `S21` | the configuration seal could not measure an axis — the seal banner does not record the unobserved as fact | does not refuse — recorded as an axis in the seal |
 | `S24` | production, but the policy has no `retention:` section — the retention period must be declared and sealed (dev gets a banner) | implemented |
 | `S25` | the `retention:` declaration contradicts itself — a leaf is missing, the floor is below 5 years, blackbox is below the floor, or anchor is below blackbox | implemented |
@@ -474,7 +474,7 @@ received.**
 | `S40b` | production, but a site model (`PAIL_SITE_MODEL`) is configured without its change-authorization bundle (`PAIL_SITE_MODEL_AUTH`) — the same discipline as the policy; the bundle is judged on the exact bytes `LoadSiteModel` read (AS-4b) | implemented |
 | `S41` | production, but the development switch that skips the journal replay is set (`PAIL_REPLAY=off`) — an issuer started without the replay restores no lockdown, consumed token or issuance history and verifies no checkpoint signature | implemented |
 
-Declared in 259 Core source files; declaration is not proof that a rule trips in every deployment. This table covers Core source only. The separate Issuer evaluation executable does not include its source. Its integration tests are distinct from Core source tests.
+Declared in 260 Core source files; declaration is not proof that a rule trips in every deployment. This table covers Core source only. The separate Issuer evaluation executable does not include its source. Its integration tests are distinct from Core source tests.
 
 <!-- END GENERATED: startup-gates -->
 

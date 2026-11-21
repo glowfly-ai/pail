@@ -13,9 +13,9 @@ is claimed.
 2. Work on a writable copy of `pail-core/`; commands below run from that copy.
    Set `PAIL_HW_STATE=/tmp/hw-state`. Use the matching image IDs from
    `images.lock.json`; the tags below name this release (the Linux amd64 bundle's tags carry an `-amd64` suffix).
-3. Operator Issuer: `pail/issuer-eval:0.2.2`. Robot services:
-   `pail/core-microduck:0.2.2` (contains the public agent, no Issuer).
-   Gate base: `pail/core-tb3-gate:0.2.2`. Add the vendor driver using hardware/Dockerfile and this matching gate image.
+3. Operator Issuer: `pail/issuer-eval:0.2.4`. Robot services:
+   `pail/core-microduck:0.2.4` (contains the public agent, no Issuer).
+   Gate base: `pail/core-tb3-gate:0.2.4`. Add the vendor driver using hardware/Dockerfile and this matching gate image.
 4. Build host-native console tools **on macOS or Linux** (Go 1.27.2+ and cached or
    online Go dependencies required):
 
@@ -73,9 +73,9 @@ responsibility. Section 8 lists what the maintainers measured.
 - The vendor driver image: built on the operator PC from that gate image and loaded on the robot:
 
 ```sh
-docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.2 \
+docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.4 \
   -t pail/tb3-hardware:<tag> -f examples/tb3/hardware/Dockerfile examples/tb3/hardware
-docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.2 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
+docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.4 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
 ```
 
 The Dockerfile adds only `ros-humble-turtlebot3-node` and `ros-humble-turtlebot3-bringup` to
@@ -124,9 +124,11 @@ ssh <user>@<robot> 'sudo chown -R 10001:10001 pail-robot-config && sudo chmod 70
 The shipped `sros2_policy.xml` already grants `/driver` the vendor driver's topics
 (`/joint_states`, `/odom`, `/tf`, …) and `/robot_state_publisher` the subscription the encoder
 observer needs, so the demo keystore works unchanged. If you change the policy, re-provision the
-keystore with `scripts/sros2_provision.sh` as the demo does and copy the enclaves again. The
-keyring bundle the demo signs is valid for eight hours; a robot session that outlives it must
-re-run `evaluation.py tb3` (or sign a new bundle) and copy `keys/keyring_bundle.json` again.
+keystore with `scripts/sros2_provision.sh` as the demo does and copy the enclaves again. The keyring bundle the demo signs is valid for eight hours. A robot session that outlives it stops: from the
+bundle's `expires_at` on, the gate refuses every command with `ERR_BUNDLE_EXPIRED` (0.2.4; before, it kept
+verifying with the keys it had loaded). Sign a new bundle and copy `keys/keyring_bundle.json` into the
+configuration directory again — the running gate takes it up within a second, with no restart — or re-run
+`evaluation.py tb3` for a fresh state.
 
 Until 2026-09-19 the maintainers' own runs used a separately provisioned robot-side
 configuration, and this subset was checked on the operator side only. Run against a real
@@ -151,11 +153,24 @@ Then, **on the robot**, with the wheels raised (or the floor cleared, §7):
 echo raised > pail-hw/control/hardware_confirmed          # the operator's statement, written by the operator
 export PAIL_HW_CONFIG=/home/<user>/pail-robot-config \
        PAIL_HW_CLOUD_ADDR=<pc-ip>:50064 \
-       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.2 \
+       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.4 \
        PAIL_HW_GATE_IMAGE=pail/tb3-hardware:<tag>
+# once, before the first start: the gate's version floor (production profile; 0.2.4)
+sudo install -d -o 10001 -g 10001 -m 700 pail-hw/state
+docker run --rm -u 10001:10001 --network none -v "$PAIL_HW_CONFIG":/etc/pail:ro -v "$PWD/pail-hw/state":/state \
+  "$PAIL_HW_SERVICES_IMAGE" /usr/local/bin/pail-keyring-sign init-floor \
+    --bundle /etc/pail/keys/keyring_bundle.json --root-pub /etc/pail/keys/root_pub.b64 \
+    --state /state/keyring_state.json
 pail-hw/start_demo_rig.sh up        # RIG_UP after 1–3 minutes on a Raspberry Pi 3
 pail-hw/start_demo_rig.sh status
 ```
+
+The floor is written once, from the bundle the robot was given, and is never overwritten. Without it a
+production gate refuses its keyring and runs with no trust anchor — every token rejected — and says so:
+`keyring load (mode=bundle): ERR_BUNDLE_STATE:missing — no trust anchor, all tokens will be rejected`
+(measured on the robot 2026-11-19). A missing floor is not read as a first load, because a lost state
+directory would otherwise bring back a bundle from before a revocation. The `dev` profile keeps the
+first-load behaviour and needs no initialisation.
 
 `up` refuses without the placement statement (exit 78), without the OpenCR device, or when a
 container of this rig already exists. It starts the agent, the five participants, the bridge,
@@ -192,7 +207,7 @@ docker logs pailhw-agent 2>&1 | tail -3                # burst CHECKPOINT lines:
 
 ```sh
 export PAIL_HW_STATE=/path/to/demo/state \
-       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.2 \
+       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.4 \
        PAIL_HW_ISSUER_IP=<pc-ip>
 examples/tb3/hardware/issuer_host.sh up            # ISSUER_UP <pc-ip>:50064 …
 ```

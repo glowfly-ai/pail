@@ -22,7 +22,7 @@
 # do not contain PAIL_HW_ISSUER_IP (the demo issued it for `localhost` inside Docker). Nothing else
 # in the state directory is changed. Private keys stay where demo.py put them.
 #
-# The cloud image's default entrypoint (pail_split_entrypoint.sh) ignores its argument and starts
+# The split supervisor of the cloud image (pail_split) starts
 # pail_cloud AND pail_robot_agent together; the agent has no client certificate on the operator PC,
 # exits, and takes the container down (measured 2026-09-23 on the real rig). The issuer is started
 # with --entrypoint so only pail_cloud runs here.

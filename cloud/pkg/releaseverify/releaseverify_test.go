@@ -216,8 +216,13 @@ func TestWriteReceipt(t *testing.T) {
 		t.Errorf("temp file left behind: %v", entries)
 	}
 	// CHECKSUMS_ONLY: the nullable fields are JSON null, keys still present (as the Python tool writes them).
+	// Written to a directory of its own: over the VERIFIED receipt above it would be kept out (P024-L1 — a run that
+	// accepted checksums only never replaces a receipt of the same manifest that verified the signature).
 	r.Signature, r.KeyFingerprint, r.Backend, r.ExpectedFingerprintGiven = "CHECKSUMS_ONLY", nil, nil, false
-	p, err = WriteReceipt(dir, r)
+	if _, err := WriteReceipt(dir, r); !errors.Is(err, ErrReceiptKeptSignature) {
+		t.Fatalf("checksums-only over verified: %v", err)
+	}
+	p, err = WriteReceipt(filepath.Join(t.TempDir(), "checksums-only"), r)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -94,7 +94,8 @@ def build(image,log):
     work=Path(tempfile.mkdtemp(prefix='pail-duck-build-'))
     with Path(log).open('a') as f:f.write('BOUNDED_BUILD_EVIDENCE='+str(work)+'\n')
     with Builder(work) as builder:
-        return builder.build(ROOT,HERE/'Dockerfile',args=['PAIL_SOURCE_SHA256='+digest,'PAIL_VERSION='+(ROOT/'VERSION').read_text().strip()])
+        from build_runtime import image_input_arg   # image_inputs.py: the label a later run compares against
+        return builder.build(ROOT,HERE/'Dockerfile',args=['PAIL_VERSION='+(ROOT/'VERSION').read_text().strip(),image_input_arg(ROOT,'microduck')])
 
 def environment(state,meta):
     # one communication contract (0.2.0-preview.40): a run recorded under the removed `legacy` contract is not revived
@@ -156,9 +157,12 @@ def run(profile,state,image,skip_build=False,adapter_binary=None,backend='microd
         if not skip_build:meta['image_id']=build(image,state/'build.log')
         else:meta['image_id']=call(['docker','image','inspect',image,'--format','{{.Id}}']).stdout.strip()
         labels=json.loads(call(['docker','image','inspect',meta['image_id'],'--format','{{json .Config.Labels}}']).stdout) or {}
-        if labels.get('org.pail.source-manifest-sha256')!=meta['source_manifest_sha256']:
-            from build_runtime import source_mismatch
-            raise RuntimeError(source_mismatch(ROOT))
+        # the image is judged against what its build reads (image_inputs.py), not against every Core file: the
+        # runners, judges and guides of this tree are not in the image and cannot make it stale
+        from build_runtime import image_matches_inputs, image_input_mismatch
+        architecture=call(['docker','image','inspect',meta['image_id'],'--format','{{.Architecture}}']).stdout.strip()
+        matches,meta['image_input_sha256']=image_matches_inputs(ROOT,'microduck',labels,architecture)
+        if not matches:raise RuntimeError(image_input_mismatch(ROOT,'microduck',labels,architecture))
         meta['core_version']=(ROOT/'VERSION').read_text().strip()
         meta['upstream_commit']='942e58e3aa6dbb28e7037203fff11866122c7567'
         meta['api_version']=44

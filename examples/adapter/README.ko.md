@@ -97,8 +97,9 @@ apt `cmake protobuf-compiler libsodium-dev libyaml-cpp-dev pkg-config build-esse
 # PASS_WITH_LIMITATIONS 17 pass / 0 fail / 1 skip for a healthy build; INCONCLUSIVE (see above) is the host, not your code
 ```
 
-Ubuntu 24.04 에서 빌드한 디버그 바이너리(glibc 2.39, 최대 `GLIBC_2.34` 요구)가 bookworm 이미지에서
-돌았지만 이는 관찰이지 호환 약속이 아닙니다 — 이미지에 대해 `ldd` 로 확인하십시오.
+Ubuntu 24.04 에서 빌드한 디버그 바이너리(glibc 2.39, 최대 `GLIBC_2.34` 요구)가 0.2.2 의 Debian 12
+이미지에서 돌았습니다. 0.2.3 부터 이미지는 Debian 13 이고, 그 이미지에서는 이 실행을 다시 해 보지
+않았습니다. 어느 쪽도 호환 약속이 아닙니다 — 이미지에 대해 `ldd` 로 확인하십시오.
 
 **3단계 — 결함을 심어 리그가 잡는지 봅니다**(리그가 *내* 바이트를 시험한다는 음성 대조). 블록은
 `adapters/microduck/src/relay.rs` MOVE 분기의 `if !shared.judge(...) { continue; }` 를 결과를 버리는
@@ -197,7 +198,7 @@ ISSUER=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["images"
   trap 'exec 3>&-; kill "$ADAPTER_PID" 2>/dev/null || true' EXIT
   for i in $(seq 1 60); do grep -q '"ready": true' "$CMD_DIR/out" && break; sleep 0.5; done
   grep -q '"ready": true' "$CMD_DIR/out" || { cat "$CMD_DIR/errors"; exit 1; }
-  docker exec "$PROJECT-issuer-1" python /opt/pail/example/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
+  docker exec "$PROJECT-tools-1" python /reference/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
   printf '%s\n' '{"linear":0.1,"angular":0,"duration":1,"skill":"twist"}' >&3
   sleep 2
   exec 3>&-

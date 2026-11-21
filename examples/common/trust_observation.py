@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import selectors
 import signal
 import stat
@@ -20,23 +21,31 @@ import time
 import threading
 import copy
 
-class TrustError(RuntimeError):pass
+class TrustError(RuntimeError):
+    """A refusal by code. `field` names the profile field or the command argument it is about, `cause` the inner
+    code when one refusal is the consequence of another (P024-M2). Never a path: this text reaches a browser, and the
+    name is enough for the operator to find the place in their own profile or command line."""
+    def __init__(self,code,field=None,cause=None):
+        super().__init__(code);self.code=code;self.field=field;self.cause=cause
 
-def regular_owned(path,max_bytes=None):
+def regular_owned(path,max_bytes=None,field=None):
     p=Path(path)
-    if not p.is_absolute():raise TrustError('ABSOLUTE_PATH_REQUIRED')
+    if not p.is_absolute():raise TrustError('ABSOLUTE_PATH_REQUIRED',field)
     for part in (p,*p.parents):
-        if part.is_symlink():raise TrustError('SYMLINK_TARGET')
-    st=p.stat()
+        if part.is_symlink():raise TrustError('SYMLINK_TARGET',field)
+    try:st=p.stat()
+    except FileNotFoundError:
+        if field is None:raise   # callers that name no item keep the plain exception
+        raise TrustError('DECLARED_FILE_MISSING',field) from None
     if not stat.S_ISREG(st.st_mode) or st.st_uid not in (0,os.geteuid()) or st.st_mode&0o022:
-        raise TrustError('UNTRUSTED_FILE_OWNER_OR_MODE')
-    if max_bytes is not None and st.st_size>max_bytes:raise TrustError('INPUT_TOO_LARGE')
+        raise TrustError('UNTRUSTED_FILE_OWNER_OR_MODE',field)
+    if max_bytes is not None and st.st_size>max_bytes:raise TrustError('INPUT_TOO_LARGE',field)
     return p
 
 def checked_helper(profile):
-    p=regular_owned(profile['helper_path'])
+    p=regular_owned(profile['helper_path'],field='helper_path')
     if hashlib.sha256(p.read_bytes()).hexdigest()!=profile['helper_sha256']:
-        raise TrustError('HELPER_CHANGED')
+        raise TrustError('HELPER_CHANGED','helper_path')
     return p
 
 def helper(profile,args,stop=None):
@@ -63,6 +72,14 @@ def helper(profile,args,stop=None):
         if process.poll() is None:
             os.killpg(process.pid,signal.SIGKILL);process.wait(timeout=1)
         process.stdout.close();process.stderr.close()
+    # P024T-M1: the signer refuses with exit != 0, `error: <CODE>` on stderr and nothing on stdout. Reading stdout
+    # as JSON first turned every such refusal into HELPER_RESPONSE_INVALID — a broken signer, to the reader — and
+    # the branch below that was written for a refusal was never reached. Only a code-shaped line is forwarded: the
+    # signer's other sentences may carry a path.
+    if returncode!=0 and not bytes(out).strip():
+        refused=re.fullmatch(r'error: ([A-Z][A-Z0-9_]{2,63})\s*',bytes(err).decode('utf-8','replace'))
+        if refused:raise TrustError('TRUST_HELPER_REJECTED',cause=refused.group(1))
+        raise TrustError('HELPER_RESPONSE_INVALID')
     try:value=json.loads(out)
     except (ValueError,TypeError):raise TrustError('HELPER_RESPONSE_INVALID') from None
     if not isinstance(value,dict):raise TrustError('HELPER_RESPONSE_INVALID')
@@ -87,7 +104,7 @@ def inspect(profile,stop=None):
     if mode!='bundle':
         result['file']=dict(state='UNSUPPORTED');return result
     try:
-        bundle=regular_owned(profile['bundle_path'],32768);root=regular_owned(profile['root_public_path'],4096)
+        bundle=regular_owned(profile['bundle_path'],32768,'bundle_path');root=regular_owned(profile['root_public_path'],4096,'root_public_path')
         observed=helper(profile,['inspect-json','--root-pub',str(root),'--bundle',str(bundle)],stop)
         if observed.get('schema_version')!=1:raise TrustError('TRUST_SCHEMA_UNSUPPORTED')
         f=observed['file']
@@ -98,8 +115,16 @@ def inspect(profile,stop=None):
         if type(version) is int and 0<version<2**64:
             f=dict(f,bundle_version_decimal=str(version))
         result['file']=f
-    except FileNotFoundError:result['file']=dict(state='MISSING')
-    except (OSError,TrustError,KeyError,subprocess.TimeoutExpired):
+    except TrustError as exc:
+        # P024-M2: say which declaration and why. The refusal is what it was; only the sentence changed. A bundle
+        # that is not there keeps its own state ("not placed yet"); a signer or a root key that is not there is an
+        # observation that could not be made, and used to read as a missing bundle.
+        if exc.code=='DECLARED_FILE_MISSING' and exc.field=='bundle_path':result['file']=dict(state='MISSING',field='bundle_path')
+        else:
+            result['file']=dict(state='UNOBSERVED',reason=exc.code)
+            if exc.field:result['file']['field']=exc.field
+            if exc.cause:result['file']['cause']=exc.cause
+    except (OSError,KeyError,subprocess.TimeoutExpired):
         result['file']=dict(state='UNOBSERVED',reason='TRUST_INSPECTION_FAILED')
     return result
 

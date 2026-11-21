@@ -48,19 +48,25 @@ func Bool(b bool) *bool { return &b }
 // ReceiptTimeLayout is the `at` format.
 const ReceiptTimeLayout = "2006-01-02T15:04:05Z"
 
-// ErrReceiptKept is returned by WriteReceipt when the existing receipt at the
-// target path recorded a matching tree and this run's tree is modified: the
-// evidence of the clean run is kept, nothing is written.
-// ErrReceiptKeptNotCompared is the same rule for a run that did not compare
-// the tree at all (tree_matched null).
+// A receipt is kept when the run that would replace it is weaker (kept
+// sentinels below; nothing is written and the existing path is returned).
+//
+// ErrReceiptKept / ErrReceiptKeptNotCompared: the existing receipt recorded a
+// matching tree and this run's tree is modified / was not compared (P42-L1).
+// ErrReceiptKeptSignature / ErrReceiptKeptPublisherKey (P024-L1): the existing
+// receipt of the SAME manifest verified the signature / compared the publisher
+// key and this run did not.
 var (
-	ErrReceiptKept            = errors.New("existing receipt matched the tree; this run's tree is modified")
-	ErrReceiptKeptNotCompared = errors.New("existing receipt matched the tree; this run did not compare the tree")
+	ErrReceiptKept             = errors.New("existing receipt matched the tree; this run's tree is modified")
+	ErrReceiptKeptNotCompared  = errors.New("existing receipt matched the tree; this run did not compare the tree")
+	ErrReceiptKeptSignature    = errors.New("existing receipt verified the signature; this run accepted checksums only")
+	ErrReceiptKeptPublisherKey = errors.New("existing receipt compared the publisher key; this run did not")
 )
 
 // IsReceiptKept reports whether err is one of the kept sentinels.
 func IsReceiptKept(err error) bool {
-	return errors.Is(err, ErrReceiptKept) || errors.Is(err, ErrReceiptKeptNotCompared)
+	return errors.Is(err, ErrReceiptKept) || errors.Is(err, ErrReceiptKeptNotCompared) ||
+		errors.Is(err, ErrReceiptKeptSignature) || errors.Is(err, ErrReceiptKeptPublisherKey)
 }
 
 // ReceiptName is <release_id>-<lock_sha256[:16]>.json.
@@ -72,27 +78,72 @@ func ReceiptName(releaseID, lockSHA256 string) string {
 	return releaseID + "-" + short + ".json"
 }
 
-// existingTreeMatched reports whether a parseable receipt at path says
-// tree_matched == true.
-func existingTreeMatched(path string) bool {
+// existingReceipt is what a receipt already at the target path recorded on
+// the axes a later run may not weaken; ok is false when there is none, it
+// does not parse, or it predates schema 2 (such a file is always replaced).
+type existingReceipt struct {
+	SchemaVersion            int    `json:"schema_version"`
+	ManifestSHA256           string `json:"manifest_sha256"`
+	Signature                string `json:"signature"`
+	ExpectedFingerprintGiven bool   `json:"expected_fingerprint_given"`
+	TreeMatched              *bool  `json:"tree_matched"`
+}
+
+func readExisting(path string) (existingReceipt, bool) {
+	var old existingReceipt
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return false
+	if err != nil || json.Unmarshal(data, &old) != nil || old.SchemaVersion < 2 {
+		return old, false
 	}
-	var old struct {
-		TreeMatched *bool `json:"tree_matched"`
+	return old, true
+}
+
+// receiptKept is the precedence rule, the same as receipt_kept_reason of
+// verification_receipt.py and tested against the same table
+// (testdata/releaseverify/receipt_precedence.json).
+//
+// Same manifest bytes: the runs are about one signed object and are ordered
+// by (signature verified, publisher key compared, tree matched),
+// lexicographically; the first axis that differs decides. The signature and
+// the key comparison exist only in a verifier run; the tree is last because
+// the launcher re-hashes it on every start. Another manifest, or a receipt
+// naming none: only the tree rule of P42-L1 applies, as before.
+func receiptKept(old existingReceipt, r Receipt) error {
+	treeOld := old.TreeMatched != nil && *old.TreeMatched
+	treeNew := r.TreeMatched != nil && *r.TreeMatched
+	treeErr := ErrReceiptKept
+	if r.TreeMatched == nil {
+		treeErr = ErrReceiptKeptNotCompared
 	}
-	if err := json.Unmarshal(data, &old); err != nil {
-		return false
+	if old.ManifestSHA256 != "" && old.ManifestSHA256 == r.ManifestSHA256 {
+		axes := []struct {
+			was, now bool
+			kept     error
+		}{
+			{old.Signature == "VERIFIED", r.Signature == "VERIFIED", ErrReceiptKeptSignature},
+			{old.ExpectedFingerprintGiven, r.ExpectedFingerprintGiven, ErrReceiptKeptPublisherKey},
+			{treeOld, treeNew, treeErr},
+		}
+		for _, a := range axes {
+			if a.was != a.now {
+				if a.was {
+					return a.kept
+				}
+				return nil
+			}
+		}
+		return nil
 	}
-	return old.TreeMatched != nil && *old.TreeMatched
+	if treeOld && !treeNew {
+		return treeErr
+	}
+	return nil
 }
 
 // WriteReceipt creates dir (0700) and writes the receipt atomically
 // (temp file + rename), JSON indented by two spaces with a trailing newline.
-// When the receipt already at the target path has tree_matched true and r has
-// tree_matched false or null, nothing is written: the existing path is
-// returned with ErrReceiptKept / ErrReceiptKeptNotCompared.
+// When the receipt already at the target path is stronger than r (receiptKept),
+// nothing is written: the existing path is returned with a kept sentinel.
 func WriteReceipt(dir string, r Receipt) (string, error) {
 	if r.ReleaseID == "" || r.LockSHA256 == "" {
 		return "", errors.New("release_id and lock_sha256 are required")
@@ -107,11 +158,10 @@ func WriteReceipt(dir string, r Receipt) (string, error) {
 		return "", err
 	}
 	target := filepath.Join(dir, ReceiptName(r.ReleaseID, r.LockSHA256))
-	if (r.TreeMatched == nil || !*r.TreeMatched) && existingTreeMatched(target) {
-		if r.TreeMatched == nil {
-			return target, ErrReceiptKeptNotCompared
+	if old, ok := readExisting(target); ok {
+		if kept := receiptKept(old, r); kept != nil {
+			return target, kept
 		}
-		return target, ErrReceiptKept
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)

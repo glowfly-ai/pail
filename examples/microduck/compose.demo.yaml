@@ -4,9 +4,39 @@
 # devices, host network or Docker socket: the console and the dashboard are host processes
 # bound to 127.0.0.1 that read files under the state directory.
 services:
-  issuer:
+  tools:
+    # Issuer-side toolbox: demo_probe.py (plan submit/cancel/unlock/verify) runs here, not in the Issuer container,
+    # whose image holds the Issuer executables and nothing else (no Python, no shell). It reads the Issuer's
+    # configuration and journal read-only and reaches the Issuer by name, so it keeps working after a scene
+    # restarted the Issuer. It can read the operator key: it belongs to the Issuer side, never to a robot.
+    # Its CPU share is taken from the Issuer's (0.4 -> 0.3 + 0.1): the probes used to run inside that container.
+    cpus: 0.1
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    image: ${PAIL_DUCK_IMAGE}
+    user: "10001:10001"
+    networks: [preview]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 2s          # `sleep` as process 1 ignores TERM
+    command: [sleep, infinity]
     volumes:
-      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro   # demo_probe.py (plan submit/cancel/unlock/verify)
+      - type: volume
+        source: private
+        target: /etc/pail
+        read_only: true
+        volume: {subpath: config}
+      - type: volume
+        source: private
+        target: /var/log/pail_blackbox
+        read_only: true
+        volume: {subpath: blackbox}
+      - ${PAIL_DUCK_STATE}/runtime/reference:/reference:ro   # demo_probe.py
+    environment:
+      PAIL_DEMO_ISSUER: issuer:50051
+      PAIL_ROBOT_ID: robot-1
+      PAIL_GRPC_TLS: "off"
   state-seam:
     cpus: 0.1
     mem_limit: 128m

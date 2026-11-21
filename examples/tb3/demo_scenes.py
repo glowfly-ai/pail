@@ -15,7 +15,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
 from run_record import RunRecord
-from judge_events import JudgeLog
+from judge_events import JudgeLog, refusal
 from stop_observation import summarize as summarize_stop
 
 AP = argparse.ArgumentParser(description=__doc__)
@@ -135,6 +135,23 @@ def settle():
     raise AssertionError('base kept moving after stop')
 
 
+# What the console starts with (demo.py). Scenes 7 and 8 each change one of them to inject a fault.
+BASELINE_INPUTS = {'tag': 'sample-box', 'safety': 'OK'}
+
+
+def restore_inputs(facts, **inputs):
+    """P024-N1: put back an input a scene injected, whatever made the scene fail. Scene 7 used to restore the tag only
+    after its wait for the gate's refusal had succeeded; on a stack that refused for another reason first (a revoked
+    key, in the 0.2.4 evaluation) the wait timed out, `tag=other-box` stayed injected, and every later plan was
+    refused for the tag — which read as "operation does not recover". Never raises: a failed restore is recorded and
+    must not replace the scene's own reason."""
+    try:
+        post('/api/inputs', inputs)
+        facts['inputs_restored'] = inputs
+    except Exception as ex:  # noqa: BLE001 — recorded, never raised
+        facts['inputs_restore_failed'] = '%s: %s' % (type(ex).__name__, ex)
+
+
 def quiet(seconds=2.0):
     i = L.mark()
     time.sleep(seconds)
@@ -146,7 +163,7 @@ def move(text, facts, key):
     p0 = L.pose()
     i = L.mark()
     r = post('/api/command', {'text': text})
-    assert r.get('accepted'), '%r was refused: %s' % (text, r.get('denial'))
+    assert r.get('accepted'), '%r was refused: %s' % (text, refusal(r))
     L.wait(i, 'step permitted for %r' % text, 20, event='step_permitted')
     total = sum(s['duration'] for s in r['steps'])
     L.wait(i, 'plan completion for %r' % text, total * 2 + 20, event='plan_done')
@@ -262,7 +279,7 @@ def s4c(f):
 def s5(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'first motion', 20, event='drive')
     j = L.mark()
     post('/api/rogue', {'linear': 0.3})
@@ -280,45 +297,57 @@ def s5(f):
 @scene('7', 'wrong tag read: gate refuses, right tag restores')
 def s7(f):
     post('/api/inputs', {'tag': 'other-box'})
-    time.sleep(1)
-    i = L.mark()
-    r = post('/api/command', {'text': 'forward 0.5 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
-    L.wait(i, 'gate ERR_TARGET_MISMATCH', 15, event='gate', reason='ERR_TARGET_MISMATCH')
-    time.sleep(.5)
-    f['drives_with_wrong_tag'] = quiet(2.5)
-    assert f['drives_with_wrong_tag'] == 0, 'the base moved while the tag did not match the token target'
-    j = L.mark()
-    post('/api/inputs', {'tag': 'sample-box'})
-    L.wait(j, 'motion after the right tag', 15, event='drive')
-    f['restored'] = True
-    # a feed switch is not a new task: the planner must not have restarted its plan
-    # (counted from the switch itself — the plan's own submission is one instruction before it)
-    time.sleep(.5)
-    f['planner_restarts_on_feed_switch'] = len(L.since(j, source='planner', event='instruction'))
-    assert f['planner_restarts_on_feed_switch'] == 0, 'switching the tag restarted the running plan'
+    put_back = False   # the passing path restores the tag itself, at the point the scene judges; the finally only acts when it did not
+    try:
+        time.sleep(1)
+        i = L.mark()
+        r = post('/api/command', {'text': 'forward 0.5 m'})
+        assert r.get('accepted'), 'plan refused: %s' % refusal(r)
+        L.wait(i, 'gate ERR_TARGET_MISMATCH', 15, event='gate', reason='ERR_TARGET_MISMATCH')
+        time.sleep(.5)
+        f['drives_with_wrong_tag'] = quiet(2.5)
+        assert f['drives_with_wrong_tag'] == 0, 'the base moved while the tag did not match the token target'
+        j = L.mark()
+        post('/api/inputs', {'tag': 'sample-box'})
+        put_back = True
+        L.wait(j, 'motion after the right tag', 15, event='drive')
+        f['restored'] = True
+        # a feed switch is not a new task: the planner must not have restarted its plan
+        # (counted from the switch itself — the plan's own submission is one instruction before it)
+        time.sleep(.5)
+        f['planner_restarts_on_feed_switch'] = len(L.since(j, source='planner', event='instruction'))
+        assert f['planner_restarts_on_feed_switch'] == 0, 'switching the tag restarted the running plan'
+    finally:
+        if not put_back:
+            restore_inputs(f, tag=BASELINE_INPUTS['tag'])
 
 
 @scene('8', 'safety UNSAFE while moving: stop, the interrupted plan never resumes; a new plan runs once safety is OK (unlock is a no-op: no forgery lock)')
 def s8(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'first motion', 20, event='drive')
     j = L.mark()
     post('/api/inputs', {'safety': 'UNSAFE'})
-    L.wait(j, 'gate ESTOP', 5, event='gate', state='ESTOP')
-    time.sleep(.5)
-    f['drives_after_unsafe'] = quiet(2)
-    assert f['drives_after_unsafe'] == 0, 'the base kept moving after safety went UNSAFE'
-    post('/api/inputs', {'safety': 'OK'})
+    put_back = False   # as in scene 7: UNSAFE must not stay injected when a wait below fails (P024-N1)
+    try:
+        L.wait(j, 'gate ESTOP', 5, event='gate', state='ESTOP')
+        time.sleep(.5)
+        f['drives_after_unsafe'] = quiet(2)
+        assert f['drives_after_unsafe'] == 0, 'the base kept moving after safety went UNSAFE'
+        post('/api/inputs', {'safety': 'OK'})
+        put_back = True
+    finally:
+        if not put_back:
+            restore_inputs(f, safety=BASELINE_INPUTS['safety'])
     f['drives_after_ok_without_unlock'] = quiet(3)
     f['planner_restarts_on_feed_switch'] = len(L.since(j, source='planner', event='instruction'))
     assert f['planner_restarts_on_feed_switch'] == 0, 'switching the safety level restarted the running plan'
     assert f['drives_after_ok_without_unlock'] == 0, 'motion resumed without an operator'
     u = post('/api/unlock')
     f['unlock'] = u
-    assert u.get('accepted'), 'unlock refused: %s' % u
+    assert u.get('accepted'), 'unlock refused: %s' % refusal(u)
     time.sleep(1)
     d, _, _, _ = move('forward 0.3 m', f, 'after_unlock')
     assert abs(d - 0.3) < 0.08, 'control moved %.3f m, want about 0.3' % d
@@ -328,7 +357,7 @@ def s8(f):
 def ss(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     first_token = r['tokens'][0]['id']
     L.wait(i, 'first motion', 20, event='drive')
     time.sleep(1.0)
@@ -395,12 +424,27 @@ def s9(f):
     assert r.get('ok'), 'verify failed'
 
 
+def reset_injected_inputs():
+    """P024-N1: the scenes assume the inputs the console starts with. An earlier judge that died, or a person at the
+    console, may have left one injected; put them back before the first scene and say so, in the verdict stream and in
+    the result file — a silent reset would hide why an earlier run failed."""
+    with urllib.request.urlopen(BASE + '/api/state', timeout=10) as r:
+        control = json.loads(r.read()).get('control') or {}
+    injected = {k: [control[k], v] for k, v in BASELINE_INPUTS.items() if k in control and control[k] != v}
+    if injected:
+        post('/api/inputs', dict(BASELINE_INPUTS))
+        time.sleep(1)  # the gate has to see the restored feed before the first command (scene 7 waits the same after its own switch)
+        RUN.data['inputs_reset'] = injected
+        print('INPUTS_RESET ' + ' '.join('%s=%s->%s' % (k, was, now) for k, (was, now) in sorted(injected.items())), flush=True)
+
+
 def main():
     try:
         urllib.request.urlopen(BASE + '/api/state', timeout=5).read()
     except OSError as ex:
         print('Console not reachable at %s (%s). Start it with: python3 examples/tb3/demo.py up' % (BASE, ex), file=sys.stderr)
         return 2
+    reset_injected_inputs()
     suite = [s6, s1, s2, s3, s4, s4b, s4c, s5, s7, s8, ss, sr, s9]
     RUN.data['expected_scene_ids'] = [s.sid for s in suite if not A.only or s.sid in A.only.split(',')]
     RUN.save(RESULTS)

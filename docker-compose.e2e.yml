@@ -21,7 +21,7 @@ services:
   pail-services:
     image: ${PAIL_E2E_SERVICES_IMAGE:?Load the pinned Issuer evaluation image}
     pull_policy: never
-    command: [/usr/local/bin/pail_split_entrypoint.sh]
+    command: [/usr/local/bin/pail_split]
     network_mode: host
     volumes:
       - ${PAIL_E2E_CONFIG:?Run e2e/run_e2e.sh to prepare isolated runtime config}:/etc/pail:ro

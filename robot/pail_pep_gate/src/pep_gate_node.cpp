@@ -213,7 +213,10 @@ public:
       // KM2-1 trust path (KM LLD §6.3): signed bundle by default, unsigned
       // keyring.json only with explicit PAIL_KEYRING_MODE=unsigned-dev. Load
       // failure leaves the trust map empty — every token verification then
-      // fails (fail-closed); a new bundle is applied by restarting this node.
+      // fails (fail-closed). SEC-H02: a bundle placed while this node runs is
+      // taken up by on_trust_timer (the session's PollTrust), and the node stops
+      // judging with a bundle whose expiry has passed; a restart is no longer the
+      // way a renewal or a revocation arrives.
       std::string kr_mode, kr_reason;
       keyring_ = pail_pep_gate::LoadTrustedKeyring(
           "/etc/pail/keys/keyring.json", &kr_mode, &kr_reason);
@@ -232,6 +235,13 @@ public:
         RCLCPP_INFO(get_logger(), "keyring trust path: mode=%s keys=%zu revoked=%zu",
                     kr_mode.c_str(), keyring_.pubkeys.size(), keyring_.revoked.size());
       }
+      // SEC-H02: one greppable line per change of the trust this gate judges with —
+      // loaded (here), applied / refused / expired (on_trust_timer). An operator or the
+      // robot agent's operator reads the version in force from these, not from a file.
+      RCLCPP_INFO(get_logger(), "PAIL_GATE_TRUST loaded mode=%s bundle_version=%llu expires_at_unix=%lld keys=%zu revoked=%zu%s%s",
+                  kr_mode.c_str(), static_cast<unsigned long long>(keyring_.bundle_version),
+                  static_cast<long long>(keyring_.expires_at_unix), keyring_.pubkeys.size(), keyring_.revoked.size(),
+                  kr_reason.empty() ? "" : " reason=", kr_reason.c_str());
       // S8 check (6) (PAIL-SD2-LLD-v1 §2.3): judge the anchors that were
       // actually loaded, not the path they came from — in bundle mode the path
       // says nothing about which keys ended up trusted. Before any subscription
@@ -637,6 +647,9 @@ public:
       };
       fatal_worker_ = std::make_unique<pail_pep_gate::FatalReportWorker>(*token_provider_, std::move(hooks));
     }
+    // SEC-H02: look for a placed bundle four times a second. The look itself is a stat of
+    // one file; the file is read only when its identity changed.
+    trust_timer_ = create_wall_timer(std::chrono::milliseconds(250), [this]() { on_trust_timer(); });
     // Readiness is diagnostic only: it neither grants a token nor proves motion.
     io_timer_ = create_wall_timer(std::chrono::seconds(1), [this]() {
       const auto now_ns = pail_robotops::MonoNS();
@@ -659,6 +672,8 @@ public:
 
 private:
   rclcpp::TimerBase::SharedPtr io_timer_;
+  rclcpp::TimerBase::SharedPtr trust_timer_;
+  bool trust_expiry_logged_{false};
   int64_t evidence_rx_ns_{0}, safety_rx_ns_{0};
   pail_robotops::Fields status_snapshot()const {
     const auto mono=pail_robotops::MonoNS();
@@ -840,6 +855,50 @@ private:
   // operator's eyes (the log line and GateState); the digest of record is the
   // one the ISSUER computes over the same text, which is why the canonical form
   // travels on the wire and the digest does not.
+  // SEC-H02 : the session takes up a placed bundle (PollTrust); the node keeps what it
+  // holds beside the session in step — the copy the status snapshot serves, the
+  // fingerprints the config seal reports — and says what happened in one line.
+  void on_trust_timer() {
+    if (!session_) return;
+    const pail_pep_gate::TrustApplyResult r = session_->PollTrust();
+    if (r.outcome == pail_pep_gate::TrustApply::Applied) {
+      keyring_ = session_->keyring();
+      keyring_fingerprints_.clear();
+      for (const auto & kv : keyring_.pubkeys) {
+        unsigned char digest[crypto_hash_sha256_BYTES];
+        crypto_hash_sha256(digest, kv.second.data(), kv.second.size());
+        static const char * kHex = "0123456789abcdef";
+        std::string fpr;
+        fpr.reserve(sizeof(digest) * 2);
+        for (unsigned char b : digest) {
+          fpr.push_back(kHex[b >> 4]);
+          fpr.push_back(kHex[b & 0x0f]);
+        }
+        keyring_fingerprints_.push_back(fpr);
+      }
+      trust_expiry_logged_ = false;
+      RCLCPP_WARN(get_logger(), "PAIL_GATE_TRUST applied bundle_version=%llu expires_at_unix=%lld keys=%zu revoked=%zu%s%s",
+                  static_cast<unsigned long long>(r.version), static_cast<long long>(r.expires_at_unix),
+                  keyring_.pubkeys.size(), keyring_.revoked.size(), r.reason.empty() ? "" : " note=", r.reason.c_str());
+      // The seal reports the anchors this process trusts (SD4). They changed, so the
+      // seal is taken again: the issuer's journal then holds the moment this gate
+      // started judging with the new set.
+      do_config_seal();
+    } else if (r.outcome == pail_pep_gate::TrustApply::Refused) {
+      RCLCPP_WARN(get_logger(), "PAIL_GATE_TRUST refused reason=%s keeping bundle_version=%llu expires_at_unix=%lld",
+                  r.reason.c_str(), static_cast<unsigned long long>(r.version), static_cast<long long>(r.expires_at_unix));
+    }
+    if (session_->TrustExpired()) {
+      if (!trust_expiry_logged_) {
+        trust_expiry_logged_ = true;
+        RCLCPP_ERROR(get_logger(), "PAIL_GATE_TRUST expired bundle_version=%llu expires_at_unix=%lld — every command is refused "
+                     "(ERR_BUNDLE_EXPIRED) until a valid bundle is applied",
+                     static_cast<unsigned long long>(session_->keyring().bundle_version),
+                     static_cast<long long>(session_->keyring().expires_at_unix));
+      }
+    }
+  }
+
   void do_config_seal() {
     const auto in = build_seal_input();
     const auto assembled = pail_deploy_guard::CanonicalizeSeal(in);

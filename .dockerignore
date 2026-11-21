@@ -14,12 +14,13 @@
 !sdk/proto/
 # Standalone core conformance test input; never include the whole config/state tree.
 !spec/vectors/token/tokens.vec
+# SEC-H02 keyring bundle parity vectors; the trust_vectors battery reads them in the image.
+!spec/vectors/keyring_bundle/vectors.json
 !robot/
 !libpail_gate/
 !examples/tb3/probe.go
 !cloud/
 !docker/entrypoints/
-!docker/pail_split_entrypoint.sh
 
 # Not scripts/ wholesale — key generators live there. _keymode.sh is the one
 # file the gate image COPYs (the run-time copy of the key-mode predicate).
@@ -46,3 +47,9 @@
 **/log/
 **/__pycache__/
 **/.venv/
+
+# What a used tree grows. Kept out so that a recipient's working copy and a pristine one are the same input
+# (examples/common/image_inputs.py reads this file exactly as Docker does).
+**/.DS_Store
+**/*.log
+cloud/bin/

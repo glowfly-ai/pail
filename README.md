@@ -1,6 +1,6 @@
 # PAIL — Physical Action Identity Layer
 
-> **Release purpose and limits.** PAIL 0.2.2 is released for developer review, research, and integration evaluation. This release does not establish suitability for production operation or certify physical or functional safety. Any production deployment requires its own integration, security, and safety assessment. This statement describes the release's validation scope; it does not change the Apache-2.0 rights granted for PAIL Core.
+> **Release purpose and limits.** PAIL 0.2.4 is released for developer review, research, and integration evaluation. This release does not establish suitability for production operation or certify physical or functional safety. Any production deployment requires its own integration, security, and safety assessment. This statement describes the release's validation scope; it does not change the Apache-2.0 rights granted for PAIL Core.
 
 **An LLM planner hallucinates `forward 30 m`. A node nobody registered starts
 publishing to `/cmd_vel`. With PAIL in front of the base, neither command reaches
@@ -41,7 +41,7 @@ Three commands on a laptop with Docker. The issuer, the gate and the motion brid
 are the real components; only the TurtleBot3 base, its tag reader and its safety
 feed are simulated. No ROS on the host, no account, no hardware. Download the
 evaluation bundle for your architecture from the
-[0.2.2 release page](https://github.com/glowfly-ai/pail/releases/tag/0.2.2) and run
+[0.2.4 release page](https://github.com/glowfly-ai/pail/releases/tag/0.2.4) and run
 these from its directory:
 
 ```sh

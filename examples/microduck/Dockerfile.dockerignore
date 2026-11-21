@@ -20,3 +20,10 @@
 **/*_ed25519*.json
 **/__pycache__/
 **/.venv/
+# What a used tree grows. Kept out so that a recipient's working copy and a pristine one are the same input
+# (examples/common/image_inputs.py reads this file exactly as Docker does).
+**/.DS_Store
+**/*.log
+cloud/bin/
+# Rewritten by a conformance run; no build step reads it.
+adapters/microduck/compatibility.json

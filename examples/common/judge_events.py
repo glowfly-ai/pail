@@ -20,6 +20,25 @@ RESYNC_KEEP = 300      # events before the live edge a late-starting judge still
 RESYNC_LIMIT = 10      # a feed that evicts faster than one request round trip, ten times in a row, is reported as a gap
 
 
+# What an answer of the console may carry besides `accepted` that says why a command was not taken. `denial` is the
+# Issuer's refusal; the others are the console's own (a paused robot, a changed intent, an unconfirmed stop).
+REASON_FIELDS = ('denial', 'reason', 'error', 'detail', 'execution', 'resume_requirement', 'robot_id', 'explain')
+
+
+def refusal(answer):
+    """One line for a verdict: every reason field the answer carries (P021C-N1: `refused: None` named nothing)."""
+    if not isinstance(answer, dict):
+        return 'no reason field in the answer: %r' % (answer,)
+    parts = []
+    for key in REASON_FIELDS:
+        value = answer.get(key)
+        if value in (None, '', [], {}):
+            continue
+        text = str(value)
+        parts.append('%s=%s' % (key, text if len(text) <= 240 else text[:240] + '...'))
+    return ' '.join(parts) if parts else 'no reason field in the answer: %r' % ({k: v for k, v in answer.items() if k not in ('steps', 'tokens')},)
+
+
 class JudgeLog:
     def __init__(self, base, sink=None, timeout=30):
         self.base, self.sink, self.timeout = base, sink, timeout

@@ -343,7 +343,10 @@ string reason
 
 <!-- source: sdk/proto/operator_service.proto -->
 
-RPC 셋, 전부 발급자 쪽이다. 로봇과 게이트는 이 중 어느 것도 보지 않는다.
+RPC 여섯, 전부 발급자 쪽이다: `Unlock`, `RevokeIssuerKey`, `IngestContextEvent`, 그리고 잠금
+등록부의 `ApplyLock`·`ReleaseLock`·`ListLocks`. 로봇과 게이트는 이 중 어느 것도 보지 않는다.
+이 절은 앞의 셋의 메시지 표를 싣는다. 잠금 등록부의 메시지와 소유 규칙은 실린 `.proto` 의
+주석에 적혀 있다.
 
 ### 5.1 컨텍스트 이벤트
 
@@ -419,7 +422,12 @@ ack 는 변경 적용 후의 그래프 판번호를 돌려준다. 그 수는 `De
 ### 5.2 Unlock 과 Revoke
 
 둘 다 서명된 운영자 명령이다. `Unlock` 은 로봇을 안전정지 상태에서 되돌리고,
-`RevokeIssuerKey` 는 발급자를 프로세스 수명 동안 지속되는 락다운에 넣는다.
+`RevokeIssuerKey` 는 발급자를 `LOCKDOWN` 에 넣으며, 이 상태는 영구적이다. 어떤 RPC 도 이
+상태를 풀지 못하고, 실행 중인 프로세스에만 한정되지도 않는다. 수락된 폐기는 저널 레코드로
+남고, 같은 저널로 다시 시작한 발급자는 그것을 재생해 `LOCKDOWN` 으로 돌아온다. (실린 `.proto`
+의 서비스 주석은 "permanent for the process lifetime" 이라고 적는데, 같은 규칙의 프로세스 안쪽
+절반이다.) 저널 재생을 건너뛰는 개발용 스위치 `PAIL_REPLAY=off` 는 이 복원도 건너뛴다.
+production 기동은 그 스위치를 거부한다(`TRUST_BOUNDARY.md` 의 규칙 `S41`).
 
 <!-- vocab: unlock -->
 

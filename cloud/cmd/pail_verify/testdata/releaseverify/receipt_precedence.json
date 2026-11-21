@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "rows": [
+    {
+      "name": "first-write",
+      "old": null,
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "replaced",
+      "axis": null
+    },
+    {
+      "name": "equal",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "replaced",
+      "axis": null
+    },
+    {
+      "name": "fingerprint-downgrade",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "kept",
+      "axis": "publisher key"
+    },
+    {
+      "name": "fingerprint-upgrade",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "replaced",
+      "axis": null
+    },
+    {
+      "name": "signature-downgrade",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "CHECKSUMS_ONLY",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "kept",
+      "axis": "signature"
+    },
+    {
+      "name": "signature-upgrade",
+      "old": {
+        "signature": "CHECKSUMS_ONLY",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "replaced",
+      "axis": null
+    },
+    {
+      "name": "tree-downgrade-modified",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": false
+      },
+      "same_manifest": true,
+      "expect": "kept",
+      "axis": "tree"
+    },
+    {
+      "name": "tree-downgrade-not-compared",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": null
+      },
+      "same_manifest": true,
+      "expect": "kept",
+      "axis": "tree"
+    },
+    {
+      "name": "fingerprint-up-tree-down",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": null
+      },
+      "same_manifest": true,
+      "expect": "replaced",
+      "axis": null
+    },
+    {
+      "name": "fingerprint-down-tree-up",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": null
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": true
+      },
+      "same_manifest": true,
+      "expect": "kept",
+      "axis": "publisher key"
+    },
+    {
+      "name": "other-manifest-tree-rule",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": true
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": false
+      },
+      "same_manifest": false,
+      "expect": "kept",
+      "axis": "tree"
+    },
+    {
+      "name": "other-manifest-weaker-key",
+      "old": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": true,
+        "tree_matched": null
+      },
+      "new": {
+        "signature": "VERIFIED",
+        "expected_fingerprint_given": false,
+        "tree_matched": null
+      },
+      "same_manifest": false,
+      "expect": "replaced",
+      "axis": null
+    }
+  ]
+}

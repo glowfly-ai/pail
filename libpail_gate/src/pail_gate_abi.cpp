@@ -238,6 +238,11 @@ int pail_gate_tick(pail_gate_t *h, const uint8_t *in, size_t in_len,
   abi::TickInput t;
   if (!in || !t.ParseFromArray(in, static_cast<int>(in_len))) return PAIL_GATE_EPARSE;
   abi::TickOutcome o;
+  // SEC-H02: take up a bundle placed beside the running gate before judging with the keys.
+  // No new call and no new message: an adapter that ticks gets revocations and renewals.
+  // The result shows in pail_gate_info (keys, revoked_keys) and in the decisions.
+  const pail_pep_gate::TrustApplyResult trust = h->session->PollTrust();
+  if (trust.outcome == pail_pep_gate::TrustApply::Applied) h->keyring_error = trust.reason;
   // GC-TIME-1: service an ordinary completion before rechecking its permit.
   // Otherwise every on-time tick would manufacture ERR_CONSTRAINT first.
   // OnRecheck still enforces duration independently if a timer is absent/late.

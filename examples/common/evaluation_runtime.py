@@ -250,12 +250,33 @@ def runtime_images(root):
             expected = {'issuer': 'issuer-eval', 'microduck': 'core-microduck', 'tb3_gate': 'core-tb3-gate'}
             if labels.get('org.pail.component') != expected[role] or labels.get('org.pail.release') != data['release_id']:
                 raise ValueError('wrong Issuer/Core component/release: ' + role)
+            # A reused image keeps the layers an earlier release built. It is accepted only when the lock says
+            # where they came from, the image's own labels say the same, and the layer list is the recorded one.
+            reuse, reused_from = entry.get('reuse'), labels.get('org.pail.reused-from')
+            if reused_from and not reuse:
+                raise ValueError('reused image without a reuse record in the lock: ' + role)
+            if reuse and not reused_from:
+                raise ValueError('reuse record for an image that is not labelled as reused: ' + role)
+            if reuse:
+                if reuse.get('from_release') != reused_from:
+                    raise ValueError('reuse record and image label name a different origin release: ' + role)
+                if reuse.get('from_image_id') != labels.get('org.pail.reused-image-id'):
+                    raise ValueError('reuse record and image label name a different origin image: ' + role)
+                if not reuse.get('layers') or info.get('RootFS', {}).get('Layers') != reuse['layers']:
+                    raise ValueError('image layers differ from the reuse record: ' + role)
             resolved[role] = image
         return resolved
     except EvaluationRequired:
         raise
     except (OSError, ValueError, KeyError, TypeError, IndexError, tarfile.TarError, subprocess.SubprocessError) as exc:
         raise EvaluationRequired('EVALUATION_REQUIRED: valid images.lock.json beside pail-core and the matching local images are required; ' + str(exc)) from exc
+
+
+def image_provenance(root):
+    """Per role, the release that built the image's layers when it is reused (from the lock; no Docker needed)."""
+    data = json.loads((Path(root).resolve().parent / 'images.lock.json').read_text())
+    return {role: {'reused_from': (entry.get('reuse') or {}).get('from_release'),
+                   'origin_image_id': (entry.get('reuse') or {}).get('from_image_id')} for role, entry in data['images'].items()}
 
 
 def issuer_image(root):

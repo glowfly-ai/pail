@@ -36,5 +36,7 @@ build-issuer:
 
 build-core:
 	go build -mod=readonly -tags "$(BUILD_TAGS)" -ldflags "$(BUILD_LDFLAGS)" -o bin/pail_robot_agent ./cmd/pail_robot_agent
+	# process 1 of the single-host split profile (cloud + robot agent in one container); no dependency outside the standard library
+	CGO_ENABLED=0 go build -mod=readonly -o bin/pail_split ./cmd/pail_split
 	go build -mod=mod -tags "$(BUILD_TAGS)" -ldflags "$(BUILD_LDFLAGS)" -o bin/submit_plan ./cmd/submit_plan
 	go build -mod=mod -tags "$(BUILD_TAGS)" -ldflags "$(BUILD_LDFLAGS)" -o bin/pail_telemetryd ./cmd/pail_telemetryd

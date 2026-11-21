@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -10,6 +11,22 @@
 #include "pail_gate/token_provider.hpp"
 
 namespace pail_pep_gate {
+
+// Where a keyring came from, kept so that a running gate can take up a newer bundle
+// through the same checks as a start (SEC-H02). Fixed when the gate starts: the
+// environment is read once, never again while the process runs.
+struct TrustSource {
+  std::string bundle_path;                 // empty = nothing to take up while running
+  std::string state_path;
+  std::vector<unsigned char> root_pub;
+  // Production profile: a missing state file is not a first load, and the validity
+  // ceiling must be declared (PAIL_KEYRING_MAX_LIFETIME_SEC).
+  bool require_state{false};
+  bool require_declared_ceiling{false};
+  // The validity ceiling resolved at the first load, in seconds. -1 = not resolved yet
+  // (the loader reads PAIL_KEYRING_MAX_LIFETIME_SEC once and records the result here).
+  long long max_remaining_sec{-1};
+};
 
 struct Keyring {
   // key_id (raw bytes) -> pubkey bytes (32)
@@ -22,6 +39,14 @@ struct Keyring {
   std::unordered_map<std::string, std::vector<unsigned char>> revoked;
   // Captured by the accepted loader, not reconstructed by a status read.
   std::string loaded_trust_json{R"({"schema_version":1,"load_verdict":"NOT_OBSERVED"})"};
+
+  // The accepted bundle's version and expiry (SEC-H02). 0 = not bundle trust
+  // (unsigned-dev): no version to raise and no expiry to honour. A gate stops
+  // judging with these keys once the wall clock passes expires_at_unix — while it
+  // runs, not only at its next start.
+  uint64_t bundle_version{0};
+  long long expires_at_unix{0};
+  TrustSource source;
 };
 
 // Load keyring JSON from /etc/pail/keys/keyring.json.

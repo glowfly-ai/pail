@@ -186,4 +186,24 @@ if(BUILD_TESTING)
     PAIL_TB7_POLICY_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/policy_min.yaml")
   target_link_libraries(test_fatal_latch pail_gate ${SODIUM_LIBRARIES} protobuf::libprotobuf)
   add_test(NAME fatal_latch COMMAND test_fatal_latch)
+
+  # SEC-H02: a running gate honours the expiry of its bundle, takes up a newer bundle
+  # without a restart, and refuses a key the applied bundle revokes. Both doors; the one
+  # seam to the product is test/h02_door.hpp.
+  add_executable(test_trust_live test/test_trust_live.cpp)
+  add_dependencies(test_trust_live pail_gate_proto_gen)
+  target_include_directories(test_trust_live PRIVATE include ${PAIL_GATE_GEN_DIR} ${SODIUM_INCLUDE_DIRS})
+  target_link_directories(test_trust_live PRIVATE ${SODIUM_LIBRARY_DIRS})
+  target_compile_definitions(test_trust_live PRIVATE
+    PAIL_H02_POLICY_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/policy_min.yaml")
+  target_link_libraries(test_trust_live pail_gate ${SODIUM_LIBRARIES} protobuf::libprotobuf)
+  add_test(NAME trust_live COMMAND test_trust_live)
+
+  # SEC-H02: the parity vectors, gate loader side. The Go loader reads the same file.
+  add_executable(test_trust_vectors test/test_trust_vectors.cpp src/keyring_bundle.cpp)
+  target_include_directories(test_trust_vectors PRIVATE include ${SODIUM_INCLUDE_DIRS})
+  target_link_directories(test_trust_vectors PRIVATE ${SODIUM_LIBRARY_DIRS})
+  target_link_libraries(test_trust_vectors yaml-cpp ${SODIUM_LIBRARIES})
+  add_test(NAME trust_vectors COMMAND test_trust_vectors)
+  set_tests_properties(trust_vectors PROPERTIES ENVIRONMENT "PAIL_REPO_ROOT=${PAIL_GATE_REPO_ROOT}")
 endif()

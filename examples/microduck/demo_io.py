@@ -229,7 +229,7 @@ def planner():
     rid = [100]
     replies = {}      # id -> response; pre-forward refusals are not robot answers
 
-    from demo_connection import PlannerConnection
+    from demo_connection import PlannerConnection, send_stamped, zero_window_open
     connection = PlannerConnection(PUBLIC, record)
     def connect():
         nonlocal s
@@ -356,11 +356,13 @@ def planner():
                             # probe with the step's own command; blocked commands get no reply
                             if now >= hold_until:
                                 linear = C.ctl.get('override_linear')
-                                step_ids[move(st['linear'] if linear is None else linear, st['angular'])] = time.monotonic()
+                                # the stamp is read before the send: the adapter's step clock cannot start earlier
+                                request_id, sent_at = send_stamped(time.monotonic, lambda: move(st['linear'] if linear is None else linear, st['angular']))
+                                step_ids[request_id] = sent_at
                         else:
                             linear = C.ctl.get('override_linear')
                             move(st['linear'] if linear is None else linear, st['angular'])
-            if now < stop_until and (mode == 'idle' or (mode == 'plan' and step_since is None and now < hold_until)):
+            if zero_window_open(time.monotonic, stop_until) and (mode == 'idle' or (mode == 'plan' and step_since is None and now < hold_until)):
                 move(0.0, 0.0)
         except (ConnectionError, OSError) as ex:
             record('send_failed', detail=str(ex))

@@ -89,6 +89,13 @@ const EnvBundleMaxLifetime = "PAIL_KEYRING_MAX_LIFETIME_SEC"
 // 상한을 정하지 않은 배포가 같은 로그를 낸다.
 type BundlePolicy struct {
 	MaxLifetime time.Duration
+	// RequireState (SEC-H02): a missing state file is not a first load. Set by
+	// BundlePolicyFromEnv in the production profile; a caller that builds its own
+	// policy keeps the first-load behaviour unless it asks for this. Reading a
+	// missing file as "no floor yet" lets a lost state directory bring back a
+	// bundle from before a revocation — the floor of a production install is
+	// written explicitly, once (InitBundleFloor / `pail-keyring-sign init-floor`).
+	RequireState bool
 }
 
 // BundlePolicyFromEnv 는 상한을 환경에서 읽는다. 미설정은 기본값이 아니라 `S20b`
@@ -106,7 +113,9 @@ func BundlePolicyFromEnv() (BundlePolicy, error) {
 			"trust anchor: %s=%q is not a positive integer number of seconds",
 			EnvBundleMaxLifetime, raw)
 	}
-	return BundlePolicy{MaxLifetime: time.Duration(sec) * time.Second}, nil
+	// Anything but an explicit "dev" is production (the reading of deploysec.Evaluate
+	// and of the C++ gate's selector).
+	return BundlePolicy{MaxLifetime: time.Duration(sec) * time.Second, RequireState: os.Getenv("PAIL_PROFILE") != "dev"}, nil
 }
 
 // checkLifetime 은 `S20`. 이미 만료된 번들을 재는 것이 아니라 **너무 긴 창**을
@@ -234,6 +243,13 @@ func LoadKeyringBundle(bundlePath string, rootPub ed25519.PublicKey, statePath s
 	}
 	if err := fresh.CheckAt(now); err != nil {
 		return nil, err
+	}
+	if pol.RequireState {
+		if _, statErr := os.Stat(statePath); errors.Is(statErr, os.ErrNotExist) {
+			// Nothing is created here: a refusal that left a state file behind would
+			// pass the next start.
+			return nil, fmt.Errorf("bundle state: missing in the production profile (%s) — a missing floor is not a first load; initialise it once with `pail-keyring-sign init-floor`", statePath)
+		}
 	}
 	last, err := readBundleState(statePath)
 	if err != nil {
@@ -394,8 +410,17 @@ func parsePayload(payloadBytes []byte) (*BundlePayload, error) {
 	}
 	// 두 배열을 **같은 검사로** 훑는다. 폐기 목록에만 느슨한 검사를 두면 느슨해
 	// 지는 쪽은 언제나 덜 쓰이는 쪽이고, 그쪽이 바로 유출 대응이 읽는 목록이다.
-	for _, list := range [][]KeyringEntry{p.Keys, p.RevokedKeys} {
+	for li, list := range [][]KeyringEntry{p.Keys, p.RevokedKeys} {
+		// SEC-H02: one key_id, one entry per list. Two entries under one name make
+		// "which key is dev-key-1" depend on which reader is asked — this loader
+		// kept both, the C++ gate kept the last. Refused at signing time, since
+		// BuildBundle calls this before it signs.
+		seen := make(map[string]bool, len(list))
 		for _, e := range list {
+			if seen[e.KeyID] && e.KeyID != "" {
+				return nil, fmt.Errorf("bundle: entry %q appears twice in %s", e.KeyID, [2]string{"keys", "revoked_keys"}[li])
+			}
+			seen[e.KeyID] = true
 			if e.KeyID == "" {
 				return nil, errors.New("bundle: entry with empty key_id")
 			}
@@ -422,6 +447,53 @@ func parsePayload(payloadBytes []byte) (*BundlePayload, error) {
 		return nil, err
 	}
 	return &p, nil
+}
+
+// InitBundleFloor is the explicit first-install step of a production consumer
+// (SEC-H02): it verifies the placed bundle against the root and writes the bundle's
+// version as the version floor. It never touches an existing state file — an
+// initialisation is not a way to lower a floor — and a bundle the root did not sign
+// initialises nothing. Returns the floor it wrote.
+func InitBundleFloor(bundlePath string, rootPub ed25519.PublicKey, statePath string) (uint64, error) {
+	raw, err := os.ReadFile(bundlePath)
+	if err != nil {
+		return 0, fmt.Errorf("bundle read: %w", err)
+	}
+	p, _, err := VerifyBundle(raw, rootPub)
+	if err != nil {
+		return 0, err
+	}
+	b, err := json.Marshal(bundleState{LastVersion: p.BundleVersion})
+	if err != nil {
+		return 0, err
+	}
+	if dir := filepath.Dir(statePath); dir != "" {
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return 0, fmt.Errorf("bundle state dir: %w", err)
+		}
+	}
+	// O_EXCL: the create and the "does not exist yet" check are one step.
+	f, err := os.OpenFile(statePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return 0, fmt.Errorf("bundle state: %s already exists — the floor is initialised once and is not overwritten", statePath)
+		}
+		return 0, fmt.Errorf("bundle state create: %w", err)
+	}
+	if _, err := f.Write(append(b, '\n')); err != nil {
+		f.Close()
+		os.Remove(statePath)
+		return 0, fmt.Errorf("bundle state write: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		os.Remove(statePath)
+		return 0, fmt.Errorf("bundle state sync: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return 0, fmt.Errorf("bundle state close: %w", err)
+	}
+	return p.BundleVersion, nil
 }
 
 func readBundleState(statePath string) (uint64, error) {

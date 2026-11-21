@@ -70,17 +70,11 @@ func TestPullerRefusesBadPollInterval(t *testing.T) {
 	}
 }
 
-// TestPullerRefusesMissingRestartCmd — `S20e`/`B-R3`. 풀러는 켜졌는데 새 번들을
-// 적용할 수단이 없다. 예전에는 이것이 로그 한 줄이었고, 그 줄은 번들이 놓인
-// 뒤에만 찍혀서 아무도 안 읽으면 폐기가 영원히 도달하지 않았다.
-func TestPullerRefusesMissingRestartCmd(t *testing.T) {
-	reachEnv(t)
-	t.Setenv(EnvGateRestartCmd, "")
-	wantPullerRule(t, "S20e")
-	// 공백만 있는 것도 같다 — 있는 것처럼 보이지만 실행할 것이 없다.
-	t.Setenv(EnvGateRestartCmd, "   ")
-	wantPullerRule(t, "S20e")
-}
+// (Rule `S20e` — a puller without a restart command is refused — went away with SEC-H02: the
+// gate applies a placed bundle by itself, so a restart command is no condition for pulling.
+// What the rule guarded, "placed and nobody loaded it", is measured where it happens: the
+// puller confirms that the gate judges with the placed version and names it when it cannot.
+// See T18a-d in h02_reach_test.go.)
 
 // TestPullerEnabledWithFullConfig — 양성 대조. 셋이 다 있으면 풀러가 서야 한다.
 // 없으면 위 셋은 "풀러가 절대 안 켜진다"로도 초록이고, 그때 이것은 게이트가

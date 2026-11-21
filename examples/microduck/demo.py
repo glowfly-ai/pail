@@ -196,7 +196,7 @@ class Stack:
             return dict(self.control)
 
     def probe(self, *args, timeout=30):
-        p = subprocess.run(self.compose + ['exec', '-T', 'issuer', 'python', '/reference/demo_probe.py', *args], cwd=ROOT, env=self.env,
+        p = subprocess.run(self.compose + ['exec', '-T', 'tools', 'python', '/reference/demo_probe.py', *args], cwd=ROOT, env=self.env,
                            capture_output=True, text=True, timeout=timeout)
         lines = [l for l in p.stdout.strip().splitlines() if l.startswith('{')]
         if not lines:
@@ -226,14 +226,15 @@ class Stack:
         else:
             self.image = subprocess.check_output(['docker', 'image', 'inspect', self.image, '--format', '{{.Id}}'], text=True).strip()
         labels = json.loads(subprocess.check_output(['docker', 'image', 'inspect', self.image, '--format', '{{json .Config.Labels}}'], text=True)) or {}
-        fresh = labels.get('org.pail.source-manifest-sha256') == source['sha256']
+        from build_runtime import image_matches_inputs, image_input_mismatch   # what the image's build reads, not every Core file
+        architecture = subprocess.check_output(['docker', 'image', 'inspect', self.image, '--format', '{{.Architecture}}'], text=True).strip()
+        fresh, image_input = image_matches_inputs(ROOT, 'microduck', labels, architecture)
         self.env['PAIL_DUCK_IMAGE'] = self.image
         preview.atomic_json(self.state / 'run.json', dict(run_id=uuid.uuid4().hex, project=self.project, state=str(self.state), image=self.image,
-                                                          profile='live-demo', source_manifest_sha256=source['sha256'], image_matches_source=fresh,
+                                                          profile='live-demo', source_manifest_sha256=source['sha256'], image_input_sha256=image_input, image_matches_source=fresh,
                                                           hardware_tested=False, environment=preview.doctor(), started_at_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
         if not fresh:
-            from build_runtime import source_mismatch
-            print(source_mismatch(ROOT), flush=True)
+            print(image_input_mismatch(ROOT, 'microduck', labels, architecture), flush=True)
         self.write_control()
         self.run(self.compose + ['run', '--rm', 'prepare'], 'prepare')
         self.run(self.compose + ['run', '--rm', 'demo-prepare'], 'demo-prepare')
@@ -251,7 +252,7 @@ class Stack:
         raise RuntimeError('readiness deadline expired: ' + label)
 
     def up(self):
-        self.run(self.compose + ['up', '-d', 'issuer', 'agent', 'fake', 'state-seam'], 'up')
+        self.run(self.compose + ['up', '-d', 'issuer', 'tools', 'agent', 'fake', 'state-seam'], 'up')
         self.wait_exec('fake', 'import os,sys; sys.exit(0 if os.path.exists("/run/duck/raw/robotd.sock") else 1)', 'fake socket')
         self.wait_exec('state-seam', 'import os,sys; sys.exit(0 if os.path.exists("/run/duck/raw/state-seam.sock") and os.path.exists("/run/duck/state.ctl") else 1)', 'state seam')
         self.run(self.compose + ['up', '-d', 'adapter'], 'up')

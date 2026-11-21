@@ -12,11 +12,11 @@ services:
     memswap_limit: 64m
     pids_limit: 256
     image: ${PAIL_TB3_CLOUD_IMAGE:-pail/tb3-cloud:local}
-    command: [sleep, infinity]
+    command: [/usr/local/bin/pail_split, hold]   # owns the network namespace; the Issuer image has no sleep
     ipc: shareable
     cap_drop: [ALL]
   issuer:
-    command: [/usr/local/bin/pail_split_entrypoint.sh]
+    command: [/usr/local/bin/pail_split]
     cpus: 0.6
     mem_limit: 512m
     memswap_limit: 512m

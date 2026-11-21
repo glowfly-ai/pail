@@ -15,7 +15,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
 from run_record import RunRecord
-from judge_events import JudgeLog
+from judge_events import JudgeLog, refusal
 from stop_observation import summarize as summarize_stop
 
 AP = argparse.ArgumentParser(description=__doc__)
@@ -222,7 +222,7 @@ def move(text, facts, key, tolerance=0.15):
     p0 = L.pose()
     i = L.mark()
     r = post('/api/command', {'text': text})
-    assert r.get('accepted'), '%r was refused: %s' % (text, r.get('denial'))
+    assert r.get('accepted'), '%r was refused: %s' % (text, refusal(r))
     L.wait(i, 'step permitted for %r' % text, 25, event='step_permitted')
     total = sum(s['duration'] for s in r['steps'])
     L.wait(i, 'plan completion for %r' % text, total * 2 + 25, event='plan_done')
@@ -343,7 +343,7 @@ def s4c(f):
 def s4d(f):
     i = L.mark()
     r = post('/api/command', {'text': 'wave'})
-    assert r.get('accepted'), 'skill plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'skill plan refused: %s' % refusal(r)
     f['token'] = {'id': r['tokens'][0]['id'], 'skill': r['tokens'][0].get('skill')}
     assert f['token']['skill'] == 'wave', 'the token does not name the skill: %s' % f['token']
     g = L.wait(i, 'adapter PERMIT for robot.do wave', 10, event='gate', state='PERMIT', pred=lambda e: e.get('path') == 'command')[0]
@@ -360,7 +360,7 @@ def s4d(f):
 def s5(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'first motion', 25, event='drive')
     j = L.mark()
     post('/api/rogue', {'linear': 0.3})
@@ -382,7 +382,7 @@ def s7(f):
     time.sleep(1)
     i = L.mark()
     r = post('/api/command', {'text': 'forward 0.5 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'adapter ERR_TARGET_MISMATCH', 15, event='gate', reason='ERR_TARGET_MISMATCH')
     time.sleep(.5)
     f['drives_with_wrong_tag'] = quiet(2.5)
@@ -400,7 +400,7 @@ def s7(f):
 def s8s(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'first motion', 25, event='drive')
     j = L.mark()
     post('/api/inputs', {'safety': 'STALE'})
@@ -422,7 +422,7 @@ def s8s(f):
 def s8a(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     L.wait(i, 'first motion', 25, event='drive')
     j = L.mark()
     t0 = time.time()
@@ -455,7 +455,7 @@ def s8a(f):
 def ss(f):
     i = L.mark()
     r = post('/api/command', {'text': 'forward 1 m'})
-    assert r.get('accepted'), 'plan refused: %s' % r.get('denial')
+    assert r.get('accepted'), 'plan refused: %s' % refusal(r)
     first_token = r['tokens'][0]['id']
     L.wait(i, 'first motion', 25, event='drive')
     time.sleep(1.0)

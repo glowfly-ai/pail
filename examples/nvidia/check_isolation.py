@@ -18,6 +18,10 @@ from nvidia_profile import load
 from runtime import HERE
 
 
+# roles whose container runs the Issuer image (isolation_runtime.py): no Python, no shell
+NATIVE_PROBE_ROLES=('issuer','agent')
+
+
 def matrix(rig):
     rig.owned();manifest=read(rig.state/'role-views.json')
     code="""import hashlib,json,os,socket
@@ -44,7 +48,10 @@ print(json.dumps({'uid':os.getuid(),'pid_namespace':os.readlink('/proc/self/ns/p
     results={}
     for role in ROLES:
         python='/isaac-sim/kit/python/bin/python3' if role=='endpoint' and rig.data['profile']['schema_version']==4 else 'python3'
-        r=subprocess.run(rig.c+['exec','-T',role,python,'-c',code],input=json.dumps({'role':role,'roles':manifest['roles']}),capture_output=True,text=True,timeout=15)
+        # The Issuer image has no interpreter: its roles measure with the probe executable the image ships, which
+        # answers the same fields (examples/tb3/probe.go, isolationView).
+        inside=['tb3-probe','-mode','isolation'] if role in NATIVE_PROBE_ROLES else [python,'-c',code]
+        r=subprocess.run(rig.c+['exec','-T',role]+inside,input=json.dumps({'role':role,'roles':manifest['roles']}),capture_output=True,text=True,timeout=15)
         if r.returncode:raise AssertionError('matrix probe failed: %s rc=%s stderr=%s'%(role,r.returncode,r.stderr[-400:].strip()))
         data=json.loads(r.stdout)
         assert data['uid']==UIDS[role] and data['own_material_available'] and not data['foreign_material_available'] and data['reserved_material_readable']==0 and not data['raw_socket_allowed'],(role,data)

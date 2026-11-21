@@ -22,6 +22,7 @@ from lifecycle import Lifecycle, sha, canonical, fingerprint_files, validate_inv
 import hashlib
 import sqlite3
 from recovery import Recovery
+import issuer_tools
 from diagnostics import ProbeError, transport
 from collector_bridge import CollectorBridge, READER, UNAVAILABLE
 from run_names import project_name, release_id  # preview.40 review item 01: pail-<kind>-<release>-<run>
@@ -42,13 +43,16 @@ class RobotStack(demo.Stack):
         if args[0] in ('verify', 'unlock'):
             # verify and unlock use keys that live only in the issuer's /etc/pail/keys (issuer key,
             # operator key); the robot's agent holds the keyring alone, and the operator key must not
-            # be put on the robot side. The single-robot console runs every probe in the issuer; the
-            # fleet runs the robot's own probes in its agent and these two in the issuer (O8-02 T23:
-            # an unlock from the agent was answered 400 UNKNOWN — FileNotFoundError in the probe).
-            service = 'issuer'
-        cmd = self.compose + ['exec', '-T', service, 'python', '/reference/demo_probe.py', *args]
+            # be put on the robot side. The fleet runs the robot's own probes in its agent and these two
+            # beside the Issuer (O8-02 T23: an unlock from the agent was answered 400 UNKNOWN —
+            # FileNotFoundError in the probe). The Issuer image has no interpreter, so "beside" is a
+            # short-lived container of the robot image on the Issuer's network namespace with the Issuer's
+            # own mounts read-only (issuer_tools.py); the fleet layout and its budget are unchanged.
+            service = None
         started=time.monotonic()
-        try:p = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=timeout)
+        try:
+            if service is None:p = self.fleet.issuer_tool(['python', '/reference/demo_probe.py', *args], timeout)
+            else:p = subprocess.run(self.compose + ['exec', '-T', service, 'python', '/reference/demo_probe.py', *args], env=self.env, capture_output=True, text=True, timeout=timeout)
         except subprocess.TimeoutExpired:
             raise ProbeError(dict(transport(basis='timeout'),endpoint='agent_to_issuer',operation=args[0],duration_ms=(time.monotonic()-started)*1000)) from None
         rows = [line for line in p.stdout.splitlines() if line.startswith('{')]
@@ -273,6 +277,29 @@ class FleetRunner:
                 f.write(line + '\n')
         except OSError:
             pass
+
+    # What the probe reads from its environment; the Issuer service's own values are handed on unchanged.
+    TOOL_ENV = ('PAIL_DEMO_ISSUER', 'PAIL_ROBOT_ID', 'PAIL_GRPC_TLS', 'PAIL_GRPC_CA', 'PAIL_GRPC_CLIENT_CERT', 'PAIL_GRPC_CLIENT_KEY',
+                'PAIL_DEMO_OPERATOR_KEY', 'PAIL_CORE_COMM_CONTRACT')
+
+    def issuer_tool(self, argv, timeout=30):
+        """Run argv beside the Issuer: the robot image, the Issuer's network namespace, user, environment and mounts
+        (read-only), plus the first robot's demo scripts at /reference. Returns the CompletedProcess."""
+        service = self.doc['services']['issuer']
+        container = subprocess.run(self.compose + ['ps', '-q', 'issuer'], env=self.env, capture_output=True, text=True, timeout=30).stdout.strip()
+        if not container or '\n' in container:
+            raise FleetError('ISSUER_CONTAINER_NOT_FOUND')
+        mounts = []
+        for volume in service.get('volumes', ()):
+            if isinstance(volume, dict):
+                mounts.append({'type': 'volume', 'source': self.project + '_' + volume['source'], 'target': volume['target'],
+                               'subpath': (volume.get('volume') or {}).get('subpath')})
+            else:
+                source, target = str(volume).split(':')[:2]
+                mounts.append(source + ':' + target + ':ro')
+        mounts.append(str(Path(self.rows[0]['state']) / 'runtime/reference') + ':/reference:ro')
+        env = {k: v for k, v in (service.get('environment') or {}).items() if k in self.TOOL_ENV}
+        return issuer_tools.run(self.image, container, argv, timeout=timeout, mounts=mounts, env=env, user=service.get('user', '10001:10001'))
 
     def run(self, args, label, timeout=180):
         self.guard()

@@ -278,11 +278,16 @@ what follows from it, and what to do until it is.
    re-sign the evidence that would show it. Until the keys are split: keep the private key
    out of the PAIL process (`PAIL_SIGNER=vault`) and anchor journal heads to a witness the
    issuer host cannot write.
-2. **Revoking an issuer key does not reach a running gate.** The operator command puts the
-   issuer into permanent LOCKDOWN; a gate refuses the key only after it has loaded a bundle
-   listing it under `revoked_keys`, and it does not re-check its bundle while running.
-   Until then, tokens signed by the leaked key still pass that gate. After a revocation,
-   apply a new bundle to the issuer and **every** gate and restart them
+2. **A revoked issuer key is trusted until the root-signed bundle reaches the gate.** The
+   operator command puts the issuer into permanent LOCKDOWN and changes nothing a gate reads.
+   A gate refuses the key once the bundle that lists it under `revoked_keys` is placed beside
+   it — a running gate applies that bundle by itself, within the robot agent's poll interval
+   plus a few seconds, and a permit held on the key ends there. Two windows remain. Until the
+   root has signed that bundle, every gate still trusts the key: the root signing step is
+   offline and takes the time it takes. And a gate that cannot be reached keeps trusting the
+   key until the bundle it holds expires — at most `PAIL_KEYRING_MAX_LIFETIME_SEC`, the
+   ceiling you declare; from that expiry on it refuses every command. Keep that ceiling as
+   short as your renewals allow
    ([`docs/TRUST_OPERATIONS.md`](docs/TRUST_OPERATIONS.md) §5).
 3. **The keyring root cannot be rotated or revoked.** Consumers hold one root public key
    (`PAIL_ROOT_PUBKEY_FILE`). A leaked root lets its holder make any key trusted; replacing

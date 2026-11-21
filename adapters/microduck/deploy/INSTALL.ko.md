@@ -65,9 +65,10 @@ origin-run.json·소스/image 해시·build-os.txt·loader 출력을 함께 보�
 
 | 환경 | 의미 |
 |---|---|
-| 프리뷰 빌드/runtime | Debian 12 bookworm 컨테이너. Mac에서 꺼내도 binary는 Linux ELF |
-| bookworm native 실행 | 호환 glibc/libstdc++ 및 `libprotobuf32`, `libsodium23`, `libyaml-cpp0.7` 등이 필요. 실제 ELF 의존성을 확인 |
-| Ubuntu 24.04 ARM64 | 일반적으로 yaml-cpp SONAME 0.8이므로 bookworm의 0.7과 다름. 해당 OS용 Core를 빌드한 뒤 검사 |
+| 프리뷰 빌드/runtime | Debian 13 trixie 컨테이너(0.2.2까지는 Debian 12). Mac에서 꺼내도 binary는 Linux ELF |
+| Debian 13 native 실행 | 호환 glibc/libstdc++ 및 `libprotobuf32t64`, `libsodium23`, `libyaml-cpp0.8` 이 필요. 2026-11-18에 빌드한 arm64 산출물은 최대 `GLIBC_2.38`, `GLIBCXX_3.4.32` 를 요구. 직접 빌드한 것의 실제 ELF 의존성을 확인 |
+| Ubuntu 24.04 ARM64 | yaml-cpp(0.8)·protobuf(32) SONAME 이 같고 glibc 는 2.39. 위 세 패키지를 설치한 Ubuntu 24.04.5 컨테이너에서 꺼낸 `pail-duckd` 가 함께 꺼낸 라이브러리를 적재하고 `--help` 에 답함(2026-11-18 측정). 이는 적재 관찰이지 호환 약속이 아님: 검사기를 돌리거나 해당 OS용 Core를 빌드 |
+| Debian 12 | 꺼낸 산출물이 적재되지 않음: `GLIBC_2.38`, `GLIBCXX_3.4.32`, `libyaml-cpp.so.0.8` 이 없음(2026-11-18 측정). 해당 OS용 Core를 빌드 |
 | 실제 Microduck 보드 OS | 아직 인증한 지원 OS가 아님. vendor image, `/etc/os-release`, CPU와 runtime 패키지 버전을 먼저 확인 |
 
 **ARM64가 같다는 사실만으로 배포판 ABI까지 같지는 않습니다.** 자신이 빌드/확인한 artifact를 목표 Linux에서 점검합니다.
@@ -176,7 +177,7 @@ sh deploy/check.sh --binary "$PAIL_EXPORT_DIR/pail-duckd" \
     --workdir /tmp/pail-duck-stage-first
 ```
 
-위 예는 §1b에서 만든 Ubuntu native Core를 사용합니다. 호환 bookworm host라면 `--lib`에 `$PAIL_EXPORT_DIR/lib/libpail_gate.so`를 사용하세요.
+위 예는 §1b에서 만든 Ubuntu native Core를 사용합니다. 호환 Debian 13 host라면 `--lib`에 `$PAIL_EXPORT_DIR/lib/libpail_gate.so`를 사용하세요.
 소스 밖의 **새 workdir**를 사용합니다. 생략하면 private 임시 폴더를 만듭니다. root 권한·실행 중인 systemd가 필요하지 않으며 실제 서비스를 기동하지 않습니다.
 
 - C1~C4: 배치 경로·unit/drop-in·그룹/소켓·updater patch의 멱등성/변경 범위를 확인합니다. upstream robotd 실행 파일은 보드 전제조건입니다.

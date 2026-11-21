@@ -45,19 +45,27 @@ def classify(raw,returncode,demo_inconclusive=False):
                 counts={k.lower():v for k,v in counts.items()},errors=errors,
                 limitations=['Physical hardware validation pending','Isolated dev control transport; not a production security deployment']+(['CA-15: upstream fake does not provide built-in skill inventory']if any(r.get('id')=='CA-15' and r.get('status')=='SKIP' for r in checks)else[])+reviewed+inconclusive)
 
-def gate_refusals(state):
+def gate_refusals(state,names=('services.log','execution.log'),extra_text=''):
     """Gate refusal reasons seen in the rig's service logs during this run, most common first, and a diagnosis when
     clock steps dominate. The scene judge summarises these for a failed scene; a conformance run that fails or blocks
-    while the adapter's wall clock was being stepped otherwise shows nothing but red cases."""
+    while the adapter's wall clock was being stepped otherwise shows nothing but red cases.
+
+    `names` are the log files to read, so another product-level check can be classified by the SAME rule under its
+    own file names (P023-L2: `test-supersede` blamed its own reconnect for a clock that was being stepped).
+
+    `extra_text` is counted the same way: what the caller's own probe was told. The gate does not report a clock
+    refusal to the Issuer, so service logs hold none; in the real failure state of 0.2.4 the probe's result had 89
+    ERR_CLOCK_DRIFT and the logs had 0, and the classification over the logs alone said nothing."""
     import collections,re
     counter=collections.Counter()
-    for name in ('services.log','execution.log'):
+    for name in names:
         p=Path(state)/name
         if not p.exists():continue
         try:text=p.read_text(errors='replace')
         except OSError:continue
         # the adapter's tracing lines (`reason="ERR_X"`, possibly ANSI-coloured) and JSON gate records (`"reason": "ERR_X"`)
         counter.update(re.findall(r'reason.{0,24}?(ERR_[A-Z_]+)',text))
+    if extra_text:counter.update(re.findall(r'reason.{0,24}?(ERR_[A-Z_]+)',extra_text))
     out={'top':dict(counter.most_common(5))}
     drift=counter.get('ERR_CLOCK_DRIFT',0)
     if drift and drift>=max(counter.values())*0.5:

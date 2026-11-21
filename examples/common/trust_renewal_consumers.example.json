@@ -1,0 +1,14 @@
+[
+  {
+    "id": "gate-robot-01",
+    "observed": true,
+    "loaded_generation": "generation-reported-by-the-consumer",
+    "root_fingerprint_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "material_digest_sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+    "max_bundle_version": 9223372036854775807,
+    "rollback_floor": 7,
+    "now_min_unix": 1795000000,
+    "now_max_unix": 1795000030,
+    "max_remaining_seconds": 86400
+  }
+]

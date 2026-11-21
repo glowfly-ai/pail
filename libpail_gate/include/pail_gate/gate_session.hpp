@@ -23,6 +23,7 @@
 #include <unordered_set>
 
 #include "pail_gate/gate_core.hpp"
+#include "pail_gate/keyring_bundle.hpp"
 #include "pail_gate/skills_load.hpp"
 #include "pail_gate/policy_load.hpp"
 #include "pail_gate/wall_clock.hpp"
@@ -85,6 +86,15 @@ class GateSession {
   // pushes; the node fetched synchronously inside build_inputs). `reachable=false` is the
   // UNREACHABLE status — never a stale body.
   void SetTokenView(const ActiveTokenView &view);
+
+  // SEC-H02 : takes up a bundle placed beside the running gate. Cheap enough for every
+  // tick: it reads the bundle file's identity (inode, size, mtime) and only when that
+  // changed since the last look puts the file through the load checks
+  // (ApplyPlacedBundle). A refused candidate is looked at once, not on every call.
+  // Same thread as the decisions.
+  TrustApplyResult PollTrust();
+  // True once the wall clock has passed the expiry of the bundle in force.
+  bool TrustExpired() const;
 
   // pep_gate_node.cpp on_safety_state / trigger_estop: may produce an ESTOP outcome.
   SessionOutcome ObserveSafety(const SafetyObservation &obs);
@@ -200,6 +210,7 @@ class GateSession {
   // ---- permit hold (node: permit_* / held_*) ----
   bool permit_active_{false};
   std::string permit_chain_id_, permit_token_id_, permit_consumption_key_, permit_issued_hash_;
+  std::string permit_key_id_;   // SEC-H02: the key the held token is signed with
   int64_t permit_not_after_ms_{0};
   double held_max_linear_{0.0}, held_max_angular_{0.0};
   std::vector<Guardrail> held_guardrails_;  // SK-2: the held envelope by name
@@ -226,6 +237,12 @@ class GateSession {
   std::string elapsed_clock_fault_reason_;
 
   bool estop_active_{false};
+
+  // ---- SEC-H02: the last bundle file looked at (identity, not content) ----
+  bool trust_seen_{false};
+  uint64_t trust_seen_ino_{0};
+  int64_t trust_seen_size_{-1};
+  int64_t trust_seen_mtime_ns_{0};
 
   // ---- P15-H1: local fatal latch (most recent first to roll over, oldest at the front) ----
   static constexpr size_t kFatalLatchMax = 64;

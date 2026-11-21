@@ -6,7 +6,11 @@ exact mounts, identities, image IDs and values. Do not overwrite an existing ins
 
 ## Software-only Issuer integration rig
 
-`evaluation.py issuer` generates these files under a new external state directory:
+`evaluation.py issuer` generates the files below under a new external state directory (the
+one given as `--state`). The paths are relative to that directory, not to the Core source
+tree: the source tree's own `config/` directory holds reference inputs only (`policy.yaml`,
+`site_model.example.yaml`, `skills.diff_drive_amr.yaml`, `sros2_policy.xml`) and contains no
+`robot_registry.yaml`.
 
 | File | Meaning |
 |---|---|

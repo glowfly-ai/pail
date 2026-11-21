@@ -165,6 +165,17 @@ COMPOSE=(docker compose -p "$PROJECT" -f "$COMPOSE_FILE")
 if [ "$VAULT" = 1 ]; then
   COMPOSE+=(-f "$ROOT/docker-compose.vault.yml")
 fi
+# The Issuer image holds executables and nothing else: no shell runs in it. What the service's user can see is
+# measured beside it, in a one-shot container of the gate image that has the service container's user and its
+# mounts (read-only) and no network. Both are read from the running container, not assumed.
+beside_services() {
+  local cid user
+  cid="$("${COMPOSE[@]}" ps -q pail-services)" || return 3
+  [ -n "$cid" ] || return 3
+  user="$(docker inspect --format '{{.Config.User}}' "$cid")" || return 3
+  docker run --rm --network none --user "${user:-0:0}" --volumes-from "$cid:ro" \
+    --entrypoint sh "$PAIL_E2E_GATE_IMAGE" -c "$1"
+}
 cleanup() {
   local rc=$?
   trap - EXIT
@@ -267,13 +278,13 @@ forged_bundle_control() {
 cd "$ROOT"
 
 echo "== early Docker-network port check (uses the services image; nothing is downloaded)"
-python3 "$ROOT/e2e/check_ports.py" --image "$PAIL_E2E_SERVICES_IMAGE" --ports "${PAIL_NORTHBOUND_PORT:-50051}" "${PAIL_CLOUD_PORT:-50061}" --report "$STATE/evidence/ports-before-build.json" || exit 2
+python3 "$ROOT/e2e/check_ports.py" --image "$PAIL_E2E_GATE_IMAGE" --ports "${PAIL_NORTHBOUND_PORT:-50051}" "${PAIL_CLOUD_PORT:-50061}" --report "$STATE/evidence/ports-before-build.json" || exit 2
 
 echo "== using verified local evaluation images (no build or pull)"
 
 # Probe the SAME Docker host namespace used by this stack, not the macOS host.
 # Recheck after the potentially long build; the earlier observation may be stale.
-python3 "$ROOT/e2e/check_ports.py" --image "$PAIL_E2E_SERVICES_IMAGE" --ports "${PAIL_NORTHBOUND_PORT:-50051}" "${PAIL_CLOUD_PORT:-50061}" --report "$STATE/evidence/ports.json" || exit 2
+python3 "$ROOT/e2e/check_ports.py" --image "$PAIL_E2E_GATE_IMAGE" --ports "${PAIL_NORTHBOUND_PORT:-50051}" "${PAIL_CLOUD_PORT:-50061}" --report "$STATE/evidence/ports.json" || exit 2
 
 echo "== isolated per-run configuration"
 for file in policy.yaml site_model.example.yaml sros2_policy.xml skills.diff_drive_amr.yaml; do
@@ -454,7 +465,7 @@ esac
 pass "active token readable (same chain_id)"
 
 echo "-- journal segments observed as the service UID"
-seg="$("${COMPOSE[@]}" exec -T pail-services sh -c '
+seg="$(beside_services '
   test -r /var/log/pail_blackbox && test -x /var/log/pail_blackbox || exit 2
   n=0; for f in /var/log/pail_blackbox/*.seg; do [ ! -s "$f" ] || n=$((n + 1)); done
   printf "%s" "$n"
@@ -465,7 +476,7 @@ pass "journal wrote $seg segment(s) under $STATE/blackbox"
 echo "-- anchor records (file anchor, interval ${PAIL_ANCHOR_INTERVAL_S}s)"
 anch=0
 for _ in $(seq 1 30); do
-  n="$("${COMPOSE[@]}" exec -T pail-services sh -c '
+  n="$(beside_services '
     test -r /var/lib/pail_anchor && test -x /var/lib/pail_anchor || exit 2
     n=0; for f in /var/lib/pail_anchor/anchor_*.json; do [ ! -e "$f" ] || n=$((n + 1)); done
     printf "%s" "$n"
@@ -483,7 +494,7 @@ echo "-- blackbox_verify (hash chain + checkpoint signatures)"
 # keyring that vault-init wrote into the shared volume.
 VERIFY_KEY=(-keyfile /etc/pail/keys/issuer_ed25519.json)
 if [ "$VAULT" = 1 ]; then
-  VAULT_PUB="$("${COMPOSE[@]}" exec -T pail-services sh -c \
+  VAULT_PUB="$(beside_services \
     "grep -o '\"ed25519_public_key_base64\":\"[^\"]*\"' /pail-vault/keyring.json \
      | head -1 | sed 's/.*:\"//; s/\"$//'" 2>/dev/null | tr -d '\r')"
   [ -n "$VAULT_PUB" ] || fail "could not read the transit public key from /pail-vault/keyring.json"
@@ -533,15 +544,23 @@ if [ "$VAULT" = 1 ]; then
 
   # Issuance is fail-closed on its signing backend: a vault that cannot be
   # reached must cost issuance, not produce an unsigned or locally-signed token.
-  echo "-- vault outage: stopping the vault, then asking for a plan"
+  # The request has to be one that needs a signature. The operation id submitted
+  # above is answered from history when it is repeated (HISTORICAL_ONLY, no
+  # token, no signer involved), which says nothing about the vault. So this
+  # asks for a NEW operation.
+  VAULT_DOWN_PLAN="pvs-plan-e2e-vault-down"
+  echo "-- vault outage: stopping the vault, then asking for a new operation ($VAULT_DOWN_PLAN)"
   "${COMPOSE[@]}" stop vault > /dev/null 2>&1 \
     || fail "could not stop the vault container"
   if OUT="$("${COMPOSE[@]}" exec -T pail-services \
-             submit_plan -addr "$NB_ADDR" -robot "$ROBOT" "${CLI_TLS[@]}" 2>&1)" \
+             submit_plan -addr "$NB_ADDR" -robot "$ROBOT" -plan "$VAULT_DOWN_PLAN" "${CLI_TLS[@]}" 2>&1)" \
      && case "$OUT" in *"status=ACCEPTED"*) true ;; *) false ;; esac; then
     echo "$OUT"
     fail "a plan was ACCEPTED with the vault down — issuance is not fail-closed on its signer"
   fi
+  case "$OUT" in
+    *"HISTORICAL_ONLY"*) echo "$OUT"; fail "the outage request was answered from history — it needed no signature, so this measures nothing" ;;
+  esac
   echo "$OUT" | tail -3
   pass "issuance refused while the vault is down (fail-closed on the signing backend)"
 fi

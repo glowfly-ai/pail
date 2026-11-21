@@ -14,6 +14,7 @@ package main
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -84,6 +85,37 @@ type keyringPuller struct {
 	destPath   string
 	restartCmd string
 	interval   time.Duration
+
+	// SEC-H02: the gate takes up a placed bundle by itself. `applied` reads the bundle
+	// version the gate judges with — the floor in the state file the gate writes the
+	// moment it accepts a higher version — and confirmBound is how long the agent waits
+	// for that floor to reach what it placed.
+	applied      func() (uint64, error)
+	confirmBound time.Duration
+}
+
+// applyConfirmBound: the gate looks at the bundle file four times a second (the ROS node)
+// or on every tick (an adapter on the C ABI); five seconds is that, with a wide margin for
+// a loaded robot computer.
+const applyConfirmBound = 5 * time.Second
+
+// gateFloorReader reads last_version from the gate's state file. The agent and the gate
+// are two processes on one robot; the state file is the one thing the gate writes about
+// its trust that needs no channel of its own.
+func gateFloorReader(statePath string) func() (uint64, error) {
+	return func() (uint64, error) {
+		b, err := os.ReadFile(statePath)
+		if err != nil {
+			return 0, err
+		}
+		var st struct {
+			LastVersion uint64 `json:"last_version"`
+		}
+		if err := json.Unmarshal(b, &st); err != nil {
+			return 0, fmt.Errorf("gate state %s: %w", statePath, err)
+		}
+		return st.LastVersion, nil
+	}
 }
 
 // EnvKeyringPollSec 는 폴링 주기(초). `0` 은 **명시적 비활성화**이고, 미설정은
@@ -97,6 +129,26 @@ const (
 	EnvKeyringPollSec = "PAIL_KEYRING_POLL_SEC"
 	EnvGateRestartCmd = "PAIL_GATE_RESTART_CMD"
 )
+
+// restartShell interprets PAIL_GATE_RESTART_CMD. The configurator's check and the exec below read this one value
+// (SEC-H02B): a literal in two places is a literal that gets fixed in one of them. The tests point it elsewhere.
+var restartShell = "/bin/sh"
+
+// executableFile answers whether a path can be executed, without executing it: a start-up check must not run an
+// arbitrary command to find out whether it could.
+func executableFile(path string) error {
+	st, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if st.IsDir() {
+		return fmt.Errorf("%s is a directory", path)
+	}
+	if st.Mode().Perm()&0o111 == 0 {
+		return fmt.Errorf("%s is not executable (mode %v)", path, st.Mode().Perm())
+	}
+	return nil
+}
 
 // newKeyringPullerFromEnv returns nil (pulling disabled) unless a root public
 // key is configured — without it no pulled bundle could ever be verified, and
@@ -129,15 +181,30 @@ func newKeyringPullerFromEnv(client agentpb.AgentRelayClient, robotID string) (*
 	if destPath == "" {
 		destPath = "/etc/pail/keys/keyring_bundle.json"
 	}
-	// `B-R3`. 풀러가 켜졌는데 적용 수단이 없으면, 새 번들은 **놓이기만 하고 게이트는
-	// 옛 키로 계속 돈다.** 예전에는 그것이 로그 한 줄이었다 — 그 줄은 폴링 주기마다
-	// 다시 나오지도 않고(놓인 뒤에만 찍힌다), 아무도 안 읽으면 폐기가 영원히
-	// 도달하지 않는다. 상한을 주장하려면 적용 수단이 배포 시점에 있어야 한다.
+	// SEC-H02. The gate applies a placed bundle by itself, so a restart command is no
+	// longer a condition for pulling (the start-up rule that refused a puller without
+	// one is gone). What that rule guarded — "a bundle was placed and nobody loaded it"
+	// — is now checked where it happens: after placing, pullOnce confirms from the
+	// gate's state file that the gate judges with the placed version, names it when it
+	// cannot (KEYRING_APPLY_NOT_CONFIRMED), and falls back to this command when one is
+	// configured. A gate that cannot apply by itself (0.2.3 and older) still gets its
+	// bundles that way.
 	restartCmd := strings.TrimSpace(os.Getenv(EnvGateRestartCmd))
-	if restartCmd == "" {
-		return nil, deploysec.Cfg("S20e",
-			"trust anchor: keyring pulling is on (%s=%d) but no way to apply a new bundle (%s) — placing a bundle nobody loads is not a revocation path",
-			EnvKeyringPollSec, pollSec, EnvGateRestartCmd)
+	// SEC-H02B: the fallback was asked for, so it must be able to run. The 0.2.3 defect behind this whole item was
+	// a configured restart command on a host whose image has no shell: the rule of the day asked only whether the
+	// variable was non-empty, so the deployment looked healthy and the revocation path was dead at the one moment
+	// it mattered. Refused in every profile — the setting is untrue in a development deployment too.
+	if restartCmd != "" {
+		if err := executableFile(restartShell); err != nil {
+			return nil, deploysec.Cfg("S20g",
+				"trust anchor: %s is set but %s cannot run it (%v) — a fallback that cannot be executed is not a fallback; "+
+					"unset %s (the gate applies a placed bundle by itself) or run the agent where that shell exists",
+				EnvGateRestartCmd, restartShell, err, EnvGateRestartCmd)
+		}
+	}
+	statePath := os.Getenv("PAIL_KEYRING_STATE")
+	if statePath == "" {
+		statePath = filepath.Join(filepath.Dir(destPath), "keyring_bundle.state.json")
 	}
 	return &keyringPuller{
 		client:     client,
@@ -146,6 +213,9 @@ func newKeyringPullerFromEnv(client agentpb.AgentRelayClient, robotID string) (*
 		destPath:   destPath,
 		restartCmd: restartCmd,
 		interval:   time.Duration(pollSec) * time.Second,
+
+		applied:      gateFloorReader(statePath),
+		confirmBound: applyConfirmBound,
 	}, nil
 }
 
@@ -153,7 +223,11 @@ func newKeyringPullerFromEnv(client agentpb.AgentRelayClient, robotID string) (*
 // failures only log — the gate keeps its current keyring (fail-closed at
 // token verification if it has none).
 func (k *keyringPuller) run() {
-	log.Printf("keyring pull: enabled (interval=%s dest=%s)", k.interval, k.destPath)
+	apply := "gate-self"
+	if k.restartCmd != "" {
+		apply += ", fallback=restart-cmd"
+	}
+	log.Printf("keyring pull: enabled (interval=%s dest=%s apply=%s)", k.interval, k.destPath, apply)
 	for {
 		k.pullOnce()
 		time.Sleep(k.interval)
@@ -176,14 +250,57 @@ func (k *keyringPuller) pullOnce() {
 	if !placed {
 		return // up to date
 	}
-	// §6.3: bundles are applied by restarting the gate. The trigger is a
+	// The gate takes the placed bundle up by itself. Confirm it: until the gate's floor
+	// reaches the placed version, "placed" is not "in force".
+	placedVersion := uint64(0)
+	if p, _, err := crypto.VerifyBundle(resp.GetBundle(), k.rootPub); err == nil {
+		placedVersion = p.BundleVersion
+	}
+	seen, seenErr := k.confirmApplied(placedVersion)
+	if seenErr == nil && seen >= placedVersion {
+		log.Printf("keyring pull: gate applied v%d", seen)
+		return
+	}
+	gate := fmt.Sprintf("v%d", seen)
+	if seenErr != nil {
+		gate = "unreadable (" + seenErr.Error() + ")"
+	}
+	log.Printf("keyring pull: KEYRING_APPLY_NOT_CONFIRMED placed=v%d gate=%s after %s — the placed bundle is not known to be in force", placedVersion, gate, k.confirmBound)
+	if k.restartCmd == "" {
+		return
+	}
+	// The fallback of a gate that does not apply by itself: restart it. The trigger is a
 	// deployment seam — compose/systemd decide what "restart the gate" means.
-	// 빈 값 분기는 없다: 구성기가 이미 `S20e` 로 거부했으므로 여기 도달한 풀러는
-	// 적용 수단을 갖고 있다.
-	out, err := exec.Command("/bin/sh", "-c", k.restartCmd).CombinedOutput()
+	out, err := exec.Command(restartShell, "-c", k.restartCmd).CombinedOutput()
 	if err != nil {
 		log.Printf("keyring pull: gate restart command failed: %v (output: %s)", err, out)
 		return
 	}
 	log.Printf("keyring pull: gate restart triggered (%q)", k.restartCmd)
+}
+
+// confirmApplied polls the gate's floor until it reaches `want` or the bound passes.
+// Returns the last floor read, or the last read error when no read succeeded.
+func (k *keyringPuller) confirmApplied(want uint64) (uint64, error) {
+	if k.applied == nil {
+		return 0, fmt.Errorf("no reader for the gate's applied version")
+	}
+	deadline := time.Now().Add(k.confirmBound)
+	var last uint64
+	var lastErr error
+	for {
+		v, err := k.applied()
+		if err == nil {
+			last, lastErr = v, nil
+			if v >= want {
+				return v, nil
+			}
+		} else if last == 0 {
+			lastErr = err
+		}
+		if !time.Now().Before(deadline) {
+			return last, lastErr
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }

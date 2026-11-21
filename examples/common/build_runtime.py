@@ -49,6 +49,14 @@ def source_entries(root):
         rows.append({'path':str(rel),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
     return rows
 
+def image_input_arg(root, role, architecture=None):
+    """The build argument that writes the image's input hash into its label (image_inputs.py)."""
+    import image_inputs
+    arch = architecture or {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'amd64', 'amd64': 'amd64'}.get(platform.machine().lower())
+    if arch is None: raise BuildRequired('UNSUPPORTED_BUILD_ARCHITECTURE')
+    try: return 'PAIL_IMAGE_INPUT_SHA256=' + image_inputs.compute(root, role, arch)['sha256']
+    except image_inputs.InputError as exc: raise BuildRequired('IMAGE_INPUTS_REFUSED: ' + str(exc)) from None
+
 def source_digest(root):
     return hashlib.sha256(json.dumps(source_entries(root),sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
@@ -66,6 +74,42 @@ def source_mismatch(root):
     return ('SOURCE_CHANGED: ' + ', '.join(detail[:8]) +
             '. Supplied images require their original inputs. Restore a pristine delivery copy; '
             'keep edits/builds in a working copy. Rebuilding custom images is a separate online workflow.')
+
+INPUT_LABEL = 'org.pail.image-input-sha256'
+
+def image_matches_inputs(root, role, labels, architecture):
+    """(True, hash) when the image was built from this tree's inputs for the role; (False, hash or None) otherwise.
+    Bundle-layer files (runners, judges, guides) are not inputs and cannot make an image stale."""
+    import image_inputs
+    try: expected = image_inputs.compute(root, role, architecture)['sha256']
+    except image_inputs.InputError: return False, None
+    return (labels or {}).get(INPUT_LABEL) == expected, expected
+
+def image_input_mismatch(root, role, labels, architecture):
+    """Name the image inputs that differ from the delivery; never suggest rebuilding blindly."""
+    import image_inputs
+    label = (labels or {}).get(INPUT_LABEL)
+    if not label:
+        return ('IMAGE_WITHOUT_INPUT_LABEL: this image carries no ' + INPUT_LABEL + ' label, so no release that compares image '
+                'inputs built it. Load the images supplied with this delivery.')
+    tail = ('. Supplied images require their original inputs. Restore a pristine delivery copy; '
+            'keep edits/builds in a working copy. Rebuilding custom images is a separate online workflow.')
+    try:
+        record = image_inputs.compute(root, role, architecture)
+    except image_inputs.InputError as exc:
+        return 'IMAGE_INPUT_CHANGED: ' + str(exc) + tail
+    try:
+        expected = json.loads((Path(root).parent/'images.lock.json').read_text())['source_files']
+    except (OSError, ValueError, KeyError):
+        return ('IMAGE_INPUT_CHANGED: image ' + label[:12] + ', this tree ' + record['sha256'][:12] +
+                ' (no delivery receipt beside this tree to name the files)' + tail)
+    actual = {path: row['sha256'] for path, row in record['files'].items()}
+    rules = image_inputs.compile_patterns((Path(root)/record['ignore_file']).read_text().splitlines()) if record['ignore_file'] else []
+    detail = [path + (' (added)' if path not in expected else ' (modified)') for path in sorted(actual) if expected.get(path) != actual[path]]
+    detail += [path + ' (missing)' for path in sorted(expected) if path not in actual
+               and any(path == s or path.startswith(s + '/') for s in record['sources']) and not image_inputs._ignored(rules, path)]
+    if not detail: detail = ['image ' + label[:12] + ', this tree ' + record['sha256'][:12] + ' (the recipe or its ignore file differs)']
+    return 'IMAGE_INPUT_CHANGED: ' + ', '.join(detail[:8]) + tail
 
 def default_record(kind):
     return Path.home()/'.cache/pail-demo'/kind/'prepared.json'
@@ -175,11 +219,11 @@ def prepare(kind,root,record,window_confirmed=False,dashboard=True):
     digest=source_digest(root);work=record.parent/('build-'+uuid.uuid4().hex)
     with Builder(work) as builder:
         if kind=='microduck':
-            images={'runtime':builder.build(root,root/'examples/microduck/Dockerfile',args=['PAIL_SOURCE_SHA256='+digest,'PAIL_VERSION='+(root/'VERSION').read_text().strip()])}
+            images={'runtime':builder.build(root,root/'examples/microduck/Dockerfile',args=['PAIL_VERSION='+(root/'VERSION').read_text().strip(),image_input_arg(root,'microduck')])}
         elif kind=='tb3':
             from evaluation_runtime import split_distribution, issuer_image
             images={'cloud':issuer_image(root) if split_distribution(root) else builder.build(root,root/'docker/Dockerfile.cloud'),
-                    'gate':builder.build(root,root/'docker/Dockerfile.gate',args=['PAIL_VERSION='+(root/'VERSION').read_text().strip()])}
+                    'gate':builder.build(root,root/'docker/Dockerfile.gate',args=['PAIL_VERSION='+(root/'VERSION').read_text().strip(),image_input_arg(root,'tb3_gate')])}
         else:raise BuildRequired('BUILD_KIND')
         native=None
         if kind=='microduck' and dashboard:

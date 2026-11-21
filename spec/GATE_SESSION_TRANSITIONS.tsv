@@ -16,6 +16,8 @@ NO_TOKEN	issuer_resumed	NO_TOKEN	-	untested	nothing resumes without a new plan
 NO_TOKEN	clock_jump	NO_TOKEN	ERR_CLOCK_DRIFT	node:test_clock_warning_summary	a jump is reported even with no permit
 NO_TOKEN	gate_restart	NO_TOKEN	-	test_session_snapshot	the session starts empty
 NO_TOKEN	cancel	NO_TOKEN	-	untested	cancel of nothing is a no-op
+NO_TOKEN	bundle_expired	BLOCK	ERR_BUNDLE_EXPIRED	test_trust_live	every command is refused from the expiry of the loaded bundle on, also for a token that is itself valid
+NO_TOKEN	bundle_applied	NO_TOKEN	-	test_trust_live	the keys in force change; that alone permits nothing
 PERMIT	command	PERMIT	-	test_gate_two_doors	forwarded within the permit's envelope
 PERMIT	command_outside_envelope	BLOCK	ERR_CONSTRAINT	node:test_constraint_zero	the permit stays live; the command is refused
 PERMIT	token_expired	NO_TOKEN	ERR_EXPIRED	node:test_gate_deadman_seal	elapsed by the gate's monotonic clock, not the wall clock
@@ -28,12 +30,19 @@ PERMIT	clock_jump	BLOCK	ERR_CLOCK_DRIFT	test_step_clock_injection	the step ends;
 PERMIT	deadman_silence	BLOCK	ERR_DEADMAN	node:test_gate_deadman_seal	no fresh permit statement within the window
 PERMIT	key_revoked	BLOCK	ERR_REVOKED	test_key_revocation	the signing key is withdrawn; the permit dies with it
 PERMIT	gate_restart	NO_TOKEN	-	test_session_snapshot	a restart holds no permit
+PERMIT	bundle_expired	BLOCK	ERR_BUNDLE_EXPIRED	test_trust_live	the keyring bundle the gate loaded has passed its expiry: the held permit ends while the gate runs; the wall clock the gate reads decides, never a time the caller hands in
+PERMIT	bundle_applied	PERMIT	-	test_trust_live	a higher-version valid bundle placed beside the running gate is applied without a restart; a renewal does not interrupt a held permit
+PERMIT	bundle_revokes_held_key	BLOCK	ERR_REVOKED_KEY_ID	test_trust_live	the applied bundle revokes the key the held permit rests on; the permit ends at the next recheck (ERR_UNKNOWN_KEY_ID when the key is dropped without being listed as revoked)
 BLOCK	token_issued	PERMIT	-	node:test_token_id_binding	a fresh valid token clears a reason-only block
 BLOCK	command	BLOCK	(same reason)	test_gate_two_doors	refusal repeats with its reason
 BLOCK	safety_unsafe	ESTOP	ERR_SAFETY_UNSAFE	node:test_safety_level	UNSAFE from any state stops the base
 BLOCK	issuer_unreachable	BLOCK	ERR_ISSUER_UNREACHABLE	untested	the reason names the link
 BLOCK	clock_jump	BLOCK	ERR_CLOCK_DRIFT	node:test_clock_warning_summary	-
 BLOCK	gate_restart	NO_TOKEN	-	test_session_snapshot	-
+BLOCK	bundle_expired	BLOCK	ERR_BUNDLE_EXPIRED	test_trust_live	the refusal names the bundle; a candidate bundle that fails a load check changes nothing and does not extend the expiry
+BLOCK	bundle_applied	NO_TOKEN	-	test_trust_live	after an expiry or a revocation, the next valid token under the applied bundle is permitted; no restart
+ESTOP	bundle_expired	ESTOP	ERR_BUNDLE_EXPIRED	untested	nothing is forwarded either way; the refusal names the bundle
+FATAL_LATCHED	bundle_expired	BLOCK	ERR_BUNDLE_EXPIRED	untested	as above
 ESTOP	safety_ok	FATAL_LATCHED	ERR_REVOKED fatal_latched	test_fatal_latch	OK releases the stop, never the chain
 ESTOP	command	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	nothing is forwarded during ESTOP
 ESTOP	token_issued	ESTOP	ERR_SAFETY_UNSAFE	test_fatal_latch	a new token does not end an ESTOP

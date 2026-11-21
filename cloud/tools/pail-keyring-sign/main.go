@@ -9,6 +9,8 @@
 //	pail-keyring-sign sign      --root root_ed25519.json --payload payload.json --out keyring_bundle.json
 //	pail-keyring-sign verify    --root-pub root_pub.b64 --bundle keyring_bundle.json
 //	pail-keyring-sign inspect   --bundle keyring_bundle.json
+//	pail-keyring-sign prepare-revoke --root-pub root_pub.b64 --bundle base.json --key-id ID --out payload.json
+//	pail-keyring-sign init-floor --root-pub root_pub.b64 --bundle keyring_bundle.json --state state.json
 package main
 
 import (
@@ -46,6 +48,10 @@ func main() {
 		err = cmdPrepareRenewal(os.Args[2:])
 	case "validate-renewal":
 		err = cmdValidateRenewal(os.Args[2:])
+	case "prepare-revoke":
+		err = cmdPrepareRevoke(os.Args[2:])
+	case "init-floor":
+		err = cmdInitFloor(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -70,8 +76,15 @@ func usage() {
   inspect-json --root-pub root_pub.b64 --bundle keyring_bundle.json
   prepare-renewal --root-pub root_pub.b64 --bundle base.json --consumers observations.json --issued-at UNIX --expires-at UNIX
   validate-renewal --root-pub root_pub.b64 --bundle base.json --consumers observations.json --candidate staged.json
+  prepare-revoke --root-pub root_pub.b64 --bundle base.json --key-id ID --out payload.json [--allow-no-issuer]
+  init-floor --root-pub root_pub.b64 --bundle keyring_bundle.json --state keyring_bundle.state.json
 
 Renewal commands are pure preparation/validation, NOT approval or application.
+prepare-revoke writes a payload (one key moved to revoked_keys, version +1, expiry unchanged); sign it with sign.
+init-floor writes a consumer's version floor once, from a root-signed bundle; it never overwrites a state file.
+init-floor reads only the bundle you give it and does not compare the floor with any other consumer; run it on the
+bundle you intend to be current.
+prepare-revoke and init-floor never read the root private key.
 `)
 }
 

@@ -53,7 +53,7 @@ norm)으로 사상해 라이브러리에 묻고 `Outcome` 에 따른다 — **�
 | `pail_gate_observe_safety(SafetyInput)` | → `Outcome` | 안전 피드가 올 때마다; `ESTOP` 결과는 정지다 |
 | `pail_gate_observe_evidence(EvidenceInput)` | | 증거 소스가 올 때마다 |
 | `pail_gate_command(CommandInput)` | → `Outcome` | 명령마다; `Outcome.forward` 가 답의 전부 |
-| `pail_gate_tick(TickInput)` | → `TickOutcome` | `set_token` 뒤 `permit_recheck_ms` 마다; 재확인 경로와 스텝 타이머 |
+| `pail_gate_tick(TickInput)` | → `TickOutcome` | `set_token` 뒤 `permit_recheck_ms` 마다; 재확인 경로와 스텝 타이머. 실행 중인 게이트 옆에 놓인 서명 키링 번들도 여기서 적용된다: 적재 검사를 통과한 더 높은 버전이 tick 의 판정 전에 사용 중인 키를 바꾼다(`pail_gate_info` 의 `keys` / `revoked_keys` 가 따라 바뀐다). tick 을 받지 않는 게이트는 아무것도 적용하지 않는다. 사용 중인 번들의 만료부터는 모든 결과가 `BLOCK ERR_BUNDLE_EXPIRED` 이고, 적용된 번들이 폐기한 키로 유지되던 허가는 `ERR_REVOKED_KEY_ID` 로 끝난다 |
 | `pail_gate_info()` | → `Info` | 기동 시·상태 |
 | `pail_gate_free()` / `pail_gate_free_buf()` | | |
 
@@ -167,7 +167,7 @@ CA-01 과 CA-05 가 붉어야 한다(2026-09-06 실측). 케이스 id 는 어댑
 이미지의 컨테이너 셋에 `/usr/local/bin/pail-duckd` 로 읽기 전용 마운트한다. 집행 어댑터와
 관측 어댑터는 uid 10001·모든 capability 제거로 돌고, 하네스 컨테이너(아래 도구 케이스에서
 바이너리를 직접 띄우는 쪽)는 Docker 와 장애 심을 조작하므로 root·capability 유지로 돈다.
-이미지는 Debian bookworm, 게이트 라이브러리는 `/opt/pail/lib/libpail_gate.so`(§2 의 C ABI;
+이미지는 Debian 13(trixie), 게이트 라이브러리는 `/opt/pail/lib/libpail_gate.so`(§2 의 C ABI;
 메이저가 다르면 기동 거부). 바이너리가 필요로 하는 의존성은 그 이미지에 있거나 정적으로
 링크돼 있어야 한다. 기동 거부는 종료코드 78 과 게이트 preflight 어휘의 사유로 끝난다. 두
 케이스는 하네스가 바이너리를 직접 띄운다: CA-07 은 `PAIL_PROFILE=dev` 아래 `pail-duckd --gate

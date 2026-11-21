@@ -79,7 +79,7 @@ PROJECT=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["projec
   trap 'exec 3>&-; kill "$ADAPTER_PID" 2>/dev/null || true' EXIT
   for i in $(seq 1 60); do grep -q '"ready": true' "$CMD_DIR/out" && break; sleep 0.5; done
   grep -q '"ready": true' "$CMD_DIR/out" || { cat "$CMD_DIR/errors"; exit 1; }
-  docker exec "$PROJECT-issuer-1" python /opt/pail/example/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
+  docker exec "$PROJECT-tools-1" python /reference/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
   printf '%s\n' '{"linear":0.1,"angular":0,"duration":1,"skill":"twist"}' >&3
   sleep 2
   exec 3>&-
@@ -170,8 +170,8 @@ just installed rustup.
 ```
 
 A debug binary built on Ubuntu 24.04 (glibc 2.39, needing `GLIBC_2.34` at most) ran in
-the bookworm image; that is an observation, not a compatibility promise — check `ldd`
-against the image.
+the Debian 12 image of 0.2.2. The image is Debian 13 from 0.2.3 and that run has not been
+repeated on it. Neither is a compatibility promise — check `ldd` against the image.
 
 **Step 3 — inject a defect and watch the rig fail it** (the negative control that proves
 the rig tests *your* bytes). The block replaces the `if !shared.judge(...) { continue; }`
@@ -289,7 +289,7 @@ keyring trust mode**. The block starts a fresh adapter, waits for its handshake 
   trap 'exec 3>&-; kill "$ADAPTER_PID" 2>/dev/null || true' EXIT
   for i in $(seq 1 60); do grep -q '"ready": true' "$CMD_DIR/out" && break; sleep 0.5; done
   grep -q '"ready": true' "$CMD_DIR/out" || { cat "$CMD_DIR/errors"; exit 1; }
-  docker exec "$PROJECT-issuer-1" python /opt/pail/example/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
+  docker exec "$PROJECT-tools-1" python /reference/demo_probe.py submit --target box-12 --steps '[{"linear":0.1,"angular":0,"duration":5}]'
   printf '%s\n' '{"linear":0.1,"angular":0,"duration":1,"skill":"twist"}' >&3
   sleep 2
   exec 3>&-

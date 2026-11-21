@@ -15,7 +15,12 @@ The `tree-*` cases also hold `tree/`, the ZIP's members as extracted (the conten
 pass `--tree-root <case>/tree` (relative to this directory in `cases.json`; the Go test makes it absolute).
 `tree-match` is the untouched extract, `tree-modified` has one member edited, one deleted and one file added,
 `tree-dsstore-ignored` adds `.DS_Store` and `pail-core/__pycache__/x.pyc`, which the ignore list hides. All other
-cases run without a tree root and print `TREE: not compared ...`.
+cases run without a tree root and print `TREE: not compared ...`, except `fingerprint-empty`: the flag given with an
+empty value is refused before any other work (exit 2, one line, nothing verified).
+
+`receipt_precedence.json` is the table of which run a verification receipt keeps (old receipt, new run, whether both
+verified the same manifest, `kept` or `replaced`, and the word the kept reason carries). The Python and the Go
+receipt writers are both tested against it.
 
 **TEST-ONLY KEYS.** `TEST-SIGNING-KEY.pub` and `TEST-WRONG-KEY.pub` are derived from fixed seeds embedded in the
 generator. They are public by construction and sign nothing that carries trust; they are not the publisher's

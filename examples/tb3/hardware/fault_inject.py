@@ -5,12 +5,21 @@
 
 Works against the software TurtleBot3 demo (`evaluation.py tb3`, simulated base) and
 against the hardware console (`hardware/console_hw.py`, real robot, wheels raised).
-The Issuer container is paused on the operator PC with `docker pause`, which keeps its
-sockets open: a request sent while it is paused is delayed, not lost, and is processed
-when the container resumes. That is the model under which a revocation report must
-still take effect.
+Two outage models, and --mode picks which one is used (P023-N1: this header described only
+the first and said "two sequences" while there are three):
 
-Two sequences, chosen with --mode:
+  permit, outage    The Issuer CONTAINER is frozen on the operator PC with `docker pause`.
+                    Its sockets stay open: a request sent while it is paused is delayed,
+                    not lost, and is processed when the container resumes.
+  agent-crash       The `pail_cloud` PROCESS inside that container is SIGSTOPped and later
+                    SIGCONTed with `docker exec <issuer> tb3-probe -mode signal` (the Issuer
+                    image of 0.2.3 is `FROM scratch`: no shell and no kill binary). A single
+                    stopped process is not a cgroup freeze — the container's other processes
+                    keep running, which is exactly what this mode needs.
+
+Either way a revocation report must still take effect.
+
+Three sequences, chosen with --mode:
 
   permit   The robot is moving under a live permit. Pause the Issuer, then safety
            UNSAFE -> OK while it is paused, keep it paused for --pause seconds, resume.
@@ -27,7 +36,14 @@ Two sequences, chosen with --mode:
            -> OK, and resume the Issuer --ok-hold seconds later. Expected: the same —
            the chain whose step was interrupted is never permitted again.
 
-Both print one JSON line and append it to --out: the number of non-zero drive commands
+  agent-crash
+           The robot is moving; `pail_cloud` is SIGSTOPped so the Issuer cannot answer;
+           UNSAFE; --kill-after seconds later the agent is SIGKILLed (in the demos it shares
+           the Issuer container, so that container exits and is started again); then OK while
+           the planner still holds the interrupted instruction. Expected: no drive after OK,
+           AND the Issuer records the ESTOP of the interrupted token once it resumes.
+
+All three print one JSON line and append it to --out: the number of non-zero drive commands
 forwarded to the base after OK (must be 0), the gate decisions after the injection
 point, and the planner events. Read the Issuer container log for the ledger lines:
 `docker logs <issuer> 2>&1 | grep decision=ESTOP`.
@@ -76,7 +92,8 @@ def main():
     ap.add_argument('--ledger-wait', type=float, default=20.0, help='agent-crash: seconds to wait for the Issuer to record the ESTOP after it resumes')
     ap.add_argument('--console', required=True, help='console base URL, e.g. http://127.0.0.1:8765')
     ap.add_argument('--state', required=True, help='console state directory (holds evidence/runtime)')
-    ap.add_argument('--issuer', required=True, help='Issuer container name on this PC (docker pause/unpause)')
+    ap.add_argument('--issuer', required=True, help='Issuer container name on this PC (permit/outage: docker pause/unpause; '
+                                                    'agent-crash: its pail_cloud process is SIGSTOPped/SIGCONTed with tb3-probe -mode signal)')
     ap.add_argument('--instruction', default='forward 1 m')
     ap.add_argument('--pause', type=float, default=12.0, help='permit mode: total seconds the Issuer stays paused')
     ap.add_argument('--wait-block', type=float, default=4.0, help='outage mode: seconds between pause and UNSAFE')
@@ -199,12 +216,18 @@ def main():
 COMM_LEN = 15
 
 
-def signal_process(container, comm, sig, shell='sh', runner=None):
-    """Send `sig` to every process named `comm` inside `container` with the shell builtin kill (the runtime images
-    carry no kill binary; preview.25 evaluation §7). `comm` is compared as the kernel stores it (COMM_LEN bytes)."""
+def signal_process(container, comm, sig, shell=None, runner=None):
+    """Send `sig` to every process named `comm` inside `container`. `comm` is compared as the kernel stores it
+    (COMM_LEN bytes). The cloud images carry no kill binary (preview.25 evaluation §7) and the Issuer image no shell
+    either (0.2.3), so the default is the probe executable they ship (`tb3-probe -mode signal`); name a shell for a
+    container that has one and no probe (the gate container: shell='bash')."""
     runner = runner or subprocess.run
-    script = 'n=0; for d in /proc/[0-9]*; do if [ "$(cat $d/comm 2>/dev/null)" = %s ]; then kill -%s ${d#/proc/} && n=$((n+1)); fi; done; echo signalled=$n' % (comm[:COMM_LEN], sig)
-    r = runner(['docker', 'exec', container, shell, '-c', script], capture_output=True, text=True, timeout=30)
+    if shell is None:
+        argv = ['docker', 'exec', container, 'tb3-probe', '-mode', 'signal', '-comm', comm[:COMM_LEN], '-sig', sig]
+    else:
+        script = 'n=0; for d in /proc/[0-9]*; do if [ "$(cat $d/comm 2>/dev/null)" = %s ]; then kill -%s ${d#/proc/} && n=$((n+1)); fi; done; echo signalled=$n' % (comm[:COMM_LEN], sig)
+        argv = ['docker', 'exec', container, shell, '-c', script]
+    r = runner(argv, capture_output=True, text=True, timeout=30)
     if r.returncode or 'signalled=0' in r.stdout:
         raise RuntimeError('signal %s to %s in %s: rc=%d %s %s' % (sig, comm, container, r.returncode, r.stdout.strip()[-120:], r.stderr.strip()[-120:]))
 

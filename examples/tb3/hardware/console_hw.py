@@ -143,6 +143,11 @@ class RemoteStack:
         self.control = {'seq': 0, 'instruction': 0, 'mode': 'idle', 'steps': [], 'tag': a.target, 'safety': 'OK'}
         self.lock = threading.Lock()
         self.started = time.time()
+        # P023-M1: the mirror children and the ssh multiplexing master belong to THIS process and are ended by
+        # shutdown(). An orphaned `docker logs -f` never ends, so it held ControlPersist open past its 600 s and
+        # the next console start was refused by the robot's sshd (reported as an unmeasurable clock).
+        self.mirrors = []
+        self.stopping = threading.Event()
 
     def ssh(self, command, stdin=None, timeout=60):
         return subprocess.run(self.ssh_base + [command], input=stdin, capture_output=True, text=True, timeout=timeout)
@@ -218,8 +223,9 @@ print(json.dumps(dict(clock_id=clock,published_before_mono=a,published_after_mon
         out = self.logs / 'runtime' / ('demo-%s.jsonl' % role)
         since = int(self.started - 5)
         last_t = 0.0  # `--since` has one-second resolution: a reconnect replays that second
-        while True:
+        while not self.stopping.is_set():
             proc = subprocess.Popen(self.ssh_base + ['docker logs -f --since %d %s 2>&1' % (since, container)], stdout=subprocess.PIPE, text=True)
+            self.mirrors.append(proc)
             for line in proc.stdout:
                 line = line.strip()
                 if line.startswith('{') and '"event"' in line:
@@ -234,7 +240,36 @@ print(json.dumps(dict(clock_id=clock,published_before_mono=a,published_after_mon
                     with out.open('a') as f:
                         f.write(json.dumps(row) + '\n')
             proc.wait()
-            time.sleep(2)  # container restarted or ssh dropped: resume; replayed rows are skipped by time
+            try:
+                self.mirrors.remove(proc)
+            except ValueError:
+                pass
+            if self.stopping.wait(2):  # container restarted or ssh dropped: resume; replayed rows are skipped by time
+                break
+
+    def shutdown(self):
+        """End what this process started: the `ssh docker logs -f` mirrors first, then the multiplexing master.
+
+        P023-M1: the mirror threads are daemons, so interpreter exit left their ssh children running under PID 1.
+        Each one holds the ControlPersist master open, and after a few console restarts the robot's sshd refuses
+        new sessions — which the next start reported only as a clock it could not measure."""
+        self.stopping.set()
+        for proc in list(self.mirrors):
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+            except OSError:
+                pass
+        try:    # `ssh -O exit` closes the mux master now instead of leaving it for ControlPersist
+            subprocess.run(self.ssh_base[:-1] + ['-O', 'exit', self.ssh_base[-1]], capture_output=True, text=True, timeout=20)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
 
 class HardwareConsole(demo.Console):
@@ -244,12 +279,17 @@ class HardwareConsole(demo.Console):
         self.stack, self.placement = stack, placement
         self.prepare_sample_batch([True])
         if not self.remote_reference or self.remote_reference['clock_id'] == 'unavailable':
-            raise ValueError('robot monotonic clock could not be measured; hardware observation is not ready')
+            # P023-M1: name WHY it could not be measured. An sshd that refuses new sessions (leaked mirrors of an
+            # earlier console) reads nothing like a clock problem, and that was the whole refusal line before.
+            why = getattr(self, 'clock_failure', None)
+            raise ValueError('robot monotonic clock could not be measured; hardware observation is not ready' +
+                             (' — ' + why if why else ''))
         self.start_reference = dict(self.remote_reference)
         super().__init__(stack)
 
     def prepare_sample_batch(self, rows):
         self.remote_reference = None
+        self.clock_failure = None
         if not rows:
             return
         before = time.monotonic()
@@ -257,14 +297,16 @@ class HardwareConsole(demo.Console):
         try:
             p = self.stack.ssh('python3 -c ' + shlex.quote(script), timeout=3)
             if p.returncode:
+                self.clock_failure = 'ssh rc=%d: %s' % (p.returncode, ((p.stderr or '') + (p.stdout or '')).strip()[-300:])
                 return
             measured = json.loads(p.stdout)
             self.remote_reference = dict(clock_id=measured['clock_id'], remote_mono=measured['mono'],
                                          before=before, after=time.monotonic())
             with (self.stack.logs / 'remote-clock-brackets.jsonl').open('a') as f:
                 f.write(json.dumps(self.remote_reference) + '\n')
-        except (ValueError, KeyError, OSError, subprocess.TimeoutExpired):
-            pass  # unmeasured is not current; raw events remain in the record
+        except (ValueError, KeyError, OSError, subprocess.TimeoutExpired) as ex:
+            # unmeasured is not current; raw events remain in the record — but the cause is kept for the refusal
+            self.clock_failure = type(ex).__name__ + ': ' + str(ex)[-300:]
 
     def sample_is_current(self, row):
         # P37-N2: a row that is not current carries why (observation_rejection_reason); the tail loop records a
@@ -404,6 +446,7 @@ def main():
             stack.write_control(instruction=True, mode='idle', steps=[], override_linear=None)
         except Exception as ex:  # the robot side must still be told to stop; report if it could not be
             print('WARNING: could not write the idle instruction on exit: %s' % ex, file=sys.stderr)
+        stack.shutdown()  # after the idle instruction: it needs the ssh connection this closes
     return 0
 
 

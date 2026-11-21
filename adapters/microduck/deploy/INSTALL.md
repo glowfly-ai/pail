@@ -71,9 +71,10 @@ its absolute path there. Shell variables do not travel with the files.
 
 | Environment | Meaning |
 |---|---|
-| Preview build/runtime | Debian 12 bookworm containers; artifacts are Linux ELF even on macOS |
-| Bookworm native loader | Requires compatible glibc/libstdc++, `libprotobuf32`, `libsodium23`, `libyaml-cpp0.7`; inspect the actual ELF dependencies |
-| Ubuntu 24.04 ARM64 host | The system yaml-cpp SONAME is normally 0.8, not bookworm's 0.7; use a Core built for this target, then run the checker |
+| Preview build/runtime | Debian 13 trixie containers (Debian 12 up to 0.2.2); artifacts are Linux ELF even on macOS |
+| Debian 13 native loader | Requires compatible glibc/libstdc++, `libprotobuf32t64`, `libsodium23`, `libyaml-cpp0.8`. The arm64 artifacts built on 2026-11-18 ask for `GLIBC_2.38` and `GLIBCXX_3.4.32` at most; inspect the actual ELF dependencies of yours |
+| Ubuntu 24.04 ARM64 host | Same yaml-cpp (0.8) and protobuf (32) SONAMEs, glibc 2.39. With those three packages installed the extracted `pail-duckd` loaded its staged library and answered `--help` in an Ubuntu 24.04.5 container (measured 2026-11-18). That is a loader observation, not a compatibility promise: run the checker, or use a Core built for this target |
+| Debian 12 host | The extracted artifacts do not load: `GLIBC_2.38`, `GLIBCXX_3.4.32` and `libyaml-cpp.so.0.8` are missing (measured 2026-11-18). Use a Core built for this target |
 | Actual Microduck board OS | Not certified by this preview; confirm the vendor image, `/etc/os-release`, architecture and runtime package versions before installation |
 
 Same CPU architecture is **not** distribution ABI compatibility. On the intended Linux
@@ -194,7 +195,7 @@ sh deploy/check.sh --binary "$PAIL_EXPORT_DIR/pail-duckd" \
 ```
 
 The example above selects the Ubuntu-native library built in §1b. On a compatible
-bookworm host, select `$PAIL_EXPORT_DIR/lib/libpail_gate.so` instead. Use a **new** workdir
+Debian 13 host, select `$PAIL_EXPORT_DIR/lib/libpail_gate.so` instead. Use a **new** workdir
 outside the source tree; omitting it allocates a private temporary directory. No root
 privilege or running systemd is required, and no real service is started.
 

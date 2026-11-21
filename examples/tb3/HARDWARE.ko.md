@@ -9,9 +9,9 @@
   준비되면 다른 터미널에서 `evaluation.py stop-tb3 --state /tmp/hw-state`로 정지합니다
   (각 명령 앞에 `python3`). 설정은 `/tmp/hw-state/runtime/config`에 있습니다.
 - 아래 명령은 `pail-core`의 쓰기 가능한 작업 사본에서 실행합니다. Issuer 소스는 필요 없습니다.
-- 운영 PC는 `pail/issuer-eval:0.2.2`, 로봇 agent는 공개
-  `pail/core-microduck:0.2.2`, 게이트 기준 이미지는
-  `pail/core-tb3-gate:0.2.2`입니다. 이는 이번 배포의 태그입니다(Linux amd64 꾸러미의 태그에는 `-amd64` 접미사가 붙습니다).
+- 운영 PC는 `pail/issuer-eval:0.2.4`, 로봇 agent는 공개
+  `pail/core-microduck:0.2.4`, 게이트 기준 이미지는
+  `pail/core-tb3-gate:0.2.4`입니다. 이는 이번 배포의 태그입니다(Linux amd64 꾸러미의 태그에는 `-amd64` 접미사가 붙습니다).
   잠금 이미지 ID를 확인하고 이 게이트 기준 이미지에 vendor 드라이버를 추가합니다.
 - Mac/Linux 호스트에서 공개 네이티브 도구를 빌드합니다(Go 1.27.2+와 의존성 캐시 또는
   인터넷이 필요합니다; 임시 패키지는 자동 제거됩니다):
@@ -66,9 +66,9 @@ English (canonical): [`HARDWARE.md`](HARDWARE.md)
 - 벤더 드라이버 이미지: 운영자 PC 에서 그 게이트 이미지 위에 빌드해 로봇에 싣는다:
 
 ```sh
-docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.2 \
+docker build --build-arg PAIL_TB3_GATE_IMAGE=pail/core-tb3-gate:0.2.4 \
   -t pail/tb3-hardware:<tag> -f examples/tb3/hardware/Dockerfile examples/tb3/hardware
-docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.2 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
+docker save pail/tb3-hardware:<tag> pail/core-microduck:0.2.4 | gzip -1 | ssh <user>@<robot> 'gunzip | docker load'
 ```
 
 Dockerfile 은 공개 게이트 이미지에 `ros-humble-turtlebot3-node` 와 `ros-humble-turtlebot3-bringup`
@@ -117,7 +117,10 @@ ssh <user>@<robot> 'sudo chown -R 10001:10001 pail-robot-config && sudo chmod 70
 배포되는 `sros2_policy.xml` 은 이미 `/driver` 에 벤더 드라이버의 토픽(`/joint_states`, `/odom`,
 `/tf`, …)을, `/robot_state_publisher` 에 엔코더 관측자가 필요한 구독을 허용하므로 데모의 키스토어를
 그대로 쓴다. 정책을 바꾸면 데모가 하듯 `scripts/sros2_provision.sh` 로 키스토어를 다시 만들고
-enclave 를 다시 복사한다. 데모가 서명하는 키링 번들은 8시간 유효하다; 그보다 오래 가는 로봇 세션은
+enclave 를 다시 복사한다. 데모가 서명하는 키링 번들은 8시간 유효하다. 그보다 오래 가는 로봇 세션은 멈춘다: 번들의
+`expires_at` 부터 게이트가 모든 명령을 `ERR_BUNDLE_EXPIRED` 로 거부한다(0.2.4. 그 전에는 적재한
+키로 계속 검증했다). 새 번들에 서명해 `keys/keyring_bundle.json` 을 설정 디렉터리에 다시 복사하면
+실행 중인 게이트가 1초 안에 받아들인다(재기동 없음). 또는 상태를 새로 만들려면
 `evaluation.py tb3` 을 다시 돌리거나 새 번들을 서명해 `keys/keyring_bundle.json` 을 다시 복사해야 한다.
 
 2026-09-19 까지 관리자 자신의 실행은 따로 프로비저닝한 로봇 쪽 설정을 썼고, 이 부분집합은 운영자
@@ -141,11 +144,24 @@ ssh <user>@<robot> 'mkdir -p pail-hw/control && echo "{\"seq\": 0, \"instruction
 echo raised > pail-hw/control/hardware_confirmed          # 운영자의 진술, 운영자가 쓴다
 export PAIL_HW_CONFIG=/home/<user>/pail-robot-config \
        PAIL_HW_CLOUD_ADDR=<pc-ip>:50064 \
-       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.2 \
+       PAIL_HW_SERVICES_IMAGE=pail/core-microduck:0.2.4 \
        PAIL_HW_GATE_IMAGE=pail/tb3-hardware:<tag>
+# 첫 기동 전에 한 번: 게이트의 판 바닥값(production 프로파일, 0.2.4)
+sudo install -d -o 10001 -g 10001 -m 700 pail-hw/state
+docker run --rm -u 10001:10001 --network none -v "$PAIL_HW_CONFIG":/etc/pail:ro -v "$PWD/pail-hw/state":/state \
+  "$PAIL_HW_SERVICES_IMAGE" /usr/local/bin/pail-keyring-sign init-floor \
+    --bundle /etc/pail/keys/keyring_bundle.json --root-pub /etc/pail/keys/root_pub.b64 \
+    --state /state/keyring_state.json
 pail-hw/start_demo_rig.sh up        # Raspberry Pi 3 에서 1–3분 뒤 RIG_UP
 pail-hw/start_demo_rig.sh status
 ```
+
+바닥값은 로봇이 받은 번들에서 한 번 쓰이고 덮어쓰이지 않는다. 없으면 production 게이트는 키링을
+거부하고 신뢰 기점 없이 돈다 — 모든 토큰 거부 — 그리고 그 사실을 적는다:
+`keyring load (mode=bundle): ERR_BUNDLE_STATE:missing — no trust anchor, all tokens will be rejected`
+(2026-11-19 로봇에서 측정). 없는 바닥값을 첫 적재로 읽지 않는 이유는, 그렇게 읽으면 상태
+디렉터리를 잃었을 때 폐기 이전의 번들이 되살아나기 때문이다. `dev` 프로파일은 첫 적재 동작을
+그대로 두므로 초기화가 필요 없다.
 
 `up` 은 배치 진술이 없으면(종료 78), OpenCR 장치가 없으면, 이 리그의 컨테이너가 이미 있으면
 거부한다. 에이전트, 참가자 다섯, 브리지, 게이트, 마지막으로 베이스 드라이버를 띄우며 전부 격리된
@@ -170,7 +186,7 @@ docker logs pailhw-agent 2>&1 | tail -3                # burst CHECKPOINT 줄: �
 
 ```sh
 export PAIL_HW_STATE=/path/to/demo/state \
-       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.2 \
+       PAIL_HW_CLOUD_IMAGE=pail/issuer-eval:0.2.4 \
        PAIL_HW_ISSUER_IP=<pc-ip>
 examples/tb3/hardware/issuer_host.sh up            # ISSUER_UP <pc-ip>:50064 …
 ```

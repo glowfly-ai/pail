@@ -142,6 +142,18 @@ struct GateInputs {
   bool              clock_drift_known{false};
   std::string       clock_fault;  // measured fault cause, never inferred from a zero value
   int64_t           clock_drift_ms{0};
+  // SEC-H02 : the trust the session judges with. Both are measured by the caller, on
+  // the wall clock it reads itself — never on now_ms, which an adapter hands in and a
+  // stale or rewound value of which must not revive an expired bundle.
+  //   trust_expired       the bundle the keys came from has passed its expires_at
+  //   hold_key_state      the key of the token a permit is held on, in the keys in force:
+  //                       0 trusted (or nothing to ask), 1 revoked, 2 no longer present.
+  //                       A bundle applied while the permit is held can move it off 0;
+  //                       the recheck path does not re-verify the signature, so the
+  //                       core is told.
+  bool              trust_expired{false};
+  int64_t           trust_expires_at_unix{0};
+  int               hold_key_state{0};
   ActiveTokenView   token_view;       // .ok == false means no authorization
   // [OR3/X26] Defaults are the REFUSING values, not the passing ones. Both
   // fields are answers the caller must supply; an unset answer means the

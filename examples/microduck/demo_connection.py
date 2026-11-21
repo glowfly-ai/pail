@@ -68,3 +68,23 @@ class PlannerConnection:
             self.close();raise
         finally:
             if self.sock is not None:self.sock.setblocking(False)
+
+
+# ---- the planner's copy of a step window --------------------------------------------------------------------------
+# The adapter starts a step's clock when it receives the first command of that step, and refuses a command that
+# arrives after the step's deadline. The planner keeps its own copy of that window, so both readings below have to
+# be taken where the adapter's clock cannot be ahead of them. The planner container has a fraction of a CPU: the
+# scheduler can hold it for most of a 0.1 s period between any two statements (0.2.1 amd64 replay: one zero command
+# arrived 5 ms after the deadline; the stamp had been read after the send, the check at the top of the loop).
+
+def send_stamped(clock, send):
+    """(request id, the clock read BEFORE the send). The adapter cannot have the command earlier than this, so a
+    window that starts here never ends after the adapter's."""
+    at = clock()
+    return send(), at
+
+
+def zero_window_open(clock, stop_until):
+    """True while a zero-velocity command may still be sent, on a clock reading taken now, not at the top of the
+    loop: what happens between this reading and the send is covered by the margin before the deadline."""
+    return clock() < stop_until

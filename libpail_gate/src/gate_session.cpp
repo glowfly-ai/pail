@@ -3,6 +3,8 @@
 
 #include "pail_gate/gate_session.hpp"
 
+#include <sys/stat.h>
+
 #include "pail_gate/safety_level.hpp"
 #include "pail_gate/strict_verify.hpp"
 
@@ -24,6 +26,40 @@ GateSession::GateSession(SessionConfig cfg, SessionPolicy policy, Keyring keyrin
     : cfg_(std::move(cfg)), policy_(std::move(policy)), keyring_(std::move(keyring)), skills_(std::move(loaded_skills)) {}
 
 void GateSession::SetTokenView(const ActiveTokenView &view) { token_view_ = view; }
+
+bool GateSession::TrustExpired() const {
+  // The wall clock the session reads itself (DC-8) — the clock token validity is judged
+  // on. Not now_ms: that value is handed in by the caller.
+  return keyring_.expires_at_unix > 0 && WallNowMs() / 1000 >= static_cast<int64_t>(keyring_.expires_at_unix);
+}
+
+TrustApplyResult GateSession::PollTrust() {
+  TrustApplyResult unchanged;
+  unchanged.version = keyring_.bundle_version;
+  unchanged.expires_at_unix = keyring_.expires_at_unix;
+  const std::string &path = keyring_.source.bundle_path;
+  if (path.empty()) return unchanged;
+  struct stat st {};
+  if (::stat(path.c_str(), &st) != 0) return unchanged;   // nothing placed (or not readable): keep judging as before
+#if defined(__APPLE__)
+  const int64_t mtime_ns = static_cast<int64_t>(st.st_mtimespec.tv_sec) * 1000000000LL + st.st_mtimespec.tv_nsec;
+#else
+  const int64_t mtime_ns = static_cast<int64_t>(st.st_mtim.tv_sec) * 1000000000LL + st.st_mtim.tv_nsec;
+#endif
+  const bool same = trust_seen_ && trust_seen_ino_ == static_cast<uint64_t>(st.st_ino) &&
+                    trust_seen_size_ == static_cast<int64_t>(st.st_size) && trust_seen_mtime_ns_ == mtime_ns;
+  if (same) return unchanged;
+  const bool first_look = !trust_seen_;
+  trust_seen_ = true;
+  trust_seen_ino_ = static_cast<uint64_t>(st.st_ino);
+  trust_seen_size_ = static_cast<int64_t>(st.st_size);
+  trust_seen_mtime_ns_ = mtime_ns;
+  TrustApplyResult r = ApplyPlacedBundle(&keyring_);
+  // The first look sees the file the keyring was loaded from: same version, Unchanged.
+  // Reported as such — a refusal can only be news once something was placed.
+  (void)first_look;
+  return r;
+}
 
 void GateSession::ObserveEvidence(const EvidenceObservation &obs) {
   // pep_gate_node.cpp on_evidence: the only place ever_received becomes true (D-L7 §6.4).
@@ -202,6 +238,13 @@ GateInputs GateSession::BuildInputs(GatePath path, const CommandRequest *cmd, in
   in.clock_drift_ms = DriftMs(clock_baseline_);
   in.clock_fault = elapsed_clock_fault_reason_;
 
+  // SEC-H02 : the trust in force, measured here on the session's own wall clock.
+  in.trust_expired = TrustExpired();
+  in.trust_expires_at_unix = static_cast<int64_t>(keyring_.expires_at_unix);
+  if (permit_active_ && !permit_key_id_.empty() && keyring_.pubkeys.count(permit_key_id_) == 0) {
+    in.hold_key_state = keyring_.revoked.count(permit_key_id_) > 0 ? 1 : 2;
+  }
+
   in.supplier.provider_mode = cfg_.provider_mode;
   in.supplier.use_token_service = cfg_.use_token_service;
   in.supplier.grpc_built = cfg_.grpc_built;
@@ -332,6 +375,8 @@ SessionOutcome GateSession::Apply(const GateDecision &d, const GateInputs &in, c
     }
     PermitEnter(id_chain, id_token, id_key, in.token_info.not_after_unix_ms,
                 in.token_info.subgraph_snapshot_hash);
+    // SEC-H02: remember whose signature this permit rests on (grpc mode; empty otherwise).
+    permit_key_id_ = grpc_mode ? tv.key_id_bytes : std::string();
   }
   if (d.begin_step) {
     BeginStepIfNeeded(id_chain, id_token, id_key, in.token_info, in.now_ms, in.elapsed_now_ms);

@@ -82,10 +82,38 @@ Tests: `step_clock` reproduces wall shifts using the session seam; Linux-only
 C++ session and C ABI. It does not change host time. `gate_two_doors` also runs with the real
 OS clock. A fresh session has no active permit; this is not a new persistent replay store.
 
+## A running gate and its keyring bundle
+
+A gate does not need a restart to change the keys it trusts, and it does not keep trusting a
+bundle past its expiry (SEC-H02):
+
+- `GateSession::PollTrust()` — called from `pail_gate_tick` and, in the ROS 2 node, from a 250 ms
+  timer — looks at the identity of the bundle file (inode, size, mtime) and reads it only when that
+  changed. A higher `bundle_version` that passes the load checks (root signature, format, version
+  floor, expiry, lifetime ceiling) replaces the keyring as a whole; the floor is written first. The
+  same version is never applied, whatever its content. A candidate that fails a check changes
+  nothing — in particular it does not extend the expiry of the bundle in use.
+- Once the wall clock the gate reads passes `expires_at_unix` of the bundle in force, every decision
+  is `BLOCK ERR_BUNDLE_EXPIRED`, on every path, also for a token that is itself still valid. The
+  `now_ms` a caller hands in is not that clock.
+- A permit held on a key the applied bundle no longer trusts ends at the next decision
+  (`ERR_REVOKED_KEY_ID`, or `ERR_UNKNOWN_KEY_ID` when the key was dropped without being revoked).
+- The environment selector `LoadTrustedKeyring` applies two rules in the production profile
+  (`PAIL_PROFILE` other than `dev`): a missing state file is refused (`ERR_BUNDLE_STATE:missing`,
+  nothing is created — initialise the floor once with `pail-keyring-sign init-floor`), and an
+  undeclared `PAIL_KEYRING_MAX_LIFETIME_SEC` is refused (`ERR_BUNDLE_POLICY`).
+- The bundle is read by shape: a member the format does not define, a member name given twice, an
+  entry without a role, or a `key_id` twice in one list refuses the bundle. A token trust anchor is
+  an entry whose role is exactly `issuer`.
+
+Batteries: `trust_live` (both doors) and `trust_vectors` (the parity vectors the Go loader reads
+too, `spec/vectors/keyring_bundle/vectors.json`).
+
 ## Signed-keyring remaining lifetime
 
 The C++ loader checks `expires_at - now` at load against
-`PAIL_KEYRING_MAX_LIFETIME_SEC` (default 86400 seconds when unset). Explicit
+`PAIL_KEYRING_MAX_LIFETIME_SEC`. Unset, the value is 86400 seconds in the `dev` profile and for a
+caller of the path-taking `LoadKeyringBundle`; the production selector refuses an unset value. Explicit
 malformed/nonpositive/out-of-range values fail with `ERR_BUNDLE_POLICY`, and
 an excessive remaining window with `ERR_BUNDLE_LIFETIME`, before version state
 is persisted. This is not bundle age. Root signature, rollback and expiry

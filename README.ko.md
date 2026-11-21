@@ -1,6 +1,6 @@
 # PAIL — Physical Action Identity Layer
 
-> **공개 목적과 한계.** PAIL 0.2.2는 개발자 검토·연구·통합 평가를 목적으로 공개합니다. 이 공개본은 실운영 적합성이나 물리적·기능적 안전 인증을 보증하지 않습니다. 실운영 적용에는 해당 배치에 대한 별도의 통합·보안·안전성 평가가 필요합니다. 이는 공개본의 검증 범위를 설명하는 것으로, PAIL Core의 Apache-2.0 이용 권리를 변경하지 않습니다.
+> **공개 목적과 한계.** PAIL 0.2.4는 개발자 검토·연구·통합 평가를 목적으로 공개합니다. 이 공개본은 실운영 적합성이나 물리적·기능적 안전 인증을 보증하지 않습니다. 실운영 적용에는 해당 배치에 대한 별도의 통합·보안·안전성 평가가 필요합니다. 이는 공개본의 검증 범위를 설명하는 것으로, PAIL Core의 Apache-2.0 이용 권리를 변경하지 않습니다.
 
 > This is the Korean edition. The canonical document is
 > [`README.md`](README.md) (English).
@@ -33,7 +33,7 @@ Jetson Orin Nano Super(네이티브 CPU), L40S 위의 Isaac Sim(amd64)에서 측
 
 Docker 가 있는 노트북에서 명령 세 줄이다. 이슈어·게이트·모션 브리지는 실제 구성 요소이고,
 시뮬레이션인 것은 TurtleBot3 베이스와 태그 리더, 안전 피드뿐이다. 호스트 ROS 도, 계정도,
-하드웨어도 필요 없다. 평가 꾸러미는 [0.2.2 release 페이지](https://github.com/glowfly-ai/pail/releases/tag/0.2.2)에서
+하드웨어도 필요 없다. 평가 꾸러미는 [0.2.4 release 페이지](https://github.com/glowfly-ai/pail/releases/tag/0.2.4)에서
 아키텍처에 맞는 것을 받아 그 디렉터리에서 아래를 실행한다.
 
 ```sh

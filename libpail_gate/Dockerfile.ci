@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY sdk/proto ./sdk/proto
 COPY spec/vectors/token/tokens.vec ./spec/vectors/token/tokens.vec
+COPY spec/vectors/keyring_bundle/vectors.json ./spec/vectors/keyring_bundle/vectors.json
 COPY libpail_gate ./libpail_gate
 RUN cmake -S libpail_gate -B /build -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=/opt/pail_gate \
     && cmake --build /build -j2 \

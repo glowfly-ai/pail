@@ -29,10 +29,10 @@ class IsolatedRig(SharedRig):
         services={}
         for role in SERVICES:
             uid=UIDS.get(role,11100)
-            image=self.images['issuer'] if role in ('netspace','issuer','agent','requester') else self.images['tb3_gate']
+            image=self.images['microduck'] if role=='requester' else self.images['issuer'] if role in ('netspace','issuer','agent') else self.images['tb3_gate']
             service={'image':image,'user':str(uid)+':'+str(uid),'read_only':True,'cap_drop':['ALL'],'security_opt':['no-new-privileges:true'],'ipc':'private','pids_limit':128,'restart':'no','labels':dict(labels,**{'org.pail.role':role}),'tmpfs':['/tmp:rw,nosuid,nodev,size=128m,mode=1777'],'environment':{'HOME':'/tmp','ROS_LOG_DIR':'/tmp/roslogs','PYTHONDONTWRITEBYTECODE':'1'},'cpus':.3,'mem_limit':'256m','memswap_limit':'256m'}
             if role=='netspace':
-                service.update(entrypoint=['sleep','infinity'],cpus=.05,mem_limit='64m',memswap_limit='64m');services[role]=service;continue
+                service.update(entrypoint=['/usr/local/bin/pail_split','hold'],cpus=.05,mem_limit='64m',memswap_limit='64m');services[role]=service;continue
             cfg=self.state/'role-views'/role/'config';state=self.state/'role-views'/role/'state'
             service['network_mode']='service:netspace'
             mounts=[str(cfg)+':/etc/pail:ro',str(state)+':/var/lib/pail_role',str(state/'keyring')+':/var/lib/pail_keyring']

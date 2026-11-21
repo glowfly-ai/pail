@@ -7,6 +7,10 @@
 //	-mode submit -steps JSON            a plan of twist steps: [{"linear":0.1,"angular":0,"duration":10}, ...]
 //	-mode cancel -plan ID               CancelPlan for a plan this client submitted (its "plan" field)
 //	-mode unlock                        a signed operator unlock with the generated dev operator key
+//	-mode signal -comm NAME -sig SIG    fault injection: send STOP, CONT, KILL or TERM to every process of this
+//	                                    container whose kernel name is NAME (the image has no shell and no kill)
+//	-mode isolation                     role-isolation measurement from inside this container: reads the role
+//	                                    manifest on standard input, prints what this process can see
 //
 // A refused plan prints its denial, including every exceeded envelope bound.
 package main
@@ -27,11 +31,15 @@ import (
 	"github.com/glowfly/pail/services/internal/corecomm"
 	"github.com/glowfly/pail/services/internal/graph"
 	"github.com/glowfly/pail/services/internal/skills"
+	"io"
 	"log"
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	op "github.com/glowfly/pail/services/proto/operatorv1"
@@ -184,8 +192,119 @@ func policyLimits(dir, robot, target string) (interface{}, error) {
 		"sha256": map[string]string{"policy.yaml": hash(raw), "site_model.yaml": hash(siteRaw), filepath.Base(reg.Path): reg.SHA256Hex}}, nil
 }
 
+// isolationView is the role-isolation measurement of examples/nvidia/check_isolation.py for a container whose image
+// has no interpreter: what a process of this container can read and do. The manifest names every role's files; a
+// private file of this role has to be readable here, a private file of another role must not be, the reserved
+// material (CA keys, the operator key, the root key, the Docker socket) must not be readable, and a raw packet
+// socket must be refused. The answer has the fields of the Python probe the other roles run.
+func isolationView(in io.Reader) (interface{}, error) {
+	var spec struct {
+		Role  string `json:"role"`
+		Roles map[string]struct {
+			Files map[string]struct {
+				SHA256  string `json:"sha256"`
+				Private bool   `json:"private"`
+			} `json:"files"`
+		} `json:"roles"`
+	}
+	if err := json.NewDecoder(in).Decode(&spec); err != nil {
+		return nil, err
+	}
+	own, known := spec.Roles[spec.Role]
+	if !known {
+		return nil, fmt.Errorf("role %q is not in the manifest", spec.Role)
+	}
+	seen := map[string]bool{}
+	_ = filepath.WalkDir("/etc/pail", func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return nil // an unreadable directory holds nothing this process can see
+		}
+		if info, e := os.Stat(path); e == nil && info.Mode().IsRegular() {
+			if b, e := os.ReadFile(path); e == nil {
+				sum := sha256.Sum256(b)
+				seen[hex.EncodeToString(sum[:])] = true
+			}
+		}
+		return nil
+	})
+	ownOK := true
+	for _, f := range own.Files {
+		if f.Private && !seen[f.SHA256] {
+			ownOK = false
+		}
+	}
+	foreign := []string{}
+	for name, role := range spec.Roles {
+		if name == spec.Role {
+			continue
+		}
+		for _, f := range role.Files {
+			if f.Private && seen[f.SHA256] {
+				foreign = append(foreign, name)
+				break
+			}
+		}
+	}
+	sort.Strings(foreign)
+	reserved := []string{"/etc/pail/grpc_certs/ca.key", "/etc/pail/sros2_keystore/private/identity_ca.key.pem",
+		"/etc/pail/sros2_keystore/private/permissions_ca.key.pem", "/etc/pail/keys/operator_ed25519.json", "/root-keys/root.json", "/var/run/docker.sock"}
+	readable := 0
+	for _, path := range reserved {
+		if f, err := os.Open(path); err == nil {
+			one := make([]byte, 1)
+			if n, _ := f.Read(one); n == 1 {
+				readable++
+			}
+			f.Close()
+		}
+	}
+	// AF_PACKET (17), SOCK_RAW (3), ETH_P_ALL (3) in network byte order: a raw view of every frame of the namespace
+	rawAllowed := false
+	if fd, err := syscall.Socket(17, 3, 0x0300); err == nil {
+		rawAllowed = true
+		syscall.Close(fd)
+	}
+	pidNS, _ := os.Readlink("/proc/self/ns/pid")
+	ipcNS, _ := os.Readlink("/proc/self/ns/ipc")
+	return map[string]interface{}{"uid": os.Getuid(), "pid_namespace": pidNS, "ipc_namespace": ipcNS, "own_material_available": ownOK,
+		"foreign_material_available": foreign, "reserved_material_readable": readable, "raw_socket_allowed": rawAllowed}, nil
+}
+
+// signalByComm sends a signal to every process in this PID namespace whose kernel name (/proc/<pid>/comm) is comm,
+// and returns how many it reached. It exists for fault injection in the reference rigs: the cloud images carry no
+// kill binary and the Issuer image no shell.
+func signalByComm(comm, name string) (int, error) {
+	signals := map[string]syscall.Signal{"STOP": syscall.SIGSTOP, "CONT": syscall.SIGCONT, "KILL": syscall.SIGKILL, "TERM": syscall.SIGTERM}
+	signal, known := signals[name]
+	if comm == "" || !known {
+		return 0, fmt.Errorf("-mode signal needs -comm NAME and -sig STOP|CONT|KILL|TERM")
+	}
+	if len(comm) > 15 {
+		comm = comm[:15] // the kernel keeps 15 bytes of a process name: pail_robot_agent is stored as pail_robot_agen
+	}
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil || pid == os.Getpid() {
+			continue
+		}
+		b, err := os.ReadFile("/proc/" + entry.Name() + "/comm")
+		if err != nil || strings.TrimSpace(string(b)) != comm {
+			continue
+		}
+		if syscall.Kill(pid, signal) == nil {
+			n++
+		}
+	}
+	return n, nil
+}
+
 func main() {
-	mode := flag.String("mode", "peek", "peek|submit|cancel|unlock|limits")
+	mode := flag.String("mode", "peek", "peek|submit|cancel|unlock|limits|signal|isolation")
 	duration := flag.Float64("duration", 6, "step duration seconds (reference plan)")
 	steps := flag.String("steps", "", "JSON list of twist steps; replaces the reference plan")
 	plan := flag.String("plan", "", "plan id to cancel (cancel)")
@@ -197,7 +316,23 @@ func main() {
 	flag.StringVar(&robotID, "robot", robotID, "robot id")
 	flag.StringVar(&operatorKey, "operator-key", operatorKey, "operator key JSON (unlock)")
 	configDir := flag.String("config", "", "configuration directory for offline limits mode")
+	comm := flag.String("comm", "", "kernel process name (signal)")
+	sig := flag.String("sig", "", "STOP|CONT|KILL|TERM (signal)")
 	flag.Parse()
+	if *mode == "isolation" {
+		out, err := isolationView(os.Stdin)
+		must(err)
+		b, err := json.Marshal(out)
+		must(err)
+		fmt.Println(string(b))
+		return
+	}
+	if *mode == "signal" {
+		n, err := signalByComm(*comm, *sig)
+		must(err)
+		fmt.Printf("signalled=%d\n", n)
+		return
+	}
 	if *mode == "limits" {
 		if *configDir == "" {
 			log.Fatal("-mode limits needs -config")

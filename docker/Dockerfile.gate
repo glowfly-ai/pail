@@ -14,6 +14,7 @@ COPY robot/pail_pep_gate ./src/pail_pep_gate
 COPY robot/pail_motion_bridge ./src/pail_motion_bridge
 COPY libpail_gate /opt/libpail_gate
 COPY spec/vectors/token/tokens.vec /opt/spec/vectors/token/tokens.vec
+COPY spec/vectors/keyring_bundle/vectors.json /opt/spec/vectors/keyring_bundle/vectors.json
 # Proto files needed for grpc++ stub generation at gate build time.
 COPY sdk/proto ./proto
 # COPY preserves checkout modes and git does not track the read bit. With
@@ -90,3 +91,5 @@ CMD ["/usr/local/bin/pep_gate_entrypoint.sh"]
 
 ARG PAIL_VERSION
 LABEL org.pail.component=core-tb3-gate org.pail.release=${PAIL_VERSION}
+ARG PAIL_IMAGE_INPUT_SHA256=unknown
+LABEL org.pail.image-input-sha256=$PAIL_IMAGE_INPUT_SHA256

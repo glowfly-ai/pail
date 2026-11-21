@@ -240,6 +240,10 @@ func TestSelectorUnsignedRequiresDevMode(t *testing.T) {
 
 // Selector: bundle mode with a configured root pubkey loads a signed bundle e2e.
 func TestSelectorBundleModeLoads(t *testing.T) {
+	// SEC-H02: the selector's policy asks for an initialised floor in the production
+	// profile (TestH02StateRule pins that). This test measures the selector's wiring on
+	// a first load, which is the dev profile's behaviour.
+	t.Setenv("PAIL_PROFILE", "dev")
 	rootPub, rootPriv, _ := ed25519.GenerateKey(rand.Reader)
 	dir := t.TempDir()
 	bundlePath := filepath.Join(dir, "keyring_bundle.json")

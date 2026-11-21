@@ -21,7 +21,7 @@ services:
       - private:/state/private
       - run:/run/duck
   issuer:
-    cpus: 0.4
+    cpus: 0.3          # 0.4 until the demo probes moved out to the tools container (compose.demo.yaml, 0.1)
     mem_limit: 512m
     memswap_limit: 512m
     pids_limit: 256

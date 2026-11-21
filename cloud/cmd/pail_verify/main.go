@@ -82,6 +82,24 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if *vector != "" {
 		return runVector(*vector, stdout)
 	}
+	// P024-H1: the flag's default is the empty string, so its value cannot tell "given empty" from "absent" — and a
+	// call that expanded an unset variable into --expected-fingerprint "" used to end PASS with the publisher key
+	// never compared. Which flags were given is asked of the parser. Refused before any other work, on stdout (the
+	// Python verifier prints the same line and the fixture compares stdout), and no receipt is written.
+	fpFlag := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "expected-fingerprint" {
+			fpFlag = true
+		}
+	})
+	if fpFlag && strings.TrimSpace(*expectedFP) == "" {
+		prefix := "EVALUATION_VERIFY: FAIL "
+		if *sigOnly {
+			prefix = "SIGNATURE: "
+		}
+		fmt.Fprintln(stdout, prefix+emptyFingerprint)
+		return 2
+	}
 	if *manifest == "" {
 		return usage("--manifest is required")
 	}
@@ -258,6 +276,10 @@ func receiptDirectory(flagValue string) (string, error) {
 	}
 	return filepath.Join(home, ".pail-evaluation", "verification"), nil
 }
+
+// emptyFingerprint is the refusal of P024-H1; the same bytes as EMPTY_FINGERPRINT of verify_evaluation.py.
+const emptyFingerprint = "--expected-fingerprint was given but is empty; pass the fingerprint obtained from the publisher outside " +
+	"this archive, or omit the flag to record PUBLISHER_KEY: NOT_COMPARED"
 
 func writeReceipt(stdout io.Writer, dirFlag, manifestPath, keyPath string, fpGiven bool, m releaseverify.Manifest, count, rc int, tree treeResult) {
 	lock, ok := m.FilesSHA256["images.lock.json"]

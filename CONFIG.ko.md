@@ -9,6 +9,10 @@
 
 `evaluation.py issuer`는 배포물 밖의 새 상태 폴더에 정책·사이트·로봇 등록부·스킬·새 키를
 만듭니다. `journal/`은 원장, `agent-state/`는 게이트웨이 보고 대기열입니다. 개인키는 공유하지 않습니다.
+로봇 등록부(`config/robot_registry.yaml`)를 비롯한 이 파일들의 경로는 `--state`로 준 상태 폴더
+기준입니다. Core 소스 트리의 `config/` 폴더에는 참조용 입력(`policy.yaml`,
+`site_model.example.yaml`, `skills.diff_drive_amr.yaml`, `sros2_policy.xml`)만 있고
+`robot_registry.yaml`은 없습니다.
 
 이 개발 리그는 `PAIL_PROFILE=dev`, `PAIL_GRPC_TLS=off`, `PAIL_KEYRING_MODE=unsigned-dev`를
 명시하고 루프백 포트만 공개합니다. **실제 등록·인증을 마친 생산 보안 프로파일이 아닙니다.**

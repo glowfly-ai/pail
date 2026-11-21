@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Glowfly Identity Systems Co.,Ltd
-"""Issuer-side helper for the live demo, run with `docker compose exec issuer python …`.
+"""Issuer-side helper for the live demo, run in a tools container beside the Issuer (`docker compose exec tools python …`).
 Prints one JSON line. The default preview uses isolated plaintext; the fleet mTLS
 profile loads its own client leaf and verifies the server. The host console never
 receives private keys or reaches the issuer directly.

@@ -446,7 +446,11 @@ void testSelector() {
   kr = LoadTrustedKeyring(legacy, &mode, &reason);
   CHECK(reason == "ERR_KEYRING_MODE" && kr.pubkeys.empty(), "unknown mode must refuse");
 
-  // Bundle mode e2e via env.
+  // Bundle mode e2e via env. SEC-H02: the selector applies two production rules (a
+  // missing state file is not a first load; the lifetime ceiling must be declared) —
+  // test_trust_live T10/T14 pin them. This section measures the selector's wiring on a
+  // first load with the default ceiling, which is the dev profile's behaviour.
+  setenv("PAIL_PROFILE", "dev", 1);
   writeFile(dir + "/keyring_bundle.json", signBundle(root, makePayload(3, future())));
   writeFile(dir + "/root_pub.b64", b64(root.pk, sizeof root.pk) + "\n");
   setenv("PAIL_KEYRING_MODE", "bundle", 1);
@@ -471,6 +475,7 @@ void testSelector() {
   kr = LoadTrustedKeyring(legacy, &mode, &reason);
   CHECK(reason.empty() && !kr.pubkeys.empty(), "valid explicit lifetime loads");
   unsetenv("PAIL_KEYRING_MAX_LIFETIME_SEC");
+  unsetenv("PAIL_PROFILE");
   clearEnv();
 }
 

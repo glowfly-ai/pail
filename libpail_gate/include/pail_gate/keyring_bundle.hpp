@@ -20,8 +20,22 @@ namespace pail_pep_gate {
 //   3) expiry and remaining-validity ceiling (PAIL_KEYRING_MAX_LIFETIME_SEC;
 //      C++ default 86400 seconds, explicit malformed/nonpositive values refuse).
 // Every failure means "no keyring from this bundle" — the gate then has no
-// trust anchor and stays fail-closed at token verification. A new bundle is
-// applied by restarting the gate (§6.3 decision: restart-based application).
+// trust anchor and stays fail-closed at token verification.
+//
+// SEC-H02: a running gate takes up a newer bundle by itself (ApplyPlacedBundle
+// below, through the same checks as a start) and stops judging with a bundle whose
+// expiry has passed. A restart still loads whatever is placed, as before.
+//
+// Format rules of the bundle path (parity with the Go loader, pinned by the shared
+// vectors tests/golden/keyring_bundle/vectors.json):
+//   - envelope, payload and entries are read by shape, not by text search: a member
+//     the format does not define, a member name given twice, or content after the
+//     envelope object refuses the bundle;
+//   - an entry without a role refuses the bundle (it used to become an issuer key);
+//     the same key_id twice in one list refuses the bundle;
+//   - a token trust anchor is an entry whose role is exactly "issuer". Any other
+//     role — operator, burst, the reserved journal and anchor, a role this reader
+//     does not know — is loaded and trusted for nothing.
 
 // Reads a bare-base64 root public key file (surrounding whitespace tolerated).
 // Returns false and fills reason on failure.
@@ -38,6 +52,28 @@ Keyring LoadKeyringBundle(const std::string &bundle_path,
                           const std::string &state_path,
                           std::string *reason);
 
+// SEC-H02 — taking up a placed bundle while the gate runs.
+//
+// Reads the bundle at current->source.bundle_path and puts it through the load
+// checks (root signature, format, version floor, expiry, validity ceiling, the
+// production rules recorded in the source):
+//   Refused    a check failed; *current is untouched and `reason` names the check
+//              (a version below the floor is ERR_BUNDLE_ROLLBACK)
+//   Unchanged  the placed version is the version in force — also when its content
+//              differs; nothing to do, as for a restart on an unchanged bundle
+//   Applied    the placed version is higher: the floor is written first, then
+//              *current is replaced as a whole. A bundle that carries no issuer key
+//              is applied too: revoking the last issuer key means "refuse everything".
+// A keyring that did not come from a bundle (unsigned-dev) is always Unchanged.
+enum class TrustApply { Unchanged, Applied, Refused };
+struct TrustApplyResult {
+  TrustApply outcome{TrustApply::Unchanged};
+  std::string reason;
+  uint64_t version{0};          // version in force after the call
+  long long expires_at_unix{0}; // expiry in force after the call
+};
+TrustApplyResult ApplyPlacedBundle(Keyring *current);
+
 // Trust-path selector (parity with Go LoadTrustedKeyringFromEnv):
 //   PAIL_KEYRING_MODE      "" | "bundle"  (default: signed bundle required)
 //                          "unsigned-dev" (legacy unsigned keyring, dev only)
@@ -49,6 +85,16 @@ Keyring LoadKeyringBundle(const std::string &bundle_path,
 //                          writable path or the rollback floor resets with
 //                          the container)
 // mode is always filled so the caller can log which trust path was taken.
+//
+// SEC-H02 — this selector reads the profile (PAIL_PROFILE; anything but "dev" is
+// production) and applies two production rules that the path-taking
+// LoadKeyringBundle above does not:
+//   - a missing state file is refused (ERR_BUNDLE_STATE:missing) and none is
+//     created: a first install writes the floor explicitly
+//     (`pail-keyring-sign init-floor`), so that a lost state file cannot bring a
+//     bundle from before a revocation back;
+//   - an undeclared PAIL_KEYRING_MAX_LIFETIME_SEC is refused (ERR_BUNDLE_POLICY).
+// The dev profile keeps the first-load behaviour and the 86400 s default.
 Keyring LoadTrustedKeyring(const std::string &legacy_path,
                            std::string *mode,
                            std::string *reason);

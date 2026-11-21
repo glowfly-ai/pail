@@ -649,6 +649,36 @@ GateDecision decide(const GateInputs &in) {
     return d;
   }
 
+  const char *path_name =
+      in.path == GatePath::Command ? "command" : in.path == GatePath::Recheck ? "recheck" : "grace";
+
+  // SEC-H02 : the bundle the keys came from has expired. The keys were trusted for a
+  // window the root signed; past it, a signature under them proves nothing the root
+  // still stands behind — and a revocation that never arrived (a robot that could not
+  // be reached, a renewal that was not pulled) lands here at the latest. Every path
+  // refuses, a held permit included.
+  if (in.trust_expired) {
+    auto d = publish("BLOCK", "ERR_BUNDLE_EXPIRED");
+    d.detail = "trust=bundle expires_at_unix=" + std::to_string(in.trust_expires_at_unix) + " path=" + path_name;
+    // P024T-L1 : reported, and not fatal. Without the report the Issuer's decision record
+    // ended at the last PERMIT and nothing in the audit trail said why the robot stopped
+    // (157 refusals in the gate's own log, none in the record). Fatal would latch the chain
+    // in the session, and a renewal could not bring it back.
+    d.report = true;
+    return d;
+  }
+
+  // SEC-H02 : a bundle applied while a permit is held took the token's key out of the
+  // trusted set. The command path would find out at its next verification; the recheck
+  // and grace paths never look at the signature again, so the hold ends here.
+  if (in.hold.active && in.hold_key_state != 0) {
+    auto d = publish("BLOCK", in.hold_key_state == 1 ? "ERR_REVOKED_KEY_ID" : "ERR_UNKNOWN_KEY_ID");
+    d.detail = std::string(in.hold_key_state == 1 ? "held permit key revoked by the applied bundle"
+                                                  : "held permit key absent from the applied bundle") +
+               " path=" + path_name;
+    return d;
+  }
+
   switch (in.path) {
     case GatePath::Command: return decide_command(in);
     case GatePath::Grace:   return decide_grace(in);
